@@ -1,0 +1,181 @@
+{
+  "brand": {
+    "name": "Atlantique Export",
+    "tagline": "Les saveurs d'Afrique, fraîches et authentiques.",
+    "taglineSecondary": "Des goûts qui voyagent, une hospitalité qui reste."
+  },
+  "nav": {
+    "home": "Accueil",
+    "shop": "Boutique",
+    "new": "Nouveautés",
+    "shipments": "Arrivages",
+    "recipes": "Recettes",
+    "brands": "Nos marques",
+    "about": "À propos",
+    "contact": "Contact",
+    "account": "Compte",
+    "cart": "Panier",
+    "search": "Rechercher",
+    "menu": "Menu",
+    "close": "Fermer",
+    "openMenu": "Ouvrir le menu",
+    "allCategories": "Toutes les catégories",
+    "skipToContent": "Aller au contenu principal",
+    "cartCount": "{count, plural, =0 {Panier vide} one {# article} other {# articles}}"
+  },
+  "announcement": {
+    "text": "Ramassage à Montréal et livraison locale · Arrivage du Sénégal en septembre"
+  },
+  "home": {
+    "hero": {
+      "eyebrow": "Épicerie afroalimentaire · Montréal",
+      "title": "Tout le goût de l'Afrique, au même endroit.",
+      "subtitle": "Poissons, légumes, céréales et produits traditionnels sélectionnés avec soin et disponibles au Canada.",
+      "ctaPrimary": "Faire mes courses",
+      "ctaSecondary": "Voir les nouveautés"
+    },
+    "trust": {
+      "sourcing": "Sélection directe auprès des producteurs",
+      "coldChain": "Chaîne du froid respectée du départ à la livraison",
+      "pickup": "Ramassage à Montréal ou livraison locale"
+    },
+    "categories": {
+      "title": "Catégories populaires",
+      "subtitle": "Parcourez le rayon qui vous intéresse."
+    },
+    "popular": {
+      "title": "Produits populaires",
+      "subtitle": "Les incontournables de notre sélection."
+    },
+    "new": {
+      "title": "Nouveaux arrivages",
+      "subtitle": "Les derniers produits ajoutés à la boutique."
+    },
+    "cold": {
+      "title": "Poissons et produits surgelés",
+      "subtitle": "Conservés au froid, préparés selon votre choix de découpe."
+    },
+    "fresh": {
+      "title": "Fruits et légumes de saison",
+      "subtitle": "Disponibles au rythme des arrivages."
+    },
+    "natural": {
+      "title": "Produits naturels",
+      "subtitle": "Poudres traditionnelles pour boissons et cuisine."
+    },
+    "deals": {
+      "title": "Promotions de la semaine",
+      "subtitle": "Nos prix réduits du moment.",
+      "empty": "Aucune promotion en cours. Revenez bientôt."
+    },
+    "shipment": {
+      "title": "Prochain arrivage du Sénégal",
+      "eta": "Arrivée estimée",
+      "deadline": "Réservation jusqu'au",
+      "reserved": "{reserved} réservés sur {planned}",
+      "cta": "Réserver ma quantité",
+      "empty": "Aucun arrivage annoncé pour le moment."
+    },
+    "brands": {
+      "title": "Nos marques partenaires",
+      "subtitle": "Les producteurs et marques que nous distribuons."
+    },
+    "recipes": {
+      "title": "Recettes africaines",
+      "subtitle": "Que faire avec nos produits, étape par étape.",
+      "cta": "Voir toutes les recettes",
+      "minutes": "{count} min",
+      "servings": "{count} portions"
+    },
+    "about": {
+      "title": "Atlantique Export",
+      "body": "Basée à Montréal, Atlantique Export sélectionne des produits alimentaires du Sénégal et d'autres pays africains pour les particuliers, les restaurants et les revendeurs du Canada. Nous travaillons directement avec les producteurs et transformateurs, et nous surveillons la chaîne du froid de bout en bout.",
+      "cta": "Découvrir notre histoire"
+    },
+    "reviews": {
+      "title": "Avis des clients",
+      "emptyTitle": "Aucun avis publié pour l'instant",
+      "emptyBody": "Nous n'affichons que des avis authentiques de clients ayant réellement commandé. Cette section se remplira avec vos premiers retours."
+    },
+    "newsletter": {
+      "title": "Recevez les prochains arrivages",
+      "body": "Une infolettre courte : arrivages, nouveautés et promotions. Rien d'autre.",
+      "emailLabel": "Adresse courriel",
+      "placeholder": "votre@courriel.ca",
+      "cta": "M'inscrire",
+      "consent": "Vous pouvez vous désabonner en tout temps.",
+      "invalidEmail": "Entrez une adresse courriel valide, par exemple nom@exemple.ca",
+      "notYetActive": "Adresse valide. L'infolettre n'est pas encore active : les inscriptions seront enregistrées à l'ouverture de la boutique."
+    },
+    "social": {
+      "title": "Suivez-nous",
+      "body": "Les arrivages et les coulisses, au jour le jour."
+    }
+  },
+  "product": {
+    "addToCart": "Ajouter au panier",
+    "reserve": "Réserver",
+    "notifyMe": "M'avertir du retour",
+    "from": "À partir de",
+    "seeAll": "Tout voir",
+    "viewProduct": "Voir le produit",
+    "perKg": "le kilo",
+    "approxWeight": "Poids approximatif",
+    "billedAtMaxWeight": "Facturé au poids haut de la tranche : le montant est définitif à l'achat.",
+    "demoPrice": "Prix de démonstration"
+  },
+  "stock": {
+    "in_stock": "En stock",
+    "low_stock": "Stock limité",
+    "out_of_stock": "Épuisé",
+    "coming_soon": "Bientôt disponible",
+    "preorder": "En précommande",
+    "incoming": "En arrivage"
+  },
+  "temperature": {
+    "ambient": "Ambiant",
+    "fresh": "Frais",
+    "refrigerated": "Réfrigéré",
+    "frozen": "Surgelé"
+  },
+  "badge": {
+    "new": "Nouveau",
+    "promo": "Promotion",
+    "wholesale": "Vente en gros"
+  },
+  "footer": {
+    "shopTitle": "Boutique",
+    "helpTitle": "Aide",
+    "companyTitle": "Entreprise",
+    "legalTitle": "Informations légales",
+    "delivery": "Livraison et ramassage",
+    "faq": "Questions fréquentes",
+    "contact": "Contact",
+    "about": "À propos",
+    "producers": "Nos producteurs",
+    "pro": "Clients professionnels",
+    "privacy": "Politique de confidentialité",
+    "terms": "Conditions de vente",
+    "refund": "Politique de remboursement",
+    "shipping": "Politique d'expédition",
+    "cookies": "Gestion des témoins",
+    "accessibility": "Accessibilité",
+    "rights": "Tous droits réservés.",
+    "location": "Montréal, Québec, Canada"
+  },
+  "notFound": {
+    "title": "Cette page n'est pas encore en ligne",
+    "body": "Le site est en cours de construction : la boutique, le panier et l'espace client arrivent dans les prochaines étapes. Si vous pensez être arrivé ici par un lien cassé, écrivez-nous.",
+    "home": "Retour à l'accueil",
+    "contact": "Nous écrire"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "photoComing": "Photo à venir",
+    "seeMore": "Voir plus",
+    "language": "Langue",
+    "french": "Français",
+    "english": "English",
+    "demoNotice": "Site en développement — le catalogue et les prix affichés sont des données de démonstration."
+  }
+}

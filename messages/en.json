@@ -1,0 +1,181 @@
+{
+  "brand": {
+    "name": "Atlantique Export",
+    "tagline": "The flavours of Africa, fresh and authentic.",
+    "taglineSecondary": "Tastes that travel, hospitality that stays."
+  },
+  "nav": {
+    "home": "Home",
+    "shop": "Shop",
+    "new": "New",
+    "shipments": "Shipments",
+    "recipes": "Recipes",
+    "brands": "Our brands",
+    "about": "About",
+    "contact": "Contact",
+    "account": "Account",
+    "cart": "Cart",
+    "search": "Search",
+    "menu": "Menu",
+    "close": "Close",
+    "openMenu": "Open menu",
+    "allCategories": "All categories",
+    "skipToContent": "Skip to main content",
+    "cartCount": "{count, plural, =0 {Empty cart} one {# item} other {# items}}"
+  },
+  "announcement": {
+    "text": "Montréal pickup and local delivery · Shipment from Senegal in September"
+  },
+  "home": {
+    "hero": {
+      "eyebrow": "African grocery · Montréal",
+      "title": "All the taste of Africa, in one place.",
+      "subtitle": "Fish, vegetables, grains and traditional products, carefully selected and available in Canada.",
+      "ctaPrimary": "Start shopping",
+      "ctaSecondary": "See what's new"
+    },
+    "trust": {
+      "sourcing": "Sourced directly from producers",
+      "coldChain": "Cold chain maintained from origin to delivery",
+      "pickup": "Montréal pickup or local delivery"
+    },
+    "categories": {
+      "title": "Popular categories",
+      "subtitle": "Browse the aisle you need."
+    },
+    "popular": {
+      "title": "Popular products",
+      "subtitle": "The staples of our selection."
+    },
+    "new": {
+      "title": "Newly added",
+      "subtitle": "The latest products in the shop."
+    },
+    "cold": {
+      "title": "Fish and frozen products",
+      "subtitle": "Kept cold, cut the way you prefer."
+    },
+    "fresh": {
+      "title": "Seasonal fruits and vegetables",
+      "subtitle": "Available with each shipment."
+    },
+    "natural": {
+      "title": "Natural products",
+      "subtitle": "Traditional powders for drinks and cooking."
+    },
+    "deals": {
+      "title": "This week's deals",
+      "subtitle": "Our current reduced prices.",
+      "empty": "No deals right now. Check back soon."
+    },
+    "shipment": {
+      "title": "Next shipment from Senegal",
+      "eta": "Estimated arrival",
+      "deadline": "Reserve before",
+      "reserved": "{reserved} reserved out of {planned}",
+      "cta": "Reserve my quantity",
+      "empty": "No shipment announced at the moment."
+    },
+    "brands": {
+      "title": "Our partner brands",
+      "subtitle": "The producers and brands we carry."
+    },
+    "recipes": {
+      "title": "African recipes",
+      "subtitle": "What to make with our products, step by step.",
+      "cta": "See all recipes",
+      "minutes": "{count} min",
+      "servings": "{count} servings"
+    },
+    "about": {
+      "title": "Atlantique Export",
+      "body": "Based in Montréal, Atlantique Export selects food products from Senegal and other African countries for households, restaurants and resellers across Canada. We work directly with producers and processors, and we watch the cold chain from end to end.",
+      "cta": "Read our story"
+    },
+    "reviews": {
+      "title": "Customer reviews",
+      "emptyTitle": "No reviews published yet",
+      "emptyBody": "We only show genuine reviews from customers who actually ordered. This section will fill up with your first feedback."
+    },
+    "newsletter": {
+      "title": "Hear about the next shipment",
+      "body": "A short newsletter: shipments, new products and deals. Nothing else.",
+      "emailLabel": "Email address",
+      "placeholder": "you@email.ca",
+      "cta": "Sign up",
+      "consent": "You can unsubscribe at any time.",
+      "invalidEmail": "Enter a valid email address, for example name@example.ca",
+      "notYetActive": "Valid address. The newsletter is not live yet — sign-ups will be recorded when the shop opens."
+    },
+    "social": {
+      "title": "Follow us",
+      "body": "Shipments and behind the scenes, day by day."
+    }
+  },
+  "product": {
+    "addToCart": "Add to cart",
+    "reserve": "Reserve",
+    "notifyMe": "Notify me",
+    "from": "From",
+    "seeAll": "See all",
+    "viewProduct": "View product",
+    "perKg": "per kilo",
+    "approxWeight": "Approximate weight",
+    "billedAtMaxWeight": "Billed at the top of the weight range, so the amount is final at checkout.",
+    "demoPrice": "Demo price"
+  },
+  "stock": {
+    "in_stock": "In stock",
+    "low_stock": "Low stock",
+    "out_of_stock": "Sold out",
+    "coming_soon": "Coming soon",
+    "preorder": "Pre-order",
+    "incoming": "In transit"
+  },
+  "temperature": {
+    "ambient": "Ambient",
+    "fresh": "Fresh",
+    "refrigerated": "Refrigerated",
+    "frozen": "Frozen"
+  },
+  "badge": {
+    "new": "New",
+    "promo": "Deal",
+    "wholesale": "Wholesale"
+  },
+  "footer": {
+    "shopTitle": "Shop",
+    "helpTitle": "Help",
+    "companyTitle": "Company",
+    "legalTitle": "Legal",
+    "delivery": "Delivery and pickup",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "about": "About",
+    "producers": "Our producers",
+    "pro": "Business customers",
+    "privacy": "Privacy policy",
+    "terms": "Terms of sale",
+    "refund": "Refund policy",
+    "shipping": "Shipping policy",
+    "cookies": "Cookie settings",
+    "accessibility": "Accessibility",
+    "rights": "All rights reserved.",
+    "location": "Montréal, Québec, Canada"
+  },
+  "notFound": {
+    "title": "This page isn't live yet",
+    "body": "The site is under construction: the shop, cart and account area are coming in the next steps. If you think you followed a broken link, let us know.",
+    "home": "Back to home",
+    "contact": "Contact us"
+  },
+  "common": {
+    "loading": "Loading…",
+    "photoComing": "Photo coming",
+    "seeMore": "See more",
+    "language": "Language",
+    "french": "Français",
+    "english": "English",
+    "demoNotice": "Site in development — the catalogue and prices shown are demo data."
+  }
+}
