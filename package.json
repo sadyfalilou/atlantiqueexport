@@ -16,7 +16,9 @@
     "db:new": "supabase migration new",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run lint && npm run typecheck && npm run test"
+    "check": "npm run lint && npm run typecheck && npm run test",
+    "smoke:stock": "node scripts/smoke-stock.mjs",
+    "smoke:security": "node scripts/smoke-security.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",

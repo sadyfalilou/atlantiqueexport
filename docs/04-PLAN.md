@@ -56,14 +56,31 @@ n'est lisible tant qu'un `GRANT` explicite ne l'autorise pas, table par table.
   options de préparation, produits associés — avec RLS et privilèges
 - ✅ Le prix de gros (`wholesale_price_cents`) est exclu des privilèges accordés au public :
   il est refusé par PostgreSQL (erreur 42501), pas seulement masqué par l'interface
-- ⬜ Stock : lots, niveaux, mouvements, `reserve_stock` / `release_stock`
-- ⬜ Panier et commandes, paiements, journal d'événements
-- ⬜ Logistique : points de ramassage, zones, créneaux, jours bloqués
-- ⬜ Arrivages, réservations, alertes de retour en stock
-- ⬜ Contenu : recettes, pages, infolettre, avis
+- ✅ Stock : lots, niveaux, registre des mouvements, et les fonctions
+  `reserve_stock`, `release_stock`, `consume_stock`, `receive_stock`
+- ✅ Panier et commandes, paiements, journal d'événements, numérotation `AE-AAAA-NNNNN`
+- ✅ Logistique : points de ramassage, zones, créneaux avec capacité garantie, jours bloqués
+- ✅ Arrivages, réservations, alertes de retour en stock
+- ✅ Contenu : recettes, pages, infolettre, avis modérés, comptes professionnels, journal d'audit
+- ✅ Privilèges de `service_role` (voir l'écueil ci-dessous)
 - ⬜ Seed du catalogue de départ, avec **prix de démonstration explicitement marqués**
 - ⬜ Types TypeScript générés depuis le schéma, en remplacement de `src/lib/types.ts`
-- **Vérification** : migrations rejouables à neuf, tests SQL sur la réservation concurrente
+- ⬜ Clients Supabase dans `src/lib/supabase/` et bascule de `src/lib/catalog/`
+
+**Écueil rencontré, à retenir.** Désactiver « Automatically expose new tables » retire aussi les
+privilèges de `service_role`, et pas seulement ceux de `anon` et `authenticated` — ce que rien
+n'annonce. Le serveur recevait « 42501 permission denied » sur la moindre lecture. La migration
+`service_role_grants` rétablit ces droits et pose des privilèges par défaut, pour que les futures
+tables n'aient pas à y penser.
+
+**Vérifications exécutées contre la base réelle**
+
+- `npm run smoke:stock` — 11 assertions : une réservation qui dépasse le stock est refusée,
+  l'état reste intact après le refus, et le registre ne garde aucune trace de l'opération annulée
+- `npm run smoke:security` — 24 assertions : le catalogue est lisible, tandis que prix de gros,
+  quantités détenues, capacités, fournisseurs, paniers, commandes, paiements, adresses, liste
+  d'infolettre et journal d'audit sont refusés par PostgreSQL (erreur 42501)
+- ⬜ Reste à faire : rejouer les migrations sur une base vierge
 
 ## Lot 3 — Catalogue, recherche et filtres ⬜
 
