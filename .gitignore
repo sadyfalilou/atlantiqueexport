@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Réglages de permissions propres à la machine, pas au projet.
 .claude/settings.local.json
+
+# Fichier intermédiaire produit par npm run brand:build.
+assets/brand/.logo-original.png
