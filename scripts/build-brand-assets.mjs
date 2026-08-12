@@ -34,6 +34,7 @@ const root = new URL("../", import.meta.url);
 const path = (p) => fileURLToPath(new URL(p, root));
 
 const CREAM = [253, 248, 240]; // --color-cream-50
+const DISC_ORANGE = [243, 145, 0]; // orange exact du logo
 const WHITE_THRESHOLD = 235;
 
 // L'original est un JPEG : on passe par sips, présent sur toute machine macOS.
@@ -123,7 +124,13 @@ const disc = bounds(isDiscOrange);
 
 function crop(
   { x0, x1, y0, y1 },
-  { reverse = false, pad = 0, square = false, ellipseMask = false } = {},
+  {
+    reverse = false,
+    pad = 0,
+    square = false,
+    ellipseMask = false,
+    greenToOrange = false,
+  } = {},
 ) {
   let left = x0 - pad;
   let top = y0 - pad;
@@ -172,7 +179,24 @@ function crop(
       }
 
       const colour = px(sx, sy);
-      const mapped = reverse && isBrandGreen(colour) ? CREAM : colour;
+      let mapped = colour;
+
+      if (greenToOrange) {
+        // Sur l'emblème isolé, le trait vert qui traverse le disque appartient
+        // au lockup complet, pas à l'emblème : laissé tel quel, il disparaît
+        // sur un fond vert forêt et le disque paraît mordu.
+        //
+        // L'emblème ne doit contenir que deux couleurs. Tout ce qui n'est ni
+        // le blanc du feuillage ni l'orange du disque est donc comblé en
+        // orange — y compris les pixels intermédiaires du lissage, qui
+        // laisseraient sinon un liseré sombre le long de l'ancien trait.
+        const [r, g, b] = colour;
+        const isFoliageWhite = Math.min(r, g, b) > 200;
+        const isDisc = r > 180 && g > 80 && g < 205 && b < 120;
+        if (!isFoliageWhite && !isDisc) mapped = DISC_ORANGE;
+      } else if (reverse && isBrandGreen(colour)) {
+        mapped = CREAM;
+      }
       out.data[target] = mapped[0];
       out.data[target + 1] = mapped[1];
       out.data[target + 2] = mapped[2];
@@ -189,7 +213,7 @@ const outputs = [
   ["logo-full-reverse.png", { ...full }, { reverse: true }],
   ["logo-wordmark.png", { ...full, y1: taglineCut }, {}],
   ["logo-wordmark-reverse.png", { ...full, y1: taglineCut }, { reverse: true }],
-  ["logo-mark.png", disc, { square: true, pad: 10, ellipseMask: true }],
+  ["logo-mark.png", disc, { square: true, pad: 10, ellipseMask: true, greenToOrange: true }],
 ];
 
 /** Réduction par moyenne de zone : un simple échantillonnage produirait des

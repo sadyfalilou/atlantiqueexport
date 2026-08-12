@@ -38,8 +38,11 @@ export async function Footer({ locale }: { locale: Locale }) {
       <Container>
         <div className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
-            <Logo variant="full" onDark className="h-20" />
-            <p className="mt-3 text-sm text-cream-200">{t("brand.tagline")}</p>
+            {/* Le mot-symbole sans la signature : celle-ci figure déjà en
+                toutes lettres dans la barre du bas, et à cette hauteur elle
+                serait de toute façon illisible dans l'image. */}
+            <Logo variant="wordmark" onDark className="h-14" />
+            <p className="mt-4 text-sm text-cream-200">{t("brand.tagline")}</p>
             <p className="mt-4 text-sm text-cream-200">
               {t("footer.location")}
             </p>
