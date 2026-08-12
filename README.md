@@ -63,7 +63,7 @@ Le site est servi sur <http://localhost:3000> et redirige vers `/fr`. La version
 | Styles | Tailwind CSS 4 (configuration en CSS, pas de `tailwind.config.js`) | 4.x |
 | Bilinguisme | next-intl, routage `/fr` et `/en` | 4.x |
 | Base de données, auth, stockage | Supabase (PostgreSQL) | à brancher au lot 2 |
-| Paiements | Stripe (carte, Apple Pay, Google Pay) + virement Interac | lot 8 |
+| Paiements | Virement Interac + paiement au ramassage (Stripe reporté en phase 2) | lot 8 |
 | Courriels | Resend | lot 12 |
 | Formulaires | React Hook Form + Zod | — |
 | Tests | Vitest (unitaires), Playwright (bout en bout) | — |

@@ -55,8 +55,9 @@ démonstration clairement marquées prennent le relais en attendant).
 
 **Bloquants pour la mise en ligne**
 
-1. **Comptes de service** : Supabase (projet + clés), Stripe (compte canadien activé, clés test et
-   production), Resend (domaine `atlantiqueexport.com` vérifié), Vercel, registrar du domaine.
+1. **Comptes de service** : Supabase (projet + clés), Resend (domaine `atlantiqueexport.com`
+   vérifié), Vercel (offre Pro — l'offre gratuite interdit l'usage commercial), registrar du
+   domaine. _Stripe est reporté en phase 2 : voir les décisions de cadrage du plan._
 2. **Prix de vente réels en dollars canadiens**, par produit et par format. Le catalogue fournisseur
    en FCFA ne sera pas converti automatiquement (voir §1.5).
 3. **Photographies produits**. En leur absence, un placeholder élégant et identifiable est utilisé.
@@ -70,10 +71,12 @@ démonstration clairement marquées prennent le relais en attendant).
 
 **Décisions métier à trancher**
 
-7. **Statut fiscal des produits.** Au Canada, la majorité des produits d'épicerie de base est
-   détaxée (TPS/TVQ à 0 %), mais les collations, boissons et certains produits préparés sont
-   taxables. Le modèle de données prévoit un champ `tax_class` par produit ; le classement de chaque
-   ligne doit être validé avec un comptable.
+7. **Statut fiscal des produits.** _Reporté à la demande d'Atlantique Export : aucune taxe n'est
+   calculée au MVP._ Le champ `tax_class` reste dans le schéma mais n'est pas exploité. Au Canada,
+   la majorité des produits d'épicerie de base est détaxée (TPS/TVQ à 0 %), mais les collations,
+   boissons et certains produits préparés sont taxables. ⚠️ Dès que l'entreprise est inscrite aux
+   fichiers de la TPS et de la TVQ, la taxe doit apparaître sur la facture : ce point devra être
+   repris avec un comptable avant la première vente réelle.
 8. **Certifications et permis** : import de denrées alimentaires (ACIA/MAPAQ), chaîne du froid pour
    les produits surgelés, licence SFC. Cela conditionne ce qui peut être expédié hors Montréal.
 9. **Allégations santé** : aucune allégation médicale ne sera affichée sur les poudres naturelles

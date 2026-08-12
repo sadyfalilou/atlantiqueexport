@@ -8,6 +8,21 @@ Une fonctionnalité n'est cochée que si elle a été exécutée, jamais sur la 
 
 Légende : ✅ terminé · 🚧 en cours · ⬜ à faire
 
+## Décisions de cadrage (11 août 2026)
+
+Trois arbitrages demandés par Atlantique Export, qui réduisent le périmètre du MVP :
+
+1. **Stripe est reporté.** Aucun paiement par carte au lancement. Le MVP s'appuie sur le
+   **virement Interac** et le paiement au ramassage. L'intégration Stripe reste conçue dans
+   l'architecture et passe en phase 2 ; c'est le blocage le plus lourd qui disparaît, puisqu'il
+   n'y a plus de compte marchand à faire activer avant la mise en ligne.
+2. **Le calcul des taxes est reporté.** Pas de TPS/TVQ calculée automatiquement pour l'instant.
+   Le champ `tax_class` reste dans le schéma mais n'est pas exploité. ⚠️ À revoir impérativement
+   avant de vendre réellement : dès que l'entreprise est inscrite aux fichiers de la TPS et de la
+   TVQ, la taxe doit figurer sur la facture. C'est une obligation légale, pas une option.
+3. **Livraison au Canada uniquement.** Aucune expédition internationale. Les zones, les adresses
+   et les provinces se limitent au Canada.
+
 ---
 
 ## Lot 0 — Fondations ✅
@@ -84,11 +99,14 @@ Légende : ✅ terminé · 🚧 en cours · ⬜ à faire
 ## Lot 8 — Paiement et commandes ⬜
 
 - Tunnel de commande en une page, quatre sections, validation Zod partagée
-- Stripe : PaymentIntent calculé côté serveur, Apple Pay / Google Pay, webhook signé et idempotent
-- Interac : commande en attente, instructions à l'écran et par courriel, validation administrateur
+- **Interac** : commande en attente, instructions à l'écran et par courriel, validation manuelle
+  par un administrateur, journalisée dans le journal d'audit
+- **Paiement au ramassage** pour les commandes récupérées sur place
 - Machine à états des commandes avec journal d'événements
-- Réservation de stock à la commande, libération à l'annulation ou à l'expiration
-- **Vérification** : webhooks rejoués via la CLI Stripe, test de double soumission
+- Réservation de stock à la commande, avec expiration et libération automatique si le virement
+  n'arrive pas dans le délai imparti
+- ~~Stripe, Apple Pay, Google Pay~~ → reporté en phase 2 (voir les décisions de cadrage)
+- **Vérification** : test de double soumission, expiration d'une réservation non payée
 
 ## Lot 9 — Administration ⬜
 
