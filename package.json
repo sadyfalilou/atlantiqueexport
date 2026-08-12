@@ -19,7 +19,8 @@
     "check": "npm run lint && npm run typecheck && npm run test",
     "smoke:stock": "node scripts/smoke-stock.mjs",
     "smoke:security": "node scripts/smoke-security.mjs",
-    "seed:sonagoo": "node scripts/seed-sonagoo.mjs"
+    "seed:sonagoo": "node scripts/seed-sonagoo.mjs",
+    "brand:build": "node scripts/build-brand-assets.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
@@ -52,6 +53,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "jsdom": "^30.0.1",
+    "pngjs": "^7.0.0",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",

@@ -24,22 +24,30 @@ Tous les ratios de contraste indiqués ont été **calculés**, pas estimés. La
 
 ### Vert forêt — navigation, titres, confiance
 
+**`forest-800` est le vert exact du logo**, relevé sur le fichier fourni par Atlantique Export
+(`#145130`, couleur dominante à 84 000 pixels). Avec du blanc il donne 9,34:1 : la barre de
+navigation porte donc la couleur de la marque sans le moindre compromis de lisibilité. Les autres
+degrés en dérivent.
+
 | Jeton | Valeur | Contraste | Usage |
 | --- | --- | --- | --- |
-| `forest-900` | `#0F2E22` | 13,85:1 sur crème (AAA) | Texte principal, titres |
-| `forest-800` | `#14472F` | 10,07:1 sur crème (AAA) | Barre de navigation, pied de page |
-| `forest-700` | `#1B5E3F` | — | Survols, bordures actives |
+| `forest-900` | `#0B3A22` | 12,09:1 sur crème (AAA) | Texte principal, titres, pied de page |
+| `forest-800` | `#145130` | 8,83:1 sur crème · 9,34:1 avec blanc | **Vert du logo** — barre de navigation |
+| `forest-700` | `#1A6A3E` | — | Survols, bordures actives |
 | `forest-600` | `#2D7A54` | — | Illustrations, icônes décoratives |
 | `forest-50` | `#EAF2ED` | — | Fond de badge « confiance » |
 
 ### Orange mangue — appels à l'action et promotions
 
-⚠️ **Règle stricte, issue du calcul.** Le blanc sur `mango-600` ne donne que **2,99:1** et
-**échoue**. Le texte blanc n'est autorisé que sur `mango-700` ou plus foncé.
+**`mango-500` est l'orange exact du logo** (`#F39100`).
+
+⚠️ **Règle stricte, issue du calcul.** Le blanc sur l'orange de la marque ne donne que **2,37:1**
+et échoue nettement. L'orange du logo ne porte donc **que du texte vert foncé**. Pour un bouton à
+texte blanc, il faut descendre jusqu'à `mango-700`.
 
 | Jeton | Valeur | Contraste | Usage autorisé |
 | --- | --- | --- | --- |
-| `mango-500` | `#F2891C` | 5,84:1 avec `forest-900` | Badges, pastilles — **texte foncé obligatoire** |
+| `mango-500` | `#F39100` | 5,39:1 avec `forest-900` | **Orange du logo** — badges, pastilles, **texte foncé obligatoire** |
 | `mango-600` | `#E8760D` | — | Décoratif uniquement, **jamais de texte blanc dessus** |
 | `mango-700` | `#C2540A` | 4,60:1 avec blanc (AA) | **Fond des boutons d'action principaux** |
 | `mango-800` | `#A8460A` | 5,60:1 sur crème (AA) | Texte orange, liens promotionnels, survol de bouton |
@@ -191,6 +199,36 @@ avis tant qu'aucun avis authentique n'existe.
 
 Transitions de 150 à 250 ms, courbe `ease-out`. Seuls la couleur, l'ombre, l'opacité et la
 translation sont animés. `prefers-reduced-motion` désactive tout mouvement non essentiel.
+
+## 3.4 bis Le logo
+
+L'original est versionné dans `assets/brand/logo-original.jpg`. Les déclinaisons sont **fabriquées
+par script** (`npm run brand:build`) et ne se retouchent jamais à la main : le jour où le logo
+change, une commande régénère tout et le découpage reste vérifiable.
+
+| Fichier | Contenu | Où |
+| --- | --- | --- |
+| `logo-wordmark.png` | ATLANTIQUE EXPORT + emblème, sans la signature | Tiroir mobile |
+| `logo-wordmark-reverse.png` | Idem, vert foncé remplacé par du crème | **En-tête** |
+| `logo-full.png` | Logo complet avec la signature | Fonds clairs |
+| `logo-full-reverse.png` | Idem, en version claire | **Pied de page** |
+| `logo-mark.png` | L'emblème seul, carré | Favicone, icône d'application, bannière d'accueil |
+| `og-image.png` | 1200 × 630, logo centré sur crème | Partage sur les réseaux |
+
+Trois décisions à connaître avant d'y toucher.
+
+**La déclinaison claire est indispensable.** Le mot EXPORT est en vert foncé ; posé tel quel sur la
+barre de navigation, il disparaîtrait purement et simplement. Le script remplace donc ce vert par
+du crème, en conservant l'orange et le feuillage blanc du baobab.
+
+**Le fond blanc devient transparent par remplissage depuis les bords**, et non par un simple « tout
+blanc devient transparent » : le feuillage du baobab est blanc lui aussi, et aurait été troué.
+
+**L'emblème est détouré par un masque elliptique.** Il est encastré dans le O d'EXPORT et frôle la
+signature ; un découpage rectangulaire happait le T d'ATLANTIQUE et un bout de texte.
+
+La signature « Des goûts qui voyagent, une hospitalité qui reste » n'apparaît pas dans l'en-tête :
+à cette hauteur elle serait illisible. Elle est réservée au pied de page et aux grands formats.
 
 ## 3.5 Photographie et motifs
 

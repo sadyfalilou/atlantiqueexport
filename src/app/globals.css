@@ -14,18 +14,24 @@
   --color-cream-200: #efe6d8;
   --color-cream-300: #e3d7c4;
 
-  /* --- Vert forêt : navigation, titres, confiance ----------------------- */
+  /* --- Vert forêt : navigation, titres, confiance -----------------------
+     forest-800 est le vert EXACT du logo (#145130), relevé sur le fichier
+     fourni par Atlantique Export. Il donne 9,34:1 avec du blanc : la barre
+     de navigation reprend donc la couleur de la marque sans compromis de
+     lisibilité. Les autres degrés en dérivent. */
   --color-forest-50: #eaf2ed;
   --color-forest-600: #2d7a54;
-  --color-forest-700: #1b5e3f;
-  --color-forest-800: #14472f; /* 10,07:1 sur crème */
-  --color-forest-900: #0f2e22; /* 13,85:1 sur crème */
+  --color-forest-700: #1a6a3e;
+  --color-forest-800: #145130; /* couleur du logo — 8,83:1 sur crème */
+  --color-forest-900: #0b3a22; /* 12,09:1 sur crème */
 
   /* --- Orange mangue : appels à l'action -------------------------------
-     ATTENTION : le blanc sur mango-600 ne donne que 2,99:1 et échoue.
-     Texte blanc autorisé uniquement sur mango-700 et plus foncé. */
+     mango-500 est l'orange EXACT du logo (#F39100).
+     ATTENTION : le blanc dessus ne donne que 2,37:1 et échoue nettement.
+     L'orange de la marque ne porte donc QUE du texte vert foncé (5,88:1).
+     Pour un bouton à texte blanc, il faut descendre à mango-700. */
   --color-mango-50: #fdf0e2;
-  --color-mango-500: #f2891c; /* badges — texte forest-900 (5,84:1) */
+  --color-mango-500: #f39100; /* couleur du logo — texte forest-900 obligatoire */
   --color-mango-600: #e8760d; /* décoratif seulement */
   --color-mango-700: #c2540a; /* CTA — texte blanc (4,60:1) */
   --color-mango-800: #a8460a; /* texte orange sur crème (5,60:1) */

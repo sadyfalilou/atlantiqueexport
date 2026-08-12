@@ -2,6 +2,7 @@ import { Search, ShoppingBag, User } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Container } from "@/components/ui/layout-primitives";
+import { Logo } from "@/components/brand/logo";
 import { MegaMenu } from "@/components/layout/mega-menu";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
@@ -31,7 +32,10 @@ export async function Header({ locale }: { locale: Locale }) {
 
       <div className="bg-forest-800 text-cream-50">
         <Container>
-          <div className="flex h-16 items-center gap-2">
+          {/* La barre est plus haute sur grand écran : le logo est un
+              lockup large, et sous 50 px la ligne « ATLANTIQUE » devient
+              illisible. */}
+          <div className="flex h-16 items-center gap-2 lg:h-20">
             <MobileNav
               categories={categories}
               locale={locale}
@@ -43,16 +47,14 @@ export async function Header({ locale }: { locale: Locale }) {
               }}
             />
 
-            <Link
-              href="/"
-              className="flex shrink-0 flex-col leading-none lg:mr-4"
-            >
-              <span className="font-display text-lg font-semibold tracking-tight lg:text-xl">
-                Atlantique Export
-              </span>
-              <span className="hidden text-[0.625rem] tracking-wide text-cream-200 sm:block">
-                {t("brand.tagline")}
-              </span>
+            <Link href="/" className="flex shrink-0 items-center lg:mr-4">
+              <Logo
+                variant="wordmark"
+                onDark
+                priority
+                className="h-10 sm:h-11 lg:h-14"
+                alt={`Atlantique Export — ${t("nav.home")}`}
+              />
             </Link>
 
             <nav

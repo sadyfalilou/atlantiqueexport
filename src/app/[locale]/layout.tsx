@@ -46,6 +46,14 @@ export async function generateMetadata({
       siteName: "Atlantique Export",
       locale: locale === "en" ? "en_CA" : "fr_CA",
       type: "website",
+      images: [
+        {
+          url: "/brand/og-image.png",
+          width: 1200,
+          height: 630,
+          alt: "Atlantique Export",
+        },
+      ],
     },
     alternates: {
       canonical: `/${locale}`,

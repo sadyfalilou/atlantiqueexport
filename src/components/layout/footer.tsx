@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Container } from "@/components/ui/layout-primitives";
 import { SocialPhotoIcon } from "@/components/shared/social-icon";
+import { Logo } from "@/components/brand/logo";
 import { getMegaMenuCategories } from "@/lib/catalog/queries";
 import type { Locale } from "@/lib/types";
 
@@ -37,10 +38,8 @@ export async function Footer({ locale }: { locale: Locale }) {
       <Container>
         <div className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
-            <p className="font-display text-xl font-semibold text-cream-50">
-              Atlantique Export
-            </p>
-            <p className="mt-2 text-sm text-cream-200">{t("brand.tagline")}</p>
+            <Logo variant="full" onDark className="h-20" />
+            <p className="mt-3 text-sm text-cream-200">{t("brand.tagline")}</p>
             <p className="mt-4 text-sm text-cream-200">
               {t("footer.location")}
             </p>

@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Container } from "@/components/ui/layout-primitives";
 import { buttonVariants } from "@/components/ui/button";
+import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 
 export async function Hero() {
@@ -70,15 +71,11 @@ export async function Hero() {
             </ul>
           </div>
 
-          {/* Emplacement de la photographie principale. */}
+          {/* Emplacement de la photographie principale, occupé par l'emblème
+              en attendant une vraie image. */}
           <div className="relative hidden aspect-[4/3] overflow-hidden rounded-xl border border-forest-700 bg-forest-900 lg:block">
-            <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-              <span
-                aria-hidden="true"
-                className="font-display text-6xl font-semibold text-cream-50/15"
-              >
-                AE
-              </span>
+            <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+              <Logo variant="mark" className="h-32 opacity-90" alt="" />
               <span className="h-px w-16 bg-gold-400" aria-hidden="true" />
               <span className="text-xs tracking-wide text-cream-200 uppercase">
                 {t("hero.eyebrow")}

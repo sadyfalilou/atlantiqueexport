@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { Logo } from "@/components/brand/logo";
 import type { Category, Locale } from "@/lib/types";
 
 interface NavLink {
@@ -69,9 +70,9 @@ export function MobileNav({
             aria-label={labels.categories}
           >
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
-              <span className="font-display text-lg font-semibold text-forest-900">
-                Atlantique Export
-              </span>
+              {/* Fond crème : c'est la déclinaison d'origine qui convient ici. */}
+              <Logo variant="wordmark" className="h-8" />
+
               <button
                 type="button"
                 onClick={() => setOpen(false)}
