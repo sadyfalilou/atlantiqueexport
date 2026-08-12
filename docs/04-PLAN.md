@@ -43,14 +43,26 @@ Trois arbitrages demandés par Atlantique Export, qui réduisent le périmètre 
 - ✅ Page d'accueil complète avec toutes les sections demandées
 - **Vérification** : lint, typecheck, build de production, rendu 320 px → 1280 px
 
-## Lot 2 — Base de données et données de démonstration ⬜
+## Lot 2 — Base de données et données de démonstration 🚧
 
-- Migrations Supabase : catalogue, stock, panier, commandes, logistique, arrivages, contenu, rôles
-- Politiques RLS sur chaque table, refus par défaut
-- Fonctions SQL : `reserve_stock`, `release_stock`, `has_staff_role`, génération du numéro de commande
-- Seed du catalogue de départ (poudres, cocktails, céréales, collations, thés, plats, fruits) avec
-  **prix de démonstration explicitement marqués**
-- Types TypeScript générés depuis le schéma
+Projet Supabase créé en région `ca-central-1`, avec « Automatically expose new tables »
+**désactivé** et l'activation automatique de RLS **activée**. Conséquence assumée : aucune table
+n'est lisible tant qu'un `GRANT` explicite ne l'autorise pas, table par table.
+
+- ✅ Structure `supabase/` et pipeline de migrations, vérifié contre la base réelle
+- ✅ Migration `foundations` : 14 types énumérés, `touch_updated_at`, `has_staff_role`,
+  `is_staff`, `staff_roles`, `profiles` et création automatique du profil à l'inscription
+- ✅ Migration `catalog` : catégories, marques, fournisseurs, produits, images, variantes,
+  options de préparation, produits associés — avec RLS et privilèges
+- ✅ Le prix de gros (`wholesale_price_cents`) est exclu des privilèges accordés au public :
+  il est refusé par PostgreSQL (erreur 42501), pas seulement masqué par l'interface
+- ⬜ Stock : lots, niveaux, mouvements, `reserve_stock` / `release_stock`
+- ⬜ Panier et commandes, paiements, journal d'événements
+- ⬜ Logistique : points de ramassage, zones, créneaux, jours bloqués
+- ⬜ Arrivages, réservations, alertes de retour en stock
+- ⬜ Contenu : recettes, pages, infolettre, avis
+- ⬜ Seed du catalogue de départ, avec **prix de démonstration explicitement marqués**
+- ⬜ Types TypeScript générés depuis le schéma, en remplacement de `src/lib/types.ts`
 - **Vérification** : migrations rejouables à neuf, tests SQL sur la réservation concurrente
 
 ## Lot 3 — Catalogue, recherche et filtres ⬜
