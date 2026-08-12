@@ -87,6 +87,17 @@ démonstration clairement marquées prennent le relais en attendant).
    les produits surgelés, licence SFC. Cela conditionne ce qui peut être expédié hors Montréal.
 9. **Allégations santé** : aucune allégation médicale ne sera affichée sur les poudres naturelles
    (bissap, moringa, bouye…) sans validation réglementaire. Les descriptions resteront culinaires.
+   _Constaté à l'import du catalogue Sonagoo : ses descriptions contiennent « régule le sucre »,
+   « renforce l'immunité », « vertus antiseptiques », « stimule l'énergie ». Toutes ont été
+   réécrites en termes culinaires. Ne pas les réintroduire en recopiant le catalogue fournisseur._
+
+10. **Marque déposée dans le catalogue fournisseur.** Sonagoo commercialise un « Coco Nutella » et
+    décrit son ngalakh avec du Nutella, marque déposée de Ferrero. Le produit a été saisi sous
+    « Coco chocolat-noisette ». Le nom commercial définitif doit être arrêté avec Sonagoo avant
+    toute étiquette ou mise en vente au Canada.
+
+11. **Nom de produit incertain.** Le catalogue intitule un article « Poudre de thiép » tout en le
+    décrivant comme du souchet. Saisi sous « Poudre de souchet », à confirmer.
 
 ## 1.5 Hypothèses de travail
 

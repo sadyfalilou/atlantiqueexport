@@ -18,7 +18,8 @@
     "format:check": "prettier --check .",
     "check": "npm run lint && npm run typecheck && npm run test",
     "smoke:stock": "node scripts/smoke-stock.mjs",
-    "smoke:security": "node scripts/smoke-security.mjs"
+    "smoke:security": "node scripts/smoke-security.mjs",
+    "seed:sonagoo": "node scripts/seed-sonagoo.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",

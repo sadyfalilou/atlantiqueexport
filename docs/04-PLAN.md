@@ -63,7 +63,13 @@ n'est lisible tant qu'un `GRANT` explicite ne l'autorise pas, table par table.
 - ✅ Arrivages, réservations, alertes de retour en stock
 - ✅ Contenu : recettes, pages, infolettre, avis modérés, comptes professionnels, journal d'audit
 - ✅ Privilèges de `service_role` (voir l'écueil ci-dessous)
-- ⬜ Seed du catalogue de départ, avec **prix de démonstration explicitement marqués**
+- ✅ Import du catalogue Sonagoo : 42 produits, 83 formats, marque et fournisseur.
+  **Aucun prix repris du catalogue FCFA** : les variantes portent `price_is_provisional`,
+  les produits restent non publiés, et un déclencheur en base refuse de publier un produit
+  dont une variante attend son prix. Le fichier `docs/prix-a-definir.csv` liste les 83 formats
+  à chiffrer en dollars canadiens.
+- ⬜ Import des prix de vente canadiens depuis `docs/prix-a-definir.csv`, puis publication
+- ⬜ Reste du catalogue : poissons, fruits et légumes, surgelés (autres fournisseurs)
 - ⬜ Types TypeScript générés depuis le schéma, en remplacement de `src/lib/types.ts`
 - ⬜ Clients Supabase dans `src/lib/supabase/` et bascule de `src/lib/catalog/`
 
