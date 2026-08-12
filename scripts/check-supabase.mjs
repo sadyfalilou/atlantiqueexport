@@ -138,52 +138,61 @@ if (failed) {
 
 console.log("\nAppels au projet Supabase\n");
 
-const rest = await request(`${url}/rest/v1/`, { apikey: publishableKey });
-if (rest.status === 200) {
-  ok("API REST joignable avec la clé publique");
-} else if (rest.status === 401) {
-  ko("API REST : clé publique refusée (401). Vérifiez qu'elle appartient");
-  info("bien à ce projet.");
+// La clé publique se valide sur /auth/v1/settings, pas sur /rest/v1/ :
+// la racine de l'API REST sert le schéma OpenAPI et Supabase la réserve aux
+// clés secrètes (« Only secret API keys can be used for this endpoint »).
+// Vérifié aussi en sens inverse : une clé publique erronée y reçoit bien un
+// 401, le test discrimine donc réellement.
+const publicCheck = await request(`${url}/auth/v1/settings`, {
+  apikey: publishableKey,
+});
+if (publicCheck.status === 200) {
+  ok("Clé publique valide (projet joignable depuis le navigateur)");
+} else if (publicCheck.status === 401) {
+  ko("Clé publique refusée (401) : coquille, ou clé appartenant à un autre");
+  info("projet. Reprenez-la dans Settings → API Keys.");
   failed = true;
-} else if (rest.status === 0) {
-  ko(`API REST injoignable : ${rest.error}`);
-  info("Projet en pause après une semaine d'inactivité ? Réveillez-le depuis");
-  info("le tableau de bord.");
+} else if (publicCheck.status === 0) {
+  ko(`Projet injoignable : ${publicCheck.error}`);
+  info("Projet mis en pause après une semaine d'inactivité ? Réveillez-le");
+  info("depuis le tableau de bord.");
   failed = true;
 } else {
-  warn(`API REST : réponse inattendue (HTTP ${rest.status})`);
+  warn(`Clé publique : réponse inattendue (HTTP ${publicCheck.status})`);
 }
 
-const auth = await request(`${url}/auth/v1/health`, { apikey: publishableKey });
-if (auth.status === 200) {
-  ok("Service d'authentification en service");
-} else if (auth.status !== 0) {
-  warn(`Authentification : HTTP ${auth.status}`);
-}
-
-const admin = await request(`${url}/rest/v1/`, {
+const secretCheck = await request(`${url}/rest/v1/`, {
   apikey: secretKey,
   Authorization: `Bearer ${secretKey}`,
 });
-if (admin.status === 200) {
-  ok("Clé secrète valide (accès serveur confirmé)");
-} else if (admin.status === 401) {
-  ko("Clé secrète refusée (401).");
+if (secretCheck.status === 200) {
+  ok("Clé secrète valide (API REST accessible côté serveur)");
+} else if (secretCheck.status === 401) {
+  ko("Clé secrète refusée (401). Reprenez-la dans Settings → API Keys.");
   failed = true;
-} else if (admin.status !== 0) {
-  warn(`Clé secrète : HTTP ${admin.status}`);
+} else if (secretCheck.status !== 0) {
+  warn(`Clé secrète : HTTP ${secretCheck.status}`);
 }
 
 /* --- 5. Optionnel : la chaîne de connexion PostgreSQL ---------------------- */
 
 const dbUrl = process.env.SUPABASE_DB_URL?.trim();
-if (!dbUrl || dbUrl.includes("votre-projet") || dbUrl.includes("motdepasse")) {
+if (!dbUrl || dbUrl.includes("votreprojet") || dbUrl.includes("motdepasse")) {
   warn("SUPABASE_DB_URL n'est pas renseignée — nécessaire au lot 2 pour les");
-  info("migrations. Tableau de bord → « Connect » → « Direct connection ».");
+  info("migrations. Tableau de bord → « Connect » → « Session pooler ».");
 } else if (!dbUrl.startsWith("postgresql://")) {
   warn("SUPABASE_DB_URL ne ressemble pas à une chaîne PostgreSQL.");
+} else if (/@db\.[a-z0-9]+\.supabase\.co/.test(dbUrl)) {
+  // Constaté sur ce projet : l'hôte direct n'a qu'un enregistrement AAAA,
+  // donc il est injoignable depuis un réseau IPv4.
+  ko("SUPABASE_DB_URL utilise la connexion DIRECTE (db.xxx.supabase.co).");
+  info("Cet hôte n'existe qu'en IPv6 et sera injoignable sur un réseau IPv4.");
+  info("Prenez l'onglet « Session pooler » du bouton « Connect ».");
+  failed = true;
+} else if (dbUrl.includes(".pooler.supabase.com")) {
+  ok("Chaîne de connexion PostgreSQL renseignée (pooler, compatible IPv4)");
 } else {
-  ok("Chaîne de connexion PostgreSQL renseignée");
+  warn("Chaîne de connexion renseignée, hôte inhabituel.");
 }
 
 console.log(
