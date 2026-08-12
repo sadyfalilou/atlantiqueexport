@@ -58,6 +58,12 @@ démonstration clairement marquées prennent le relais en attendant).
 1. **Comptes de service** : Supabase (projet + clés), Resend (domaine `atlantiqueexport.com`
    vérifié), Vercel (offre Pro — l'offre gratuite interdit l'usage commercial), registrar du
    domaine. _Stripe est reporté en phase 2 : voir les décisions de cadrage du plan._
+
+   ⚠️ **Ces comptes sont propres à Atlantique Export et ne doivent pas être mutualisés avec
+   d'autres projets.** Chacun est créé sous une adresse courriel d'entreprise dédiée. Motif :
+   séparer la facturation, permettre de céder ou déléguer l'accès sans toucher aux autres
+   projets, et éviter qu'un incident sur un service (suspension, dépassement de quota) n'affecte
+   deux entreprises à la fois.
 2. **Prix de vente réels en dollars canadiens**, par produit et par format. Le catalogue fournisseur
    en FCFA ne sera pas converti automatiquement (voir §1.5).
 3. **Photographies produits**. En leur absence, un placeholder élégant et identifiable est utilisé.
