@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 export async function Hero() {
   const t = await getTranslations("home");
+  const tBrand = await getTranslations("brand");
 
   const trust = [
     { Icon: Leaf, label: t("trust.sourcing") },
@@ -71,15 +72,16 @@ export async function Hero() {
             </ul>
           </div>
 
-          {/* Emplacement de la photographie principale, occupé par l'emblème
-              en attendant une vraie image. */}
+          {/* Emplacement de la photographie principale. En attendant une
+              vraie image, le panneau porte l'emblème et la signature de la
+              marque — et non une répétition de l'accroche déjà lue à gauche. */}
           <div className="relative hidden aspect-[4/3] overflow-hidden rounded-xl border border-forest-700 bg-forest-900 lg:block">
-            <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-              <Logo variant="mark" className="h-32 opacity-90" alt="" />
-              <span className="h-px w-16 bg-gold-400" aria-hidden="true" />
-              <span className="text-xs tracking-wide text-cream-200 uppercase">
-                {t("hero.eyebrow")}
-              </span>
+            <div className="flex h-full flex-col items-center justify-center gap-6 px-10 text-center">
+              <Logo variant="mark" className="h-40" alt="" />
+              <span className="h-px w-20 bg-gold-400" aria-hidden="true" />
+              <p className="font-display text-lg leading-snug text-cream-100">
+                {tBrand("taglineSecondary")}
+              </p>
             </div>
           </div>
         </div>
