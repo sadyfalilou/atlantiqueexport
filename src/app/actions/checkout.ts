@@ -4,6 +4,7 @@ import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
 import { getCartId } from "@/lib/cart/cart";
 import { findZone, getLogistics, placeOrder } from "@/lib/checkout/checkout";
+import { queueEmail } from "@/lib/resend";
 
 /**
  * Passage de commande.
@@ -105,6 +106,47 @@ export async function placeOrderAction(
 
   if (!result.ok) {
     return { status: "error", message: result.message };
+  }
+
+  // Met les emails en queue (non-bloquant)
+  const methodLabel =
+    input.method === "pickup" ? "Ramassage" : input.method === "local_delivery" ? "Livraison locale" : "Expédition";
+
+  // Email de confirmation de commande
+  queueEmail({
+    type: "order_confirmation",
+    recipientEmail: input.email,
+    recipientName: input.fullName,
+    locale,
+    data: {
+      recipientName: input.fullName,
+      orderNumber: result.orderNumber,
+      orderDate: new Date().toLocaleDateString(locale === "fr" ? "fr-CA" : "en-CA"),
+      items: [], // TODO: fetch from cart
+      subtotal: "À confirmer",
+      shippingFee: "À confirmer",
+      total: (result.totalCents / 100).toFixed(2) + " $",
+      fulfillmentMethod: input.method,
+      fulfillmentDetails: methodLabel,
+    },
+  }).catch((err) => console.error("Erreur lors de la mise en queue de l'email:", err));
+
+  // Email Interac si paiement par virement
+  if (input.method !== "pickup" || true) {
+    // Temporairement mettre tous les paiements en Interac pour le MVP
+    queueEmail({
+      type: "interac_pending",
+      recipientEmail: input.email,
+      recipientName: input.fullName,
+      locale,
+      data: {
+        recipientName: input.fullName,
+        orderNumber: result.orderNumber,
+        totalAmount: (result.totalCents / 100).toFixed(2) + " $",
+        recipientEmail: process.env.INTERAC_RECIPIENT_EMAIL || "adresse à confirmer",
+        securityAnswer: process.env.INTERAC_SECURITY_ANSWER || null,
+      },
+    }).catch((err) => console.error("Erreur lors de la mise en queue de l'email Interac:", err));
   }
 
   redirect({

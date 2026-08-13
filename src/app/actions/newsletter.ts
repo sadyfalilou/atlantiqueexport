@@ -1,5 +1,7 @@
 "use server";
 
+import { createAdminClient } from "@/lib/supabase/admin";
+import { queueEmail } from "@/lib/resend";
 import { newsletterSchema } from "@/lib/validation/newsletter";
 
 /**
@@ -7,7 +9,7 @@ import { newsletterSchema } from "@/lib/validation/newsletter";
  * statut, le composant choisit le message dans la langue courante.
  */
 export type NewsletterState = {
-  status: "idle" | "invalid" | "accepted";
+  status: "idle" | "invalid" | "accepted" | "error";
 };
 
 export async function subscribeToNewsletter(
@@ -23,8 +25,46 @@ export async function subscribeToNewsletter(
     return { status: "invalid" };
   }
 
-  // La persistance arrive au lot 2, avec la table `newsletter_subscribers`
-  // et l'envoi de confirmation via Resend. Tant qu'elle n'existe pas, on ne
-  // prétend pas avoir enregistré l'inscription : le message le dit clairement.
-  return { status: "accepted" };
+  const db = createAdminClient();
+  const { email, locale } = parsed.data;
+
+  // Vérifie si l'adresse est déjà inscrite
+  const { data: existing } = await db
+    .from("newsletter_subscribers")
+    .select("id")
+    .eq("email", email)
+    .single();
+
+  if (existing) {
+    // Déjà inscrit, accepter silencieusement (évite les énumérations)
+    return { status: "accepted" };
+  }
+
+  try {
+    // Enregistre l'abonnement
+    const { error: insertError } = await db.from("newsletter_subscribers").insert({
+      email,
+      locale,
+    });
+
+    if (insertError) {
+      console.error("Erreur lors de l'inscription:", insertError);
+      return { status: "error" };
+    }
+
+    // Met l'email de confirmation en queue
+    await queueEmail({
+      type: "welcome",
+      recipientEmail: email,
+      locale,
+      data: {
+        recipientName: email.split("@")[0], // Utilise la partie avant @ comme nom
+      },
+    });
+
+    return { status: "accepted" };
+  } catch (err) {
+    console.error("Erreur lors de la souscription:", err);
+    return { status: "error" };
+  }
 }
