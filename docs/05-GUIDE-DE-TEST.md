@@ -31,14 +31,19 @@ C'est le point le plus important avant de commencer : la plupart des liens mène
 | Page d'accueil complète | Recherche |
 | Boutique avec filtres et tri | Paiement en ligne par carte |
 | Pages de catégorie | **Création de compte et connexion** (lot 7) |
-| Fiches produit avec choix du format | **Espace administrateur** (lot 9) |
+| Fiches produit avec choix du format | Gestion des produits et des prix en ligne |
 | Panier : ajout, quantités, retrait | Recettes, arrivages, pages institutionnelles |
-| **Commande complète avec Interac** | Courriels de confirmation |
+| Commande complète avec Interac | Courriels de confirmation |
+| **Administration : commandes, encaissements, stocks** | |
 | Nouveautés et Promotions | |
 | Bascule français / anglais, méga-menu, navigation mobile | |
 
-**Il n'y a donc pas encore de connexion.** L'icône de personnage dans l'en-tête mène à la page
-« pas encore en ligne ». L'authentification arrive au lot 7, l'administration au lot 9.
+**Il n'y a pas encore de compte CLIENT.** L'icône de personnage dans l'en-tête mène à la page
+« pas encore en ligne » ; commander se fait sans compte, avec un suivi par lien.
+
+**L'administration, elle, existe** : <http://localhost:3000/admin>. Pour y accéder, créez d'abord
+votre utilisateur dans Supabase — Authentication → Users → Add user — puis lancez
+`npm run grant:admin -- votre@courriel.ca`.
 
 **Les produits affichés viennent de votre base Supabase** : les 42 références Sonagoo plus la
 pulpe de madd. En revanche, **les prix et les stocks sont fictifs** — un bandeau le rappelle en
@@ -143,14 +148,23 @@ Deux vérifications qui comptent :
 - [ ] Essayez un autre numéro de commande, par exemple `AE-2026-00001` : vous obtenez une page
       introuvable. Connaître le numéro ne suffit pas à voir la commande d'autrui
 
-### 3.8 Liens non construits
+### 3.8 Administration
+
+- [ ] Ouvrez <http://localhost:3000/admin> sans être connecté : vous êtes renvoyé vers la
+      page de connexion
+- [ ] Connectez-vous : le tableau de bord signale les virements à valider
+- [ ] Ouvrez une commande en attente, puis « J'ai reçu le virement »
+- [ ] La commande passe en « Confirmée » et « Encaissé »
+- [ ] Le tableau de bord met à jour le montant encaissé
+
+### 3.9 Liens non construits
 
 - [ ] Cliquez sur l'icône de compte, ou sur « Recettes » : vous arrivez sur « Cette page n'est
       pas encore en ligne »
 - [ ] L'en-tête et le pied de page restent affichés — ce n'est pas la page d'erreur brute du serveur
 - [ ] Le bouton « Retour à l'accueil » fonctionne
 
-### 3.9 Infolettre
+### 3.10 Infolettre
 
 - [ ] Entrez une adresse invalide, par exemple `abc` : un message explique quoi corriger
 - [ ] Entrez une adresse valide : le message précise que l'infolettre n'est pas encore active et
@@ -159,7 +173,7 @@ Deux vérifications qui comptent :
 **Rien n'est enregistré pour l'instant, et le message le dit.** L'enregistrement réel viendra avec
 les courriels transactionnels.
 
-### 3.10 Accessibilité
+### 3.11 Accessibilité
 
 - [ ] Appuyez sur `Tab` dès l'ouverture de la page : un lien « Aller au contenu principal » apparaît
 - [ ] Continuez au `Tab` : chaque élément actif est entouré d'un anneau vert bien visible

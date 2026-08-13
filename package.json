@@ -22,7 +22,8 @@
     "seed:sonagoo": "node scripts/seed-sonagoo.mjs",
     "brand:build": "node scripts/build-brand-assets.mjs",
     "seed:logistics": "node scripts/seed-logistics.mjs",
-    "smoke:order": "node scripts/smoke-order.mjs"
+    "smoke:order": "node scripts/smoke-order.mjs",
+    "grant:admin": "node scripts/grant-admin.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",

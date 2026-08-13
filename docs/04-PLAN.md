@@ -222,14 +222,48 @@ Elle s'affiche telle quelle au client comme destination de son virement. Tant qu
 la page affiche « adresse à confirmer » — ce qui vaut infiniment mieux qu'une adresse d'exemple
 vers laquelle quelqu'un enverrait de l'argent.
 
-## Lot 9 — Administration ⬜
+## Lot 9 — Administration 🚧
 
-- Layout `/admin` protégé côté serveur, rôles et journal d'audit
-- Tableau de bord : chiffre d'affaires, commandes du jour, paiements en attente, préparations,
-  ramassages, livraisons, stocks faibles, expirations proches, prochains arrivages, meilleures ventes
-- Gestion : produits, variantes, catégories, marques, fournisseurs, images
-- Gestion : commandes, paiements, validation Interac, remboursements
-- **Vérification** : test d'accès refusé pour chaque rôle non autorisé
+- ✅ Connexion par Supabase Auth, protection **côté serveur** dans le layout `(protege)` :
+  toute page passe par le garde avant qu'un octet de contenu ne soit rendu
+- ✅ Tableau de bord : virements à valider, commandes à préparer, ramassages et livraisons
+  du jour, encaissé, stocks faibles
+- ✅ Liste des commandes, filtres « à encaisser » et « à préparer »
+- ✅ Fiche commande : contenu, client, réception, avancement du statut
+- ✅ **Validation d'un virement Interac**, réservée aux rôles `super_admin` et `manager`,
+  journalisée dans `admin_audit_log` avec l'identité de son auteur
+- ✅ Consultation des stocks
+- ⬜ Gestion des produits, prix, catégories et marques
+- ⬜ Mouvements de stock (réception, ajustement, perte)
+- ⬜ Arrivages, comptes professionnels, promotions, rapports
+
+**Trois précautions**
+
+1. **Les actions revérifient le rôle.** Le garde du layout protège l'affichage ; il ne protège
+   pas les Server Actions, appelables directement. Sans ce second contrôle, connaître
+   l'identifiant d'une commande suffirait à la déclarer payée.
+2. **Le message d'erreur de connexion est identique** pour un compte inexistant et un mot de
+   passe erroné — les distinguer révélerait quelles adresses existent.
+3. **Le rôle est relu en base à chaque requête.** Retirer un accès prend effet aussitôt, sans
+   attendre l'expiration d'une session.
+
+**Vérifié** — avec des comptes temporaires, créés puis supprimés :
+
+- accès sans session : `/admin`, `/admin/commandes` et `/admin/stocks` redirigent vers la
+  connexion
+- compte **sans rôle** : refusé avec « Ce compte n'a pas accès à l'administration »
+- compte `super_admin` : tableau de bord affichant le virement en attente
+- validation d'un encaissement : commande passée en `confirmed`/`paid`, ligne de paiement
+  créée avec l'identité du valideur, entrée au journal d'audit, historique de statut complété
+
+### Premier accès
+
+Le script ne crée aucun compte et ne manipule aucun mot de passe. Créez l'utilisateur dans
+Supabase — Authentication → Users → Add user — puis accordez-lui son rôle :
+
+```bash
+npm run grant:admin -- votre@courriel.ca
+```
 
 ## Lot 10 — Stocks ⬜
 
