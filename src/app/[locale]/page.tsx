@@ -13,7 +13,6 @@ import {
   SocialSection,
 } from "@/components/home/sections";
 import { Newsletter } from "@/components/home/newsletter";
-import { IS_DEMO_DATA } from "@/data/demo-catalog";
 import {
   getColdProducts,
   getFeaturedProducts,
@@ -21,8 +20,16 @@ import {
   getNaturalProducts,
   getNewProducts,
   getPromotedProducts,
+  getSiteSettings,
 } from "@/lib/catalog/queries";
 import type { Locale } from "@/lib/types";
+
+/**
+ * La page est prérendue, puis régénérée toutes les cinq minutes. Sans cela,
+ * le catalogue serait figé au moment de la compilation et une modification de
+ * prix ou de stock n'apparaîtrait qu'au redéploiement suivant.
+ */
+export const revalidate = 300;
 
 export default async function HomePage({
   params,
@@ -36,14 +43,16 @@ export default async function HomePage({
   const tCommon = await getTranslations("common");
   const typedLocale = locale as Locale;
 
-  const [featured, fresh, cold, produce, natural, deals] = await Promise.all([
-    getFeaturedProducts(8),
-    getNewProducts(4),
-    getColdProducts(4),
-    getFreshProducts(4),
-    getNaturalProducts(4),
-    getPromotedProducts(4),
-  ]);
+  const [featured, fresh, cold, produce, natural, deals, settings] =
+    await Promise.all([
+      getFeaturedProducts(8),
+      getNewProducts(4),
+      getColdProducts(4),
+      getFreshProducts(4),
+      getNaturalProducts(4),
+      getPromotedProducts(4),
+      getSiteSettings(),
+    ]);
 
   const organizationJsonLd = {
     "@context": "https://schema.org",
@@ -67,7 +76,10 @@ export default async function HomePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
 
-      {IS_DEMO_DATA ? (
+      {/* Le bandeau est piloté par le réglage en base : il disparaîtra de
+          lui-même le jour où les vrais prix seront saisis et où
+          `allow_provisional_prices` repassera à faux. */}
+      {settings.allowProvisionalPrices ? (
         <div className="bg-mango-50 text-forest-900">
           <Container>
             <p className="flex items-start gap-2 py-2.5 text-sm">

@@ -1,5 +1,5 @@
 /**
- * Importe le catalogue Sonagoo dans Supabase.
+ * Importe le catalogue dans Supabase.
  *
  *   npm run seed:sonagoo
  *
@@ -7,22 +7,28 @@
  * ou `sku`. Relancer le script après avoir corrigé le fichier JSON met la
  * base à jour sans rien dupliquer.
  *
- * ⚠️ AUCUN PRIX N'EST IMPORTÉ. Le catalogue fournisseur est libellé en FCFA ;
- * les prix de vente canadiens seront saisis séparément. Les variantes sont
- * donc créées à 0, marquées `price_is_provisional`, et les produits restent
- * NON PUBLIÉS — un déclencheur en base refuse d'ailleurs de publier un
- * produit dont une variante attend encore son prix.
+ * ⚠️ LES PRIX ET LES STOCKS SONT FICTIFS.
  *
- * Le script écrit ensuite docs/prix-a-definir.csv : la liste des formats à
- * chiffrer, prête à remplir.
+ * Le catalogue fournisseur est libellé en FCFA et n'est pas converti. Les
+ * montants ci-dessous sont des valeurs de démonstration, demandées par
+ * Atlantique Export pour voir le site fonctionner en attendant les vrais
+ * prix. Chaque variante reste marquée `price_is_provisional`, et le réglage
+ * `site_settings.allow_provisional_prices` autorise leur publication.
+ *
+ * AVANT LA PREMIÈRE VENTE RÉELLE, deux gestes sont obligatoires :
+ *   1. saisir les vrais prix et remettre price_is_provisional à faux ;
+ *   2. basculer allow_provisional_prices à faux, ce qui réactive le
+ *      garde-fou interdisant de publier un produit non chiffré ;
+ *   3. remettre les stocks à leur valeur réelle (voir la fin de ce fichier).
  */
 
-import { writeFile } from "node:fs/promises";
-import { readFile } from "node:fs/promises";
+import { writeFile, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 const root = new URL("../", import.meta.url);
-process.loadEnvFile(fileURLToPath(new URL(".env.local", root)));
+const path = (p) => fileURLToPath(new URL(p, root));
+
+process.loadEnvFile(path(".env.local"));
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, "");
 const secret = process.env.SUPABASE_SECRET_KEY.trim();
@@ -34,8 +40,6 @@ const headers = {
 };
 
 async function request(path, init = {}) {
-  // `init` est étalé EN PREMIER : sinon son propre champ `headers` écrase
-  // l'objet fusionné et la requête part sans clé d'API.
   const response = await fetch(url + path, {
     ...init,
     headers: { ...headers, ...(init.headers ?? {}) },
@@ -57,17 +61,17 @@ async function request(path, init = {}) {
 
 const get = (path) => request(path);
 
-/** Upsert sur une contrainte d'unicité, avec retour des lignes écrites. */
 const upsert = (table, onConflict, rows) =>
   request(`/rest/v1/${table}?on_conflict=${onConflict}`, {
     method: "POST",
-    headers: {
-      Prefer: "resolution=merge-duplicates,return=representation",
-    },
+    headers: { Prefer: "resolution=merge-duplicates,return=representation" },
     body: JSON.stringify(rows),
   });
 
-/** Les formats du catalogue Sonagoo, traduits en variantes vendables. */
+/* -------------------------------------------------------------------------- */
+/* Formats                                                                     */
+/* -------------------------------------------------------------------------- */
+
 const FORMATS = {
   "50g": { g: 50, unit: "bag", fr: "Sachet 50 g", en: "50 g bag" },
   "100g": { g: 100, unit: "bag", fr: "Sachet 100 g", en: "100 g bag" },
@@ -80,11 +84,54 @@ const FORMATS = {
   sachet: { g: null, unit: "bag", fr: "Sachet", en: "Pack" },
 };
 
-const seed = JSON.parse(
-  await readFile(fileURLToPath(new URL("supabase/seed/sonagoo.json", root)), "utf8"),
-);
+/* -------------------------------------------------------------------------- */
+/* ⚠️ Prix de DÉMONSTRATION, en cents CAD                                      */
+/*                                                                             */
+/* Ce ne sont pas des prix de vente. Ils ne proviennent d'aucune conversion du */
+/* catalogue FCFA : ce sont des ordres de grandeur plausibles pour une épicerie */
+/* afroalimentaire montréalaise, choisis pour que le site soit présentable en   */
+/* attendant la grille réelle.                                                  */
+/* -------------------------------------------------------------------------- */
 
-console.log("\nImport du catalogue Sonagoo\n");
+const DEMO_PRICES_BY_CATEGORY = {
+  "poudres-naturelles": { "500g": 1499, "1kg": 2699 },
+  "epices-condiments": { "250g": 999, "500g": 1799, "1kg": 3299 },
+  "cereales-feculents": { "500g": 899, "1kg": 1599 },
+  collations: { "50g": 349, "100g": 599, sachet: 899 },
+  "thes-boissons": { "500g": 1599, "1kg": 2899, box: 1299 },
+  "plats-preparations": { "500g": 1399, "1kg": 2499 },
+  "produits-surgeles": { "500g": 1699, "1kg": 2999 },
+};
+
+/** Produits dont le prix ne suit pas celui de leur catégorie. */
+const DEMO_PRICE_OVERRIDES = {
+  wass: { "125g": 699, "250g": 1199, "500g": 2199, "1kg": 3999 },
+  "cafe-touba": { "500g": 1699, "1kg": 2999 },
+  "ngalakh-instantane": { "1kg": 2299, "3kg": 5999 },
+  "madd-sachet": { sachet: 799 },
+  "mangue-sechee": { sachet: 999 },
+};
+
+function demoPrice(product, formatKey) {
+  const price =
+    DEMO_PRICE_OVERRIDES[product.slug]?.[formatKey] ??
+    DEMO_PRICES_BY_CATEGORY[product.cat]?.[formatKey];
+  if (price == null) {
+    throw new Error(
+      `Aucun prix de démonstration pour ${product.slug} au format ${formatKey}`,
+    );
+  }
+  return price;
+}
+
+/** Stock de démonstration, pour que le site ne soit pas entièrement vide. */
+const DEMO_STOCK_QUANTITY = 24;
+
+/* -------------------------------------------------------------------------- */
+
+const seed = JSON.parse(await readFile(path("supabase/seed/sonagoo.json"), "utf8"));
+
+console.log("\nImport du catalogue\n");
 
 // --- Catégories --------------------------------------------------------------
 
@@ -105,28 +152,30 @@ const categories = await upsert(
 const categoryId = Object.fromEntries(categories.map((c) => [c.slug, c.id]));
 console.log(`  ✓ ${categories.length} catégories`);
 
-// --- Marque ------------------------------------------------------------------
+// --- Marques ------------------------------------------------------------------
 
-const [brand] = await upsert("brands", "slug", [
-  {
-    slug: seed.brand.slug,
-    name: seed.brand.name,
-    description_fr: seed.brand.description_fr,
-    description_en: seed.brand.description_en,
-    origin_country: seed.brand.origin_country,
-    is_partner: seed.brand.is_partner,
+const brands = await upsert(
+  "brands",
+  "slug",
+  seed.brands.map((b) => ({
+    slug: b.slug,
+    name: b.name,
+    description_fr: b.description_fr,
+    description_en: b.description_en,
+    origin_country: b.origin_country,
+    is_partner: b.is_partner,
     is_active: true,
-  },
-]);
-console.log(`  ✓ marque ${brand.name}`);
+  })),
+);
+const brandId = Object.fromEntries(brands.map((b) => [b.slug, b.id]));
+console.log(`  ✓ ${brands.length} marques`);
 
-// --- Fournisseur -------------------------------------------------------------
-// Pas de contrainte d'unicité sur le nom : on cherche avant d'insérer.
+// --- Fournisseur ---------------------------------------------------------------
 
-const existingSuppliers = await get(
+const existing = await get(
   `/rest/v1/suppliers?name=eq.${encodeURIComponent(seed.supplier.name)}&select=id`,
 );
-let supplierId = existingSuppliers[0]?.id;
+let supplierId = existing[0]?.id;
 if (!supplierId) {
   const [created] = await request("/rest/v1/suppliers", {
     method: "POST",
@@ -137,7 +186,9 @@ if (!supplierId) {
 }
 console.log(`  ✓ fournisseur ${seed.supplier.name} (table interne)`);
 
-// --- Produits ----------------------------------------------------------------
+// --- Produits ------------------------------------------------------------------
+
+const publishedAt = new Date().toISOString();
 
 const products = await upsert(
   "products",
@@ -151,37 +202,46 @@ const products = await upsert(
     description_fr: p.descFr,
     description_en: p.descEn,
     category_id: categoryId[p.cat],
-    brand_id: brand.id,
-    supplier_id: supplierId,
+    brand_id: brandId[p.brand ?? "sonagoo"],
+    supplier_id: p.supplier === null ? null : supplierId,
     origin_country: "SN",
-    temperature_class: "ambient",
+    temperature_class: p.temperature ?? "ambient",
     tax_class: p.tax ?? "zero_rated",
-    // Rien n'est encore en stock : le dire plutôt que de laisser croire
-    // à une disponibilité immédiate.
-    availability_status: "coming_soon",
+    availability_status: "in_stock",
     allergens: p.allergens ?? [],
-    // Non publié : le prix de vente canadien n'est pas fixé.
-    published_at: null,
+    is_featured: seed.editorial.featured.includes(p.slug),
+    is_new: seed.editorial.new.includes(p.slug),
+    published_at: publishedAt,
   })),
 );
 const productId = Object.fromEntries(products.map((p) => [p.slug, p.id]));
-console.log(`  ✓ ${products.length} produits (non publiés)`);
+console.log(`  ✓ ${products.length} produits publiés`);
 
-// --- Variantes ---------------------------------------------------------------
+// --- Variantes ------------------------------------------------------------------
 
 const variantRows = [];
 for (const product of seed.products) {
   product.formats.forEach((formatKey, index) => {
     const format = FORMATS[formatKey];
     if (!format) throw new Error(`Format inconnu : ${formatKey}`);
+    const retail = demoPrice(product, formatKey);
+    // Remise de démonstration : le prix barré est reconstitué à partir du
+    // pourcentage, de sorte que la promotion affichée soit cohérente.
+    const discount = seed.editorial.promotions[product.slug];
+    const compareAt = discount
+      ? Math.round(retail / (1 - discount / 100))
+      : null;
     variantRows.push({
       product_id: productId[product.slug],
-      sku: `AE-SNG-${product.code}-${formatKey.toUpperCase()}`,
+      sku: `AE-${product.brand === "atlantique-export" ? "AEX" : "SNG"}-${product.code}-${formatKey.toUpperCase()}`,
       label_fr: format.fr,
       label_en: format.en,
       sale_unit: format.unit,
       net_weight_g: format.g,
-      retail_price_cents: 0,
+      retail_price_cents: retail,
+      compare_at_price_cents: compareAt,
+      wholesale_price_cents: Math.round(retail * 0.78),
+      // Le drapeau reste levé : ces montants ne sont pas des prix de vente.
       price_is_provisional: true,
       position: index,
       is_active: true,
@@ -190,11 +250,44 @@ for (const product of seed.products) {
 }
 
 const variants = await upsert("product_variants", "sku", variantRows);
-console.log(`  ✓ ${variants.length} variantes, toutes en prix provisoire`);
+console.log(`  ✓ ${variants.length} variantes, aux prix de démonstration`);
 
-// --- Fichier de saisie des prix ----------------------------------------------
+// --- Stock de démonstration -----------------------------------------------------
+// Écriture directe du niveau, sans passer par receive_stock : on évite ainsi
+// d'inscrire au registre des mouvements des réceptions qui n'ont jamais eu lieu.
 
-const bySlug = Object.fromEntries(seed.products.map((p) => [p.slug, p]));
+const stockRows = variants.map((v) => ({
+  variant_id: v.id,
+  quantity_on_hand: DEMO_STOCK_QUANTITY,
+}));
+await upsert("stock_levels", "variant_id", stockRows);
+console.log(`  ✓ stock de démonstration : ${DEMO_STOCK_QUANTITY} par format`);
+
+// --- Recettes ----------------------------------------------------------------------
+// Contenu éditorial réel : aucune donnée inventée, seulement des préparations
+// traditionnelles. Les étapes détaillées seront rédigées au lot consacré au
+// contenu ; ces fiches donnent déjà titre, description et temps.
+
+const recipes = await upsert(
+  "recipes",
+  "slug",
+  seed.recipes.map((r) => ({
+    slug: r.slug,
+    title_fr: r.titleFr,
+    title_en: r.titleEn,
+    description_fr: r.descFr,
+    description_en: r.descEn,
+    prep_time_minutes: r.prep,
+    cook_time_minutes: r.cook,
+    servings: r.servings,
+    is_published: true,
+    published_at: publishedAt,
+  })),
+);
+console.log(`  ✓ ${recipes.length} recettes publiées`);
+
+// --- Fichier de saisie des prix réels --------------------------------------------
+
 const productBySku = Object.fromEntries(
   variantRows.map((v) => [
     v.sku,
@@ -203,30 +296,30 @@ const productBySku = Object.fromEntries(
 );
 
 const lines = [
-  "sku,produit,format,poids_g,prix_detail_cad,prix_gros_cad",
+  "sku,produit,format,poids_g,prix_demo_cad,prix_detail_cad,prix_gros_cad",
   ...variantRows
     .map((v) => {
-      const product = productBySku[v.sku];
-      const name = product.fr.replace(/,/g, " ");
-      return `${v.sku},${name},${v.label_fr},${v.net_weight_g ?? ""},,`;
+      const name = productBySku[v.sku].fr.replace(/,/g, " ");
+      const demo = (v.retail_price_cents / 100).toFixed(2);
+      return `${v.sku},${name},${v.label_fr},${v.net_weight_g ?? ""},${demo},,`;
     })
     .sort(),
 ];
-await writeFile(
-  fileURLToPath(new URL("docs/prix-a-definir.csv", root)),
-  lines.join("\n") + "\n",
-  "utf8",
-);
-console.log(`  ✓ docs/prix-a-definir.csv — ${variantRows.length} lignes à chiffrer`);
+await writeFile(path("docs/prix-a-definir.csv"), lines.join("\n") + "\n", "utf8");
+console.log(`  ✓ docs/prix-a-definir.csv — ${variantRows.length} formats à chiffrer`);
 
-// --- Points à trancher --------------------------------------------------------
+// --- Rappels ----------------------------------------------------------------------
 
-const notes = Object.values(bySlug).filter((p) => p.note);
+const notes = seed.products.filter((p) => p.note);
 if (notes.length > 0) {
-  console.log("\n  Points à confirmer avec le fournisseur :");
-  for (const product of notes) {
-    console.log(`    • ${product.fr} — ${product.note}`);
-  }
+  console.log("\n  À confirmer avec le fournisseur :");
+  for (const product of notes) console.log(`    • ${product.fr} — ${product.note}`);
 }
 
-console.log("\nImport terminé.\n");
+console.log(`
+  ⚠️  Prix ET stocks affichés sont fictifs. Avant la première vente :
+      1. saisir les vrais prix, puis passer price_is_provisional à faux
+      2. passer site_settings.allow_provisional_prices à faux
+      3. remettre les stocks à zéro :
+         update public.stock_levels set quantity_on_hand = 0;
+`);

@@ -29,6 +29,12 @@ export async function ProductRow({
 }) {
   const t = await getTranslations("product");
 
+  // Une rangée sans produit et sans message à afficher n'a rien à dire : on la
+  // retire plutôt que de laisser un cadre vide. Les sections où le vide est
+  // porteur de sens — les promotions, par exemple — fournissent un message et
+  // restent donc visibles.
+  if (products.length === 0 && !emptyMessage) return null;
+
   return (
     <Section className={className}>
       <Container>

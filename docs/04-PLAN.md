@@ -68,10 +68,26 @@ n'est lisible tant qu'un `GRANT` explicite ne l'autorise pas, table par table.
   les produits restent non publiés, et un déclencheur en base refuse de publier un produit
   dont une variante attend son prix. Le fichier `docs/prix-a-definir.csv` liste les 83 formats
   à chiffrer en dollars canadiens.
-- ⬜ Import des prix de vente canadiens depuis `docs/prix-a-definir.csv`, puis publication
-- ⬜ Reste du catalogue : poissons, fruits et légumes, surgelés (autres fournisseurs)
+- ✅ **Le site lit la base.** `src/lib/supabase/server.ts` + réécriture de
+  `src/lib/catalog/queries.ts`. Les données de démonstration du front sont supprimées, avec
+  elles les poissons qui n'avaient jamais existé au catalogue d'Atlantique Export.
+- ✅ Prix et stocks de démonstration, à la demande d'Atlantique Export, pour rendre le site
+  présentable en attendant la grille réelle. Voir l'encadré ci-dessous.
+- ✅ Pulpe de madd congelée, marque maison, ajoutée au catalogue
+- ✅ Six recettes publiées
+- ⬜ Import des prix réels depuis `docs/prix-a-definir.csv`
+- ⬜ Reste du catalogue : poissons, fruits et légumes (autres fournisseurs, non encore
+  disponibles)
 - ⬜ Types TypeScript générés depuis le schéma, en remplacement de `src/lib/types.ts`
-- ⬜ Clients Supabase dans `src/lib/supabase/` et bascule de `src/lib/catalog/`
+
+### ⚠️ À faire impérativement avant la première vente
+
+Prix et stocks actuellement en base sont **fictifs**. Trois gestes, dans cet ordre :
+
+1. saisir les vrais prix, puis passer `product_variants.price_is_provisional` à faux ;
+2. passer `site_settings.allow_provisional_prices` à faux — cela réactive le déclencheur qui
+   interdit de publier un produit non chiffré, et fait disparaître le bandeau du site ;
+3. remettre les stocks à leur valeur réelle : `update public.stock_levels set quantity_on_hand = 0;`
 
 **Écueil rencontré, à retenir.** Désactiver « Automatically expose new tables » retire aussi les
 privilèges de `service_role`, et pas seulement ceux de `anon` et `authenticated` — ce que rien

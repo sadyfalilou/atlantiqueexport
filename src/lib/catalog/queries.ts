@@ -1,121 +1,385 @@
-/**
- * Couche d'accès au catalogue.
- *
- * Toutes les fonctions sont asynchrones bien que les données de démonstration
- * soient synchrones : c'est la signature qu'auront les requêtes Supabase du
- * lot 2. Les composants n'auront donc pas à changer lorsque la vraie base
- * remplacera le fichier de démonstration.
- */
-
-import {
-  demoBrands,
-  demoCategories,
-  demoProducts,
-  demoRecipes,
-  demoShipments,
-} from "@/data/demo-catalog";
+import "server-only";
+import { createCatalogClient } from "@/lib/supabase/server";
 import type {
   Brand,
   Category,
   Product,
+  ProductVariant,
   Recipe,
   Shipment,
+  StockStatus,
+  TemperatureClass,
 } from "@/lib/types";
 
+/**
+ * Accès au catalogue.
+ *
+ * Les données viennent de Supabase, lues avec la clé publique et donc soumises
+ * aux politiques RLS : un produit non publié est invisible ici comme il l'est
+ * depuis le navigateur.
+ *
+ * Les colonnes des variantes sont énumérées une à une, et `wholesale_price_cents`
+ * en est volontairement absente : le tarif professionnel n'est pas accordé aux
+ * rôles publics, et un `select=*` échouerait donc — c'est le comportement voulu.
+ */
+
+const VARIANT_COLUMNS = [
+  "id",
+  "sku",
+  "label_fr",
+  "label_en",
+  "sale_unit",
+  "net_weight_g",
+  "is_variable_weight",
+  "min_weight_g",
+  "max_weight_g",
+  "price_per_kg_cents",
+  "retail_price_cents",
+  "compare_at_price_cents",
+  "price_is_provisional",
+  "min_qty",
+  "step_qty",
+  "position",
+  "is_active",
+].join(",");
+
+const PRODUCT_SELECT = `
+  id, slug, name_fr, name_en,
+  short_description_fr, short_description_en,
+  description_fr, description_en,
+  origin_country, temperature_class, tax_class, availability_status,
+  allergens, tags, is_featured, is_new, is_wholesale_only,
+  category:categories!products_category_id_fkey(slug),
+  brand:brands!products_brand_id_fkey(slug),
+  variants:product_variants(${VARIANT_COLUMNS})
+`;
+
+/* -------------------------------------------------------------------------- */
+/* Conversion des lignes vers les types du domaine                             */
+/* -------------------------------------------------------------------------- */
+
+type Row = Record<string, unknown>;
+
+const text = (row: Row, field: string) => (row[field] as string | null) ?? "";
+
+function toLocalized(row: Row, base: string) {
+  return { fr: text(row, `${base}_fr`), en: text(row, `${base}_en`) };
+}
+
+function toVariant(row: Row): ProductVariant {
+  return {
+    id: row.id as string,
+    sku: row.sku as string,
+    label: toLocalized(row, "label"),
+    saleUnit: row.sale_unit as ProductVariant["saleUnit"],
+    netWeightG: (row.net_weight_g as number | null) ?? null,
+    isVariableWeight: Boolean(row.is_variable_weight),
+    minWeightG: (row.min_weight_g as number | null) ?? undefined,
+    maxWeightG: (row.max_weight_g as number | null) ?? undefined,
+    pricePerKgCents: (row.price_per_kg_cents as number | null) ?? undefined,
+    retailPriceCents: row.retail_price_cents as number,
+    compareAtPriceCents: (row.compare_at_price_cents as number | null) ?? null,
+    // Le tarif professionnel n'est jamais servi ici.
+    wholesalePriceCents: null,
+    priceIsProvisional: Boolean(row.price_is_provisional),
+    minQty: (row.min_qty as number) ?? 1,
+    stepQty: (row.step_qty as number) ?? 1,
+  };
+}
+
+function toProduct(row: Row): Product {
+  const variants = ((row.variants as Row[] | null) ?? [])
+    .filter((v) => v.is_active !== false)
+    .sort((a, b) => (a.position as number) - (b.position as number))
+    .map(toVariant);
+
+  const category = row.category as { slug: string } | null;
+  const brand = row.brand as { slug: string } | null;
+
+  return {
+    id: row.id as string,
+    slug: row.slug as string,
+    name: toLocalized(row, "name"),
+    shortDescription: toLocalized(row, "short_description"),
+    description: toLocalized(row, "description"),
+    categorySlug: category?.slug ?? "",
+    brandSlug: brand?.slug ?? null,
+    originCountry: (row.origin_country as string | null) ?? "",
+    temperatureClass: row.temperature_class as TemperatureClass,
+    taxClass: row.tax_class as Product["taxClass"],
+    stockStatus: row.availability_status as StockStatus,
+    variants,
+    imageUrl: null,
+    tags: (row.tags as string[] | null) ?? [],
+    allergens: (row.allergens as string[] | null) ?? [],
+    isFeatured: Boolean(row.is_featured),
+    isNew: Boolean(row.is_new),
+    isWholesaleOnly: Boolean(row.is_wholesale_only),
+  };
+}
+
+function toCategory(row: Row): Category {
+  return {
+    id: row.id as string,
+    slug: row.slug as string,
+    name: toLocalized(row, "name"),
+    description: row.description_fr
+      ? toLocalized(row, "description")
+      : undefined,
+    isVirtual: Boolean(row.is_virtual),
+    href: (row.href as string | null) ?? undefined,
+    parentId: (row.parent_id as string | null) ?? null,
+    position: (row.position as number) ?? 0,
+    showInMegaMenu: Boolean(row.show_in_mega_menu),
+  };
+}
+
+function toBrand(row: Row): Brand {
+  return {
+    id: row.id as string,
+    slug: row.slug as string,
+    name: row.name as string,
+    description: row.description_fr ? toLocalized(row, "description") : undefined,
+    originCountry: (row.origin_country as string | null) ?? undefined,
+    isPartner: Boolean(row.is_partner),
+  };
+}
+
+/** Toute erreur Supabase remonte : mieux vaut une page en échec qu'un catalogue
+ *  silencieusement vide, qui passerait pour une rupture de stock générale. */
+function unwrap<T>(result: {
+  data: unknown;
+  error: { message: string } | null;
+}): T {
+  if (result.error) throw new Error(`Supabase : ${result.error.message}`);
+  return (result.data ?? []) as T;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Requêtes                                                                    */
+/* -------------------------------------------------------------------------- */
+
 export async function getCategories(): Promise<Category[]> {
-  return [...demoCategories].sort((a, b) => a.position - b.position);
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase
+      .from("categories")
+      .select("*")
+      .eq("is_active", true)
+      .order("position"),
+  );
+  return rows.map(toCategory);
 }
 
 export async function getMegaMenuCategories(): Promise<Category[]> {
   return (await getCategories()).filter((c) => c.showInMegaMenu);
 }
 
-export async function getCategoryBySlug(
-  slug: string,
-): Promise<Category | undefined> {
-  return demoCategories.find((c) => c.slug === slug);
+export async function getCategoryBySlug(slug: string) {
+  return (await getCategories()).find((c) => c.slug === slug);
 }
 
 export async function getBrands(): Promise<Brand[]> {
-  return demoBrands;
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase.from("brands").select("*").eq("is_active", true).order("name"),
+  );
+  return rows.map(toBrand);
 }
 
-export async function getBrandBySlug(slug: string): Promise<Brand | undefined> {
-  return demoBrands.find((b) => b.slug === slug);
+export async function getBrandBySlug(slug: string) {
+  return (await getBrands()).find((b) => b.slug === slug);
 }
 
-export async function getProducts(): Promise<Product[]> {
-  return demoProducts;
+export async function getProducts(limit = 200): Promise<Product[]> {
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase.from("products").select(PRODUCT_SELECT).order("name_fr").limit(limit),
+  );
+  return rows.map(toProduct);
 }
 
-export async function getProductBySlug(
-  slug: string,
-): Promise<Product | undefined> {
-  return demoProducts.find((p) => p.slug === slug);
+export async function getProductBySlug(slug: string): Promise<Product | undefined> {
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase.from("products").select(PRODUCT_SELECT).eq("slug", slug).limit(1),
+  );
+  return rows[0] ? toProduct(rows[0]) : undefined;
 }
 
 export async function getProductsByCategory(
   categorySlug: string,
+  limit = 100,
 ): Promise<Product[]> {
-  return demoProducts.filter((p) => p.categorySlug === categorySlug);
+  const category = await getCategoryBySlug(categorySlug);
+  if (!category) return [];
+
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .eq("category_id", category.id)
+      .order("name_fr")
+      .limit(limit),
+  );
+  return rows.map(toProduct);
 }
 
 export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
-  return demoProducts.filter((p) => p.isFeatured).slice(0, limit);
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .eq("is_featured", true)
+      .order("name_fr")
+      .limit(limit),
+  );
+  return rows.map(toProduct);
 }
 
 export async function getNewProducts(limit = 8): Promise<Product[]> {
-  return demoProducts.filter((p) => p.isNew).slice(0, limit);
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .eq("is_new", true)
+      .order("published_at", { ascending: false })
+      .limit(limit),
+  );
+  return rows.map(toProduct);
 }
 
 /** Un produit est en promotion dès qu'une de ses variantes porte un prix barré. */
 export async function getPromotedProducts(limit = 8): Promise<Product[]> {
-  return demoProducts
-    .filter((p) =>
-      p.variants.some(
-        (v) =>
-          v.compareAtPriceCents != null &&
-          v.compareAtPriceCents > v.retailPriceCents,
-      ),
-    )
-    .slice(0, limit);
+  const supabase = createCatalogClient();
+  const discounted = unwrap<Row[]>(
+    await supabase
+      .from("product_variants")
+      .select("product_id")
+      .not("compare_at_price_cents", "is", null),
+  );
+  const ids = [...new Set(discounted.map((v) => v.product_id as string))];
+  if (ids.length === 0) return [];
+
+  const rows = unwrap<Row[]>(
+    await supabase.from("products").select(PRODUCT_SELECT).in("id", ids).limit(limit),
+  );
+  return rows.map(toProduct);
 }
 
-export async function getColdProducts(limit = 8): Promise<Product[]> {
-  return demoProducts
-    .filter(
-      (p) =>
-        p.temperatureClass === "frozen" || p.temperatureClass === "refrigerated",
-    )
-    .slice(0, limit);
+async function getByTemperature(
+  classes: TemperatureClass[],
+  limit: number,
+): Promise<Product[]> {
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .in("temperature_class", classes)
+      .order("name_fr")
+      .limit(limit),
+  );
+  return rows.map(toProduct);
 }
 
-export async function getFreshProducts(limit = 8): Promise<Product[]> {
-  return demoProducts
-    .filter((p) => p.temperatureClass === "fresh")
-    .slice(0, limit);
+export async function getColdProducts(limit = 8) {
+  return getByTemperature(["frozen", "refrigerated"], limit);
 }
 
-export async function getNaturalProducts(limit = 8): Promise<Product[]> {
-  return demoProducts
+export async function getFreshProducts(limit = 8) {
+  return getByTemperature(["fresh"], limit);
+}
+
+export async function getNaturalProducts(limit = 8) {
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .eq("temperature_class", "ambient")
+      .limit(200),
+  );
+  return rows
+    .map(toProduct)
     .filter((p) => p.categorySlug === "poudres-naturelles")
     .slice(0, limit);
 }
 
 export async function getOpenShipments(): Promise<Shipment[]> {
-  return demoShipments.filter(
-    (s) => !["completed", "cancelled"].includes(s.status),
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase
+      .from("shipments")
+      .select("*, items:shipment_items(variant_id, planned_quantity, remaining_quantity, deposit_cents)")
+      .not("status", "in", "(completed,cancelled)")
+      .order("eta_date"),
   );
+
+  return rows.map((row) => ({
+    id: row.id as string,
+    code: row.code as string,
+    title: toLocalized(row, "title"),
+    originCountry: (row.origin_country as string | null) ?? "",
+    status: row.status as Shipment["status"],
+    etaDate: (row.eta_date as string | null) ?? "",
+    reservationDeadline: (row.reservation_deadline as string | null) ?? "",
+    items: ((row.items as Row[] | null) ?? []).map((item) => ({
+      productSlug: item.variant_id as string,
+      plannedQuantity: item.planned_quantity as number,
+      reservedQuantity:
+        (item.planned_quantity as number) - (item.remaining_quantity as number),
+      depositCents: (item.deposit_cents as number) ?? 0,
+    })),
+  }));
 }
 
 export async function getRecipes(limit?: number): Promise<Recipe[]> {
-  return limit ? demoRecipes.slice(0, limit) : demoRecipes;
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase
+      .from("recipes")
+      .select("*")
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(limit ?? 50),
+  );
+
+  return rows.map((row) => ({
+    id: row.id as string,
+    slug: row.slug as string,
+    title: toLocalized(row, "title"),
+    description: toLocalized(row, "description"),
+    prepTimeMinutes: (row.prep_time_minutes as number) ?? 0,
+    cookTimeMinutes: (row.cook_time_minutes as number) ?? 0,
+    servings: (row.servings as number) ?? 0,
+    productSlugs: [],
+    imageUrl: (row.image_url as string | null) ?? null,
+  }));
 }
 
-export async function getRecipeBySlug(
-  slug: string,
-): Promise<Recipe | undefined> {
-  return demoRecipes.find((r) => r.slug === slug);
+export async function getRecipeBySlug(slug: string) {
+  return (await getRecipes(50)).find((r) => r.slug === slug);
+}
+
+/**
+ * Réglages du site. `allowProvisionalPrices` pilote le bandeau d'avertissement :
+ * tant qu'il est vrai, les prix affichés sont des valeurs de démonstration et
+ * le visiteur doit le savoir.
+ */
+export async function getSiteSettings(): Promise<{
+  allowProvisionalPrices: boolean;
+}> {
+  const supabase = createCatalogClient();
+  const rows = unwrap<Row[]>(
+    await supabase.from("site_settings").select("allow_provisional_prices").limit(1),
+  );
+  return {
+    allowProvisionalPrices: Boolean(rows[0]?.allow_provisional_prices),
+  };
 }
 
 /** Prix affiché : la variante la moins chère, celle qui sert d'entrée de gamme. */

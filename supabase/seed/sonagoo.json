@@ -20,14 +20,79 @@
     "notes": "Sites de Thiaroye, Médina et Rufisque (Dakar). Certifiée HACCP selon son catalogue. Tarif de gros annoncé à partir de 10 kg. Autres lignes : +221 78 733 76 76, +221 70 454 51 76, +221 78 650 76 76. Table interne : ces coordonnées ne sont jamais exposées publiquement."
   },
 
-  "brand": {
-    "slug": "sonagoo",
-    "name": "Sonagoo",
-    "description_fr": "Marque sénégalaise de poudres, céréales, cocktails de fruits et préparations traditionnelles, transformés à Dakar.",
-    "description_en": "Senegalese brand of powders, grains, fruit blends and traditional preparations, processed in Dakar.",
-    "origin_country": "SN",
-    "is_partner": true
+  "brands": [
+    {
+      "slug": "sonagoo",
+      "name": "Sonagoo",
+      "description_fr": "Marque sénégalaise de poudres, céréales, cocktails de fruits et préparations traditionnelles, transformés à Dakar.",
+      "description_en": "Senegalese brand of powders, grains, fruit blends and traditional preparations, processed in Dakar.",
+      "origin_country": "SN",
+      "is_partner": true
+    },
+    {
+      "slug": "atlantique-export",
+      "name": "Atlantique Export",
+      "description_fr": "Notre sélection maison, choisie directement auprès des producteurs.",
+      "description_en": "Our own selection, sourced directly from producers.",
+      "origin_country": "CA",
+      "is_partner": false
+    }
+  ],
+
+  "_editorial": "Choix de mise en avant. Les remises sont exprimées en pourcentage et servent uniquement à alimenter la section « Promotions » pendant le développement.",
+  "editorial": {
+    "featured": [
+      "poudre-de-bouye",
+      "poudre-de-bissap-rouge",
+      "poudre-de-moringa",
+      "thiakry",
+      "fonio",
+      "cafe-touba",
+      "mangue-sechee",
+      "pulpe-de-madd"
+    ],
+    "new": [
+      "thiakry-coco",
+      "thiakry-mangue",
+      "thiakry-papaye",
+      "coco-chocolat-noisette",
+      "bouye-mangue",
+      "bouye-fraise",
+      "pulpe-de-madd"
+    ],
+    "promotions": {
+      "mangue-sechee": 20,
+      "coco-fraise-framboise": 15,
+      "the-hibiscus": 15
+    }
   },
+
+  "recipes": [
+    { "slug": "jus-de-bouye", "titleFr": "Jus de bouye", "titleEn": "Baobab juice",
+      "descFr": "La boisson de baobab classique, onctueuse et légèrement acidulée.",
+      "descEn": "The classic baobab drink — creamy and gently tart.",
+      "prep": 15, "cook": 0, "servings": 6 },
+    { "slug": "jus-de-bissap", "titleFr": "Jus de bissap", "titleEn": "Hibiscus juice",
+      "descFr": "Infusion d'hibiscus servie bien fraîche, avec menthe et fleur d'oranger.",
+      "descEn": "Hibiscus infusion served chilled, with mint and orange blossom.",
+      "prep": 10, "cook": 10, "servings": 8 },
+    { "slug": "smoothie-au-madd", "titleFr": "Smoothie au madd", "titleEn": "Madd smoothie",
+      "descFr": "Pulpe de madd, lait et glace : un smoothie franchement acidulé.",
+      "descEn": "Madd pulp, milk and ice for a bracingly tangy smoothie.",
+      "prep": 5, "cook": 0, "servings": 2 },
+    { "slug": "thiakry-traditionnel", "titleFr": "Thiakry traditionnel", "titleEn": "Traditional thiakry",
+      "descFr": "Semoule de mil et lait caillé, le dessert de toutes les fêtes.",
+      "descEn": "Millet semolina and curdled milk — the dessert of every celebration.",
+      "prep": 20, "cook": 25, "servings": 6 },
+    { "slug": "preparation-du-fonio", "titleFr": "Préparation du fonio", "titleEn": "How to cook fonio",
+      "descFr": "La cuisson à la vapeur du fonio, étape par étape.",
+      "descEn": "Steaming fonio, step by step.",
+      "prep": 10, "cook": 20, "servings": 4 },
+    { "slug": "cafe-touba-recette", "titleFr": "Café Touba", "titleEn": "Touba coffee",
+      "descFr": "Le café au poivre de Selim, préparé comme au Sénégal.",
+      "descEn": "Selim pepper coffee, brewed the Senegalese way.",
+      "prep": 5, "cook": 10, "servings": 4 }
+  ],
 
   "categories": [
     { "slug": "poissons-fruits-de-mer", "fr": "Poissons et fruits de mer", "en": "Fish and seafood", "descFr": "Poissons frais et surgelés, crevettes et fruits de mer.", "descEn": "Fresh and frozen fish, shrimp and seafood.", "position": 1 },
@@ -342,6 +407,14 @@
       "shortFr": "Lamelles de mangue séchée, sans additifs.",
       "shortEn": "Dried mango slices, no additives.",
       "descFr": "Lamelles de mangue séchée, sans additifs ni conservateurs, prêtes à déguster.",
-      "descEn": "Dried mango slices with no additives or preservatives, ready to eat." }
+      "descEn": "Dried mango slices with no additives or preservatives, ready to eat." },
+
+    { "slug": "pulpe-de-madd", "code": "PMA", "cat": "produits-surgeles", "formats": ["500g", "1kg"],
+      "brand": "atlantique-export", "temperature": "frozen", "supplier": null,
+      "fr": "Pulpe de madd congelée", "en": "Frozen madd pulp",
+      "shortFr": "Pulpe de madd surgelée, prête pour les jus et les smoothies.",
+      "shortEn": "Frozen madd pulp, ready for juices and smoothies.",
+      "descFr": "La pulpe du fruit du madd, surgelée juste après préparation pour garder son acidité franche. À diluer pour un jus, ou à passer au mélangeur avec du lait pour un smoothie.",
+      "descEn": "Madd fruit pulp, frozen right after preparation to keep its bracing tartness. Dilute for juice, or blend with milk for a smoothie." }
   ]
 }

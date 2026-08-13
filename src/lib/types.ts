@@ -84,6 +84,8 @@ export interface ProductVariant {
   compareAtPriceCents?: number | null;
   /** Prix professionnel — jamais servi à un compte non approuvé. */
   wholesalePriceCents?: number | null;
+  /** Vrai tant que le prix affiché est une valeur de démonstration. */
+  priceIsProvisional?: boolean;
   minQty: number;
   stepQty: number;
 }
