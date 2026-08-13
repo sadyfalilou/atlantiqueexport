@@ -120,3 +120,4 @@ src/
 Lot 2 — schéma PostgreSQL, migrations Supabase, politiques RLS, fonctions de réservation de stock
 et remplacement des données de démonstration par le vrai catalogue. Le détail est dans
 [docs/04-PLAN.md](docs/04-PLAN.md).
+# Test auto-deploy
