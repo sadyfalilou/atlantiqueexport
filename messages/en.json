@@ -251,5 +251,59 @@
       "shipping": "Shipping across Canada"
     },
     "invalidQuantity": "Invalid quantity."
+  },
+  "checkout": {
+    "title": "Checkout",
+    "methodTitle": "How would you like to receive your order?",
+    "methodHelp": {
+      "pickup": "You collect your order in Montréal.",
+      "local_delivery": "We deliver to you, in and around Montréal.",
+      "shipping": "Postal shipping across Canada, dry goods only."
+    },
+    "pickupTitle": "Pickup location",
+    "addressTitle": "Delivery address",
+    "line1": "Address",
+    "line2": "Apartment, floor (optional)",
+    "city": "City",
+    "postalCode": "Postal code",
+    "zoneFound": "Zone “{zone}” — delivery fee {fee}",
+    "freeDelivery": "free",
+    "outsideZones": "We don't deliver to this postal code yet. Choose pickup, or write to us.",
+    "belowMinimum": "This zone requires an order of at least {amount}.",
+    "slotTitle": "Date and time slot",
+    "chooseSlot": "Choose a time slot",
+    "slotNeedsPostalCode": "Enter your postal code to see available slots.",
+    "noSlots": "No slot available right now. Write to us and we'll find a solution.",
+    "contactTitle": "Your details",
+    "fullName": "Full name",
+    "email": "Email address",
+    "phone": "Phone (optional)",
+    "notes": "Special instructions (optional)",
+    "paymentTitle": "Payment",
+    "interac": "Interac e-Transfer",
+    "interacHelp": "You'll receive transfer instructions once your order is placed. Nothing is charged now.",
+    "submit": "Place my order",
+    "noPaymentNow": "No payment is taken at this step. Your order is confirmed once the transfer arrives.",
+    "feeAfterAddress": "Calculated after address",
+    "errors": {
+      "invalid": "Some fields are incomplete or incorrect.",
+      "emptyCart": "Your cart is empty.",
+      "addressRequired": "A delivery address is required."
+    }
+  },
+  "orderConfirmation": {
+    "title": "Thank you, your order is recorded",
+    "subtitle": "Order {number} — a summary is on its way to {email}.",
+    "interacTitle": "Pay by Interac e-Transfer",
+    "interacIntro": "Your order is reserved. It will be confirmed as soon as we receive your transfer.",
+    "interacRecipient": "Recipient address",
+    "interacNotConfigured": "Address to be confirmed — we'll email it to you.",
+    "interacAmount": "Exact amount",
+    "interacMessage": "Put this in the message",
+    "interacPending": "Until the transfer is received, your order stays pending payment. The stock is already reserved for you.",
+    "total": "Total",
+    "free": "Free",
+    "continueShopping": "Continue shopping",
+    "contactUs": "Contact us"
   }
 }

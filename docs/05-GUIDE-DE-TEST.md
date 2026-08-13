@@ -1,6 +1,6 @@
 # Guide de test
 
-_Dernière mise à jour : 12 août 2026 — état : lots 1 et 2 terminés, boutique et fiches produit en place_
+_Dernière mise à jour : 13 août 2026 — état : catalogue, panier et commande Interac en place_
 
 ## 1. Démarrer le site
 
@@ -29,10 +29,11 @@ C'est le point le plus important avant de commencer : la plupart des liens mène
 | Fonctionne aujourd'hui | Pas encore construit |
 | --- | --- |
 | Page d'accueil complète | Recherche |
-| Boutique avec filtres et tri | Tunnel de commande et paiement |
+| Boutique avec filtres et tri | Paiement en ligne par carte |
 | Pages de catégorie | **Création de compte et connexion** (lot 7) |
 | Fiches produit avec choix du format | **Espace administrateur** (lot 9) |
-| **Panier : ajout, quantités, retrait** | Recettes, arrivages, pages institutionnelles |
+| Panier : ajout, quantités, retrait | Recettes, arrivages, pages institutionnelles |
+| **Commande complète avec Interac** | Courriels de confirmation |
 | Nouveautés et Promotions | |
 | Bascule français / anglais, méga-menu, navigation mobile | |
 
@@ -101,7 +102,7 @@ Sur une fiche produit :
 
 - [ ] Cliquez sur un produit : le fil d'Ariane montre Boutique → catégorie → produit
 - [ ] Changez de format : le prix et le prix au kilo changent aussitôt
-- [ ] Le bouton « Ajouter au panier » est **grisé**, avec une phrase qui explique pourquoi
+- [ ] Le bouton « Ajouter au panier » fonctionne (voir la section Panier ci-dessous)
 - [ ] La mention « Prix de démonstration, non définitif » apparaît sous le prix
 
 Sur téléphone :
@@ -125,14 +126,31 @@ Le test le plus intéressant, celui de la chaîne du froid :
       votre panier contient un produit surgelé
 - [ ] Retirez la pulpe : l'expédition redevient disponible aussitôt
 
-### 3.7 Liens non construits
+### 3.7 Commande
 
-- [ ] Cliquez sur « Panier » ou sur l'icône de compte : vous arrivez sur « Cette page n'est pas
-      encore en ligne »
+- [ ] Depuis le panier, « Passer la commande » ouvre le tunnel
+- [ ] Seuls les modes compatibles avec votre panier sont proposés
+- [ ] En livraison locale, saisissez `H2X 1Y4` : la zone et les frais s'affichent
+- [ ] Saisissez un code postal hors zone, par exemple `K1A 0A6` : un message l'explique
+- [ ] Choisissez un créneau, remplissez vos coordonnées, validez
+- [ ] La page de confirmation affiche le numéro de commande, le montant exact et le numéro
+      à inscrire en message pour le virement
+- [ ] Le panier est vidé et la pastille revient à zéro
+
+Deux vérifications qui comptent :
+
+- [ ] Rechargez la page de confirmation : elle s'affiche encore
+- [ ] Essayez un autre numéro de commande, par exemple `AE-2026-00001` : vous obtenez une page
+      introuvable. Connaître le numéro ne suffit pas à voir la commande d'autrui
+
+### 3.8 Liens non construits
+
+- [ ] Cliquez sur l'icône de compte, ou sur « Recettes » : vous arrivez sur « Cette page n'est
+      pas encore en ligne »
 - [ ] L'en-tête et le pied de page restent affichés — ce n'est pas la page d'erreur brute du serveur
 - [ ] Le bouton « Retour à l'accueil » fonctionne
 
-### 3.8 Infolettre
+### 3.9 Infolettre
 
 - [ ] Entrez une adresse invalide, par exemple `abc` : un message explique quoi corriger
 - [ ] Entrez une adresse valide : le message précise que l'infolettre n'est pas encore active et
@@ -141,7 +159,7 @@ Le test le plus intéressant, celui de la chaîne du froid :
 **Rien n'est enregistré pour l'instant, et le message le dit.** L'enregistrement réel viendra avec
 les courriels transactionnels.
 
-### 3.9 Accessibilité
+### 3.10 Accessibilité
 
 - [ ] Appuyez sur `Tab` dès l'ouverture de la page : un lien « Aller au contenu principal » apparaît
 - [ ] Continuez au `Tab` : chaque élément actif est entouré d'un anneau vert bien visible

@@ -251,5 +251,59 @@
       "shipping": "Expédition au Canada"
     },
     "invalidQuantity": "Quantité invalide."
+  },
+  "checkout": {
+    "title": "Commander",
+    "methodTitle": "Comment souhaitez-vous recevoir votre commande ?",
+    "methodHelp": {
+      "pickup": "Vous venez chercher votre commande à Montréal.",
+      "local_delivery": "Nous livrons chez vous, à Montréal et dans les environs.",
+      "shipping": "Envoi postal partout au Canada, réservé aux produits secs."
+    },
+    "pickupTitle": "Point de ramassage",
+    "addressTitle": "Adresse de livraison",
+    "line1": "Adresse",
+    "line2": "Appartement, étage (facultatif)",
+    "city": "Ville",
+    "postalCode": "Code postal",
+    "zoneFound": "Zone « {zone} » — frais de livraison {fee}",
+    "freeDelivery": "offerts",
+    "outsideZones": "Ce code postal n'est pas encore desservi. Choisissez le ramassage, ou écrivez-nous.",
+    "belowMinimum": "Cette zone demande une commande d'au moins {amount}.",
+    "slotTitle": "Date et créneau",
+    "chooseSlot": "Choisissez un créneau",
+    "slotNeedsPostalCode": "Entrez votre code postal pour voir les créneaux disponibles.",
+    "noSlots": "Aucun créneau disponible pour le moment. Écrivez-nous et nous trouverons une solution.",
+    "contactTitle": "Vos coordonnées",
+    "fullName": "Nom complet",
+    "email": "Adresse courriel",
+    "phone": "Téléphone (facultatif)",
+    "notes": "Instructions particulières (facultatif)",
+    "paymentTitle": "Paiement",
+    "interac": "Virement Interac",
+    "interacHelp": "Vous recevrez les instructions de virement après avoir validé votre commande. Rien n'est prélevé maintenant.",
+    "submit": "Valider ma commande",
+    "noPaymentNow": "Aucun paiement n'est demandé à cette étape. Votre commande sera confirmée dès réception du virement.",
+    "feeAfterAddress": "Calculés après l'adresse",
+    "errors": {
+      "invalid": "Certains champs sont incomplets ou mal remplis.",
+      "emptyCart": "Votre panier est vide.",
+      "addressRequired": "L'adresse de livraison est nécessaire."
+    }
+  },
+  "orderConfirmation": {
+    "title": "Merci, votre commande est enregistrée",
+    "subtitle": "Commande {number} — un récapitulatif part à l'adresse {email}.",
+    "interacTitle": "Régler par virement Interac",
+    "interacIntro": "Votre commande est réservée. Elle sera confirmée dès que nous aurons reçu votre virement.",
+    "interacRecipient": "Adresse de destination",
+    "interacNotConfigured": "Adresse à confirmer — nous vous l'enverrons par courriel.",
+    "interacAmount": "Montant exact",
+    "interacMessage": "À inscrire en message",
+    "interacPending": "Tant que le virement n'est pas constaté, votre commande reste en attente de paiement. Le stock est déjà réservé pour vous.",
+    "total": "Total",
+    "free": "Offerts",
+    "continueShopping": "Continuer mes achats",
+    "contactUs": "Nous écrire"
   }
 }

@@ -161,12 +161,19 @@ tables n'aient pas à y penser.
 - Formulaire falsifié à 999 puis à 50 exemplaires : refusé côté serveur dans les deux cas, avec
   deux messages distincts, et le panier en base reste inchangé
 
-## Lot 6 — Livraison, ramassage et créneaux ⬜
+## Lot 6 — Livraison, ramassage et créneaux 🚧
 
-- Sélection du mode, validation du code postal par zone, calcul des frais et du seuil de gratuité
-- Calendrier des créneaux avec capacité restante, jours bloqués
-- Administration des zones, créneaux et règles
-- **Vérification** : test de réservation concurrente d'un créneau à capacité 1
+- ✅ Point de ramassage, deux zones de livraison, créneaux sur 14 jours glissants
+- ✅ Zone déduite du **code postal**, jamais reçue du formulaire — sinon il suffirait de
+  désigner la zone la moins chère pour payer moins
+- ✅ Frais, seuil de gratuité et montant minimum appliqués dans la transaction
+- ✅ Capacité des créneaux garantie par contrainte : un créneau complet n'est plus proposé
+- ⬜ Administration des zones et créneaux (lot 9)
+- ⬜ Jours bloqués
+
+⚠️ **Adresse, horaires, tarifs et seuils sont PROVISOIRES.** Ce que le script pose est marqué
+comme tel — le point de ramassage s'intitule « adresse à confirmer ». Les préfixes de codes
+postaux, eux, sont exacts : H1 à H9 pour l'île de Montréal, J pour les couronnes.
 
 ## Lot 7 — Authentification et espace client ⬜
 
@@ -176,7 +183,7 @@ tables n'aient pas à y penser.
 - Demande de compte professionnel avec validation manuelle
 - **Vérification** : end-to-end connexion, commande invité, recommande
 
-## Lot 8 — Paiement et commandes ⬜
+## Lot 8 — Paiement et commandes 🚧
 
 - Tunnel de commande en une page, quatre sections, validation Zod partagée
 - **Interac** : commande en attente, instructions à l'écran et par courriel, validation manuelle
@@ -186,7 +193,34 @@ tables n'aient pas à y penser.
 - Réservation de stock à la commande, avec expiration et libération automatique si le virement
   n'arrive pas dans le délai imparti
 - ~~Stripe, Apple Pay, Google Pay~~ → reporté en phase 2 (voir les décisions de cadrage)
-- **Vérification** : test de double soumission, expiration d'une réservation non payée
+- ✅ Tunnel de commande en une page, validation Zod côté serveur
+- ✅ Commande créée en **une seule transaction PostgreSQL** : réservation du stock, prise de
+  créneau, écriture des lignes et vidage du panier réussissent ou échouent ensemble
+- ✅ Instructions Interac sur la page de confirmation, avec le numéro à inscrire en message
+- ✅ Commande sans compte, consultable par un jeton en cookie `httpOnly`
+- ⬜ Validation administrateur des virements (lot 9)
+- ⬜ Expiration automatique des réservations non payées
+- ⬜ Courriels de confirmation (lot 12)
+
+**Pourquoi une fonction SQL plutôt que plusieurs appels**
+
+Passer commande enchaîne quatre écritures qui doivent toutes réussir ou toutes échouer. Faites
+depuis l'application, en autant d'appels HTTP, elles laisseraient du stock réservé pour une
+commande inexistante dès qu'une ligne échoue au milieu — et la compensation peut elle-même
+échouer. `place_order` fait tout dans une transaction : la moindre exception annule l'ensemble.
+
+**Vérifié** — `npm run smoke:order`, 14 assertions :
+
+- commande valide : total calculé en base, stock réservé, panier vidé, numéro `AE-2026-00001`
+- stock insuffisant : refus, **aucune commande fantôme**, aucune réservation résiduelle,
+  panier intact
+- surgelé par la poste : refusé
+- panier vide : refusé
+
+⚠️ **`INTERAC_RECIPIENT_EMAIL` doit rester vide** tant que l'adresse réelle n'est pas connue.
+Elle s'affiche telle quelle au client comme destination de son virement. Tant qu'elle est vide,
+la page affiche « adresse à confirmer » — ce qui vaut infiniment mieux qu'une adresse d'exemple
+vers laquelle quelqu'un enverrait de l'argent.
 
 ## Lot 9 — Administration ⬜
 

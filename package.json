@@ -20,7 +20,9 @@
     "smoke:stock": "node scripts/smoke-stock.mjs",
     "smoke:security": "node scripts/smoke-security.mjs",
     "seed:sonagoo": "node scripts/seed-sonagoo.mjs",
-    "brand:build": "node scripts/build-brand-assets.mjs"
+    "brand:build": "node scripts/build-brand-assets.mjs",
+    "seed:logistics": "node scripts/seed-logistics.mjs",
+    "smoke:order": "node scripts/smoke-order.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
