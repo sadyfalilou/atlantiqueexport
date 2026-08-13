@@ -122,7 +122,18 @@
     "perKg": "le kilo",
     "approxWeight": "Poids approximatif",
     "billedAtMaxWeight": "Facturé au poids haut de la tranche : le montant est définitif à l'achat.",
-    "demoPrice": "Prix de démonstration"
+    "demoPrice": "Prix de démonstration",
+    "chooseFormat": "Choisir un format",
+    "origin": "Origine",
+    "brand": "Marque",
+    "conservation": "Conservation",
+    "allergens": "Allergènes",
+    "description": "Description",
+    "noAllergens": "Aucun allergène déclaré.",
+    "cartComingSoon": "Le panier arrive à la prochaine étape du développement : cette fiche est consultable, mais la commande n'est pas encore ouverte.",
+    "provisionalPrice": "Prix de démonstration, non définitif.",
+    "backToShop": "Retour à la boutique",
+    "unitPrice": "Prix au kilo"
   },
   "stock": {
     "in_stock": "En stock",
@@ -177,5 +188,33 @@
     "french": "Français",
     "english": "English",
     "demoNotice": "Site en développement — le catalogue et les prix affichés sont des données de démonstration."
+  },
+  "shop": {
+    "title": "Boutique",
+    "subtitle": "Tous nos produits, du Sénégal à Montréal.",
+    "filters": "Filtres",
+    "filtersWithCount": "Filtres ({count})",
+    "clearAll": "Tout effacer",
+    "category": "Catégorie",
+    "allCategories": "Toutes les catégories",
+    "temperature": "Conservation",
+    "price": "Prix",
+    "priceMin": "Minimum",
+    "priceMax": "Maximum",
+    "apply": "Appliquer",
+    "close": "Fermer les filtres",
+    "sort": "Trier par",
+    "onlyPromo": "En promotion",
+    "onlyNew": "Nouveautés",
+    "results": "{count, plural, =0 {Aucun produit} one {# produit} other {# produits}}",
+    "emptyTitle": "Aucun produit ne correspond",
+    "emptyBody": "Essayez d'élargir votre recherche en retirant un filtre.",
+    "sortOptions": {
+      "popularite": "Popularité",
+      "nouveautes": "Nouveautés",
+      "prix-croissant": "Prix croissant",
+      "prix-decroissant": "Prix décroissant",
+      "promotions": "Promotions"
+    }
   }
 }

@@ -226,6 +226,40 @@ export async function getProductsByCategory(
   return rows.map(toProduct);
 }
 
+/**
+ * Catalogue filtré. Les critères que PostgreSQL sait traiter — catégorie,
+ * marque, température — sont appliqués côté base ; le prix et le tri, qui
+ * dépendent de la variante la moins chère, le sont ensuite en mémoire
+ * (voir `applyFilters`).
+ */
+export async function getCatalogue(criteria: {
+  categorySlug?: string;
+  brandSlug?: string;
+  temperatures?: TemperatureClass[];
+}): Promise<Product[]> {
+  const supabase = createCatalogClient();
+  let request = supabase.from("products").select(PRODUCT_SELECT);
+
+  if (criteria.categorySlug) {
+    const category = await getCategoryBySlug(criteria.categorySlug);
+    if (!category) return [];
+    request = request.eq("category_id", category.id);
+  }
+
+  if (criteria.brandSlug) {
+    const brand = await getBrandBySlug(criteria.brandSlug);
+    if (!brand) return [];
+    request = request.eq("brand_id", brand.id);
+  }
+
+  if (criteria.temperatures && criteria.temperatures.length > 0) {
+    request = request.in("temperature_class", criteria.temperatures);
+  }
+
+  const rows = unwrap<Row[]>(await request.order("name_fr").limit(500));
+  return rows.map(toProduct);
+}
+
 export async function getFeaturedProducts(limit = 8): Promise<Product[]> {
   const supabase = createCatalogClient();
   const rows = unwrap<Row[]>(

@@ -122,7 +122,18 @@
     "perKg": "per kilo",
     "approxWeight": "Approximate weight",
     "billedAtMaxWeight": "Billed at the top of the weight range, so the amount is final at checkout.",
-    "demoPrice": "Demo price"
+    "demoPrice": "Demo price",
+    "chooseFormat": "Choose a size",
+    "origin": "Origin",
+    "brand": "Brand",
+    "conservation": "Storage",
+    "allergens": "Allergens",
+    "description": "Description",
+    "noAllergens": "No declared allergens.",
+    "cartComingSoon": "The cart is coming in the next development step: this page is browsable, but ordering is not open yet.",
+    "provisionalPrice": "Demo price, not final.",
+    "backToShop": "Back to the shop",
+    "unitPrice": "Price per kilo"
   },
   "stock": {
     "in_stock": "In stock",
@@ -177,5 +188,33 @@
     "french": "Français",
     "english": "English",
     "demoNotice": "Site in development — the catalogue and prices shown are demo data."
+  },
+  "shop": {
+    "title": "Shop",
+    "subtitle": "All our products, from Senegal to Montréal.",
+    "filters": "Filters",
+    "filtersWithCount": "Filters ({count})",
+    "clearAll": "Clear all",
+    "category": "Category",
+    "allCategories": "All categories",
+    "temperature": "Storage",
+    "price": "Price",
+    "priceMin": "Minimum",
+    "priceMax": "Maximum",
+    "apply": "Apply",
+    "close": "Close filters",
+    "sort": "Sort by",
+    "onlyPromo": "On sale",
+    "onlyNew": "New",
+    "results": "{count, plural, =0 {No products} one {# product} other {# products}}",
+    "emptyTitle": "No product matches",
+    "emptyBody": "Try widening your search by removing a filter.",
+    "sortOptions": {
+      "popularite": "Popularity",
+      "nouveautes": "Newest",
+      "prix-croissant": "Price, low to high",
+      "prix-decroissant": "Price, high to low",
+      "promotions": "Deals"
+    }
   }
 }

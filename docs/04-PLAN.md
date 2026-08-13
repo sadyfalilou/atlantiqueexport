@@ -104,24 +104,32 @@ tables n'aient pas à y penser.
   d'infolettre et journal d'audit sont refusés par PostgreSQL (erreur 42501)
 - ⬜ Reste à faire : rejouer les migrations sur une base vierge
 
-## Lot 3 — Catalogue, recherche et filtres ⬜
+## Lot 3 — Catalogue et filtres 🚧
 
-- Page boutique et pages catégories, rendues côté serveur
-- Filtres : catégorie, marque, origine, prix, format, disponibilité, température, promotion,
-  nouveauté, vente en gros — état porté par l'URL, donc partageable et indexable
-- Tris : popularité, nouveautés, prix croissant/décroissant, promotions
-- Feuille de filtres plein écran sur mobile
-- Recherche instantanée avec suggestions (`/api/recherche`, anti-rebond)
-- **Vérification** : chaque filtre testé unitairement, parcours de recherche en end-to-end
+- ✅ Page boutique et pages catégories, rendues côté serveur
+- ✅ Filtres catégorie, température, promotion, nouveauté et fourchette de prix — l'état vit
+  dans l'URL, donc partageable, indexable et compatible avec le bouton « précédent »
+- ✅ Chaque filtre est un LIEN et le prix un formulaire GET : la page fonctionne sans JavaScript
+- ✅ Tris : popularité, nouveautés, prix croissant, prix décroissant, promotions
+- ✅ Tiroir de filtres sur mobile, fermé par Échap
+- ✅ Pages Nouveautés et Promotions
+- ⬜ Filtres marque, origine, format et vente en gros
+- ⬜ Recherche instantanée avec suggestions (`/api/recherche`, anti-rebond)
+- **Vérification** : 21 tests unitaires sur les filtres et le tri, plus un contrôle des pages
+  rendues (comptages, ordre des prix, traduction)
 
-## Lot 4 — Fiche produit ⬜
+## Lot 4 — Fiche produit 🚧
 
-- Galerie, sélecteur de format, options de préparation du poisson, prix à l'unité de mesure
-- États de stock, alerte de retour en stock, bouton de réservation si arrivage
-- Onglets description / ingrédients / allergènes / nutrition / conservation
-- Produits complémentaires et recettes associées
-- Données structurées `Product` + fil d'Ariane
-- **Vérification** : test end-to-end du choix de format et d'option de préparation
+- ✅ Sélecteur de format, prix qui suit, prix au kilo, fil d'Ariane
+- ✅ Badges de température et d'état de stock, mention du prix provisoire
+- ✅ Description, allergènes, origine, conservation
+- ✅ Données structurées `Product` — **émises seulement si les prix sont définitifs**, pour ne
+  pas alimenter les moteurs de recherche avec des montants de démonstration
+- ✅ Le bouton d'ajout au panier est présent mais désactivé, avec une explication écrite : le
+  panier n'existe pas encore, et un bouton actif qui ne ferait rien serait un mensonge
+- ⬜ Galerie d'images (en attente de photographies)
+- ⬜ Options de préparation du poisson, alerte de retour en stock, réservation d'arrivage
+- ⬜ Produits complémentaires et recettes associées
 
 ## Lot 5 — Panier et règles logistiques ⬜
 

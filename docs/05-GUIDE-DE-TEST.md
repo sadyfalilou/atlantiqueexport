@@ -1,6 +1,6 @@
 # Guide de test
 
-_Dernière mise à jour : 12 août 2026 — état : lot 1 terminé, lot 2 en cours_
+_Dernière mise à jour : 12 août 2026 — état : lots 1 et 2 terminés, boutique et fiches produit en place_
 
 ## 1. Démarrer le site
 
@@ -28,20 +28,20 @@ C'est le point le plus important avant de commencer : la plupart des liens mène
 
 | Fonctionne aujourd'hui | Pas encore construit |
 | --- | --- |
-| Page d'accueil complète | Boutique, catégories, fiches produit |
-| Bascule français / anglais | Recherche |
-| Méga-menu Boutique | Panier et commande |
-| Navigation mobile et barre inférieure | **Création de compte et connexion** (lot 7) |
-| Pied de page | **Espace administrateur** (lot 9) |
-| Page « pas encore en ligne » | Recettes, arrivages, pages institutionnelles |
+| Page d'accueil complète | Recherche |
+| **Boutique avec filtres et tri** | Panier et commande |
+| **Pages de catégorie** | **Création de compte et connexion** (lot 7) |
+| **Fiches produit avec choix du format** | **Espace administrateur** (lot 9) |
+| **Nouveautés et Promotions** | Recettes, arrivages, pages institutionnelles |
+| Bascule français / anglais, méga-menu, navigation mobile | |
 
 **Il n'y a donc pas encore de connexion.** L'icône de personnage dans l'en-tête mène à la page
 « pas encore en ligne ». L'authentification arrive au lot 7, l'administration au lot 9.
 
-**Les produits affichés ne sont pas encore ceux de la base.** L'accueil montre toujours le jeu de
-démonstration, avec des prix fictifs — un bandeau le rappelle en haut de page. Les 42 produits
-Sonagoo sont bien en base, mais non publiés faute de prix canadiens, et l'accueil n'y est pas
-encore branché. Cette bascule est la prochaine étape du lot 2.
+**Les produits affichés viennent de votre base Supabase** : les 42 références Sonagoo plus la
+pulpe de madd. En revanche, **les prix et les stocks sont fictifs** — un bandeau le rappelle en
+haut de page, et la fiche produit le répète sous le prix. Ils seront remplacés par vos vraies
+valeurs.
 
 ## 3. Parcours à tester
 
@@ -54,8 +54,8 @@ Cochez au fur et à mesure ; ce qui cloche m'intéresse, même si ça vous para�
 - [ ] Les prix sont alignés d'une carte à l'autre, avec le prix au kilo en dessous
 - [ ] La section « Avis des clients » est vide et l'explique — c'est voulu, nous n'affichons aucun
       faux témoignage
-- [ ] « Prochain arrivage du Sénégal » montre deux barres de progression et les bonnes dates
-      (18 septembre 2026 pour l'arrivée, 5 septembre pour la limite de réservation)
+- [ ] « Prochain arrivage du Sénégal » affiche un état vide : aucun arrivage n'est encore
+      enregistré en base, et nous n'en inventons pas
 
 ### 3.2 Bilinguisme
 
@@ -84,13 +84,38 @@ Le plus simple est de réduire la fenêtre de votre navigateur jusqu'à ce qu'el
 - [ ] Les cartes produit passent sur deux colonnes
 - [ ] Tous les boutons se touchent facilement au doigt, sans viser
 
-### 3.5 Liens non construits
+### 3.5 Boutique et fiches produit
 
-- [ ] Cliquez sur « Faire mes courses » : vous arrivez sur « Cette page n'est pas encore en ligne »
+- [ ] Depuis l'accueil, « Faire mes courses » ouvre la boutique et ses 43 produits
+- [ ] Cochez une catégorie dans la colonne de gauche : la liste se réduit et **l'URL change**
+- [ ] Copiez cette URL dans un nouvel onglet : vous retrouvez exactement les mêmes filtres
+- [ ] Le bouton « précédent » du navigateur défait le dernier filtre
+- [ ] Cochez « En promotion » : il ne reste que trois produits
+- [ ] Changez le tri pour « Prix croissant » : les prix montent bien de haut en bas
+- [ ] Saisissez 25 au minimum de prix, puis « Appliquer » : les produits dont **un format** coûte
+      25 $ ou plus apparaissent, même si leur petit format est moins cher
+- [ ] « Tout effacer » remet la liste complète
+
+Sur une fiche produit :
+
+- [ ] Cliquez sur un produit : le fil d'Ariane montre Boutique → catégorie → produit
+- [ ] Changez de format : le prix et le prix au kilo changent aussitôt
+- [ ] Le bouton « Ajouter au panier » est **grisé**, avec une phrase qui explique pourquoi
+- [ ] La mention « Prix de démonstration, non définitif » apparaît sous le prix
+
+Sur téléphone :
+
+- [ ] Le bouton « Filtres » ouvre un tiroir latéral ; `Échap` le referme
+- [ ] Aucune barre de défilement horizontale n'apparaît
+
+### 3.6 Liens non construits
+
+- [ ] Cliquez sur « Panier » ou sur l'icône de compte : vous arrivez sur « Cette page n'est pas
+      encore en ligne »
 - [ ] L'en-tête et le pied de page restent affichés — ce n'est pas la page d'erreur brute du serveur
 - [ ] Le bouton « Retour à l'accueil » fonctionne
 
-### 3.6 Infolettre
+### 3.7 Infolettre
 
 - [ ] Entrez une adresse invalide, par exemple `abc` : un message explique quoi corriger
 - [ ] Entrez une adresse valide : le message précise que l'infolettre n'est pas encore active et
@@ -99,7 +124,7 @@ Le plus simple est de réduire la fenêtre de votre navigateur jusqu'à ce qu'el
 **Rien n'est enregistré pour l'instant, et le message le dit.** L'enregistrement réel viendra avec
 les courriels transactionnels.
 
-### 3.7 Accessibilité
+### 3.8 Accessibilité
 
 - [ ] Appuyez sur `Tab` dès l'ouverture de la page : un lien « Aller au contenu principal » apparaît
 - [ ] Continuez au `Tab` : chaque élément actif est entouré d'un anneau vert bien visible
