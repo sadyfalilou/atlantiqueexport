@@ -16,7 +16,13 @@ import type { Locale } from "@/lib/types";
 
 export async function BrandsSection({ locale }: { locale: Locale }) {
   const t = await getTranslations("home.brands");
-  const brands = await getBrands();
+
+  // La section s'intitule « Nos marques partenaires » : la marque maison n'y a
+  // pas sa place. Et s'il ne reste aucune partenaire à montrer — c'est le cas
+  // tant que Sonagoo est masquée — la section se retire au lieu d'afficher
+  // une grille d'une seule carte, ou pire, vide.
+  const brands = (await getBrands()).filter((brand) => brand.isPartner);
+  if (brands.length === 0) return null;
 
   return (
     <Section className="bg-cream-100">

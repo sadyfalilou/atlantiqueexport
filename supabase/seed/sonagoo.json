@@ -27,7 +27,9 @@
       "description_fr": "Marque sénégalaise de poudres, céréales, cocktails de fruits et préparations traditionnelles, transformés à Dakar.",
       "description_en": "Senegalese brand of powders, grains, fruit blends and traditional preparations, processed in Dakar.",
       "origin_country": "SN",
-      "is_partner": true
+      "is_partner": true,
+      "_pourquoi_masquee": "Masquée à la demande d'Atlantique Export en attendant la mise en avant publique du partenariat. Les produits Sonagoo restent en boutique : seule la mention de la marque disparaît. Repasser isActive à true pour la réafficher.",
+      "isActive": false
     },
     {
       "slug": "atlantique-export",

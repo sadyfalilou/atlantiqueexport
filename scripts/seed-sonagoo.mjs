@@ -164,7 +164,9 @@ const brands = await upsert(
     description_en: b.description_en,
     origin_country: b.origin_country,
     is_partner: b.is_partner,
-    is_active: true,
+    // Une marque masquée disparaît du site sans que ses produits en pâtissent :
+    // la politique RLS filtre la marque, pas le catalogue.
+    is_active: b.isActive ?? true,
   })),
 );
 const brandId = Object.fromEntries(brands.map((b) => [b.slug, b.id]));
