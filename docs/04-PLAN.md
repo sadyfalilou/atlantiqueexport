@@ -1,6 +1,6 @@
 # Étape 4 — Plan d'implémentation
 
-_Dernière mise à jour : 11 août 2026_
+_Dernière mise à jour : 13 août 2026_
 
 Le plan est découpé en lots courts et vérifiables. Chaque lot se termine par : `npm run lint`,
 `npm run typecheck`, les tests concernés, et une vérification du rendu à 320 px et à 1280 px.
@@ -296,12 +296,19 @@ npm run grant:admin -- votre@courriel.ca
 - Administration des arrivages et conversion en stock à réception
 - **Vérification** : end-to-end de réservation, notification à la mise à disposition
 
-## Lot 12 — Courriels transactionnels ⬜
+## Lot 12 — Courriels transactionnels 🚧
 
-- Douze modèles bilingues via Resend (bienvenue, confirmation, Interac en attente, paiement
-  confirmé, préparation, prêt pour ramassage, en livraison, livrée, précommande, arrivage
-  disponible, retour en stock, réinitialisation)
-- File d'envoi avec relance en cas d'échec
+- ✅ Migration `email_queue` avec statuts et système de relance (backoff exponentiel)
+- ✅ Douze modèles bilingues via Resend, rendus en JSX/React :
+  - Bienvenue, confirmation de commande, attente Interac, paiement confirmé, préparation,
+    ramassage, livraison, livrée, précommande, arrivage disponible, stock, réinitialisation
+- ✅ Client Resend avec validation des clés au démarrage
+- ✅ Fonction `queueEmail()` pour mettre un courriel en queue
+- ✅ Fonction `processEmailQueue()` pour traiter les courriels avec gestion d'erreurs
+- ✅ Route `/api/cron/send-emails` pour orchestration par un service de cron
+- ✅ Intégration dans newsletter (souscription) et commandes
+- ⬜ Intégration complète dans les autres événements (statuts de commande, etc.)
+- ⬜ Tests unitaires des templates
 - **Vérification** : rendu de chaque modèle dans les deux langues, envoi réel en test
 
 ## Lot 13 — Contenu éditorial et pages institutionnelles ⬜
