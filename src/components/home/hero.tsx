@@ -28,16 +28,10 @@ export async function Hero() {
 
   return (
     <section className="relative overflow-hidden bg-forest-800 text-cream-50">
-      {/* Motif décoratif, très discret, et jamais derrière du texte. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-0 hidden w-2/5 opacity-[0.07] lg:block"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(135deg, var(--color-gold-400) 0 2px, transparent 2px 22px)",
-        }}
-      />
-
+      {/* Pas de motif de fond ici. Une version en rayures dorées y figurait,
+          arrêtée net sur une verticale au milieu de la bannière : la coupure
+          se lisait comme un défaut d'affichage plutôt que comme une texture.
+          Un aplat franc vaut mieux qu'un ornement qui appelle la question. */}
       <Container>
         <div className="relative py-16 lg:py-28">
           <p className="text-xs font-semibold tracking-wide text-gold-400 uppercase">

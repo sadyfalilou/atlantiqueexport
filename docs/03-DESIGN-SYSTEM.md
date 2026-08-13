@@ -240,6 +240,13 @@ et remplaçable en changeant une seule ligne en base.
 Les motifs inspirés du textile ouest-africain sont réduits à des filets fins et des séparateurs,
 en or ou en vert, à moins de 10 % d'opacité. Jamais en fond de page, jamais derrière du texte.
 
+⚠️ **Et jamais avec un bord franc.** La bannière d'accueil a porté un moment des rayures dorées à
+7 % d'opacité sur sa moitié droite. À cette opacité elles étaient bien assez discrètes — mais
+elles s'arrêtaient net sur une verticale au milieu de l'écran, et cette coupure se lisait comme un
+défaut d'affichage. Un motif de fond doit soit couvrir toute la zone, soit s'éteindre en dégradé.
+La règle pratique : si quelqu'un demande « est-ce voulu ? », la texture a échoué et il vaut mieux
+un aplat franc.
+
 ## 3.6 Points de rupture
 
 `sm 640` · `md 768` · `lg 1024` · `xl 1280` · `2xl 1536`.
