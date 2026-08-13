@@ -12,14 +12,15 @@ import { processEmailQueue } from "@/lib/resend";
  *   curl http://localhost:3000/api/cron/send-emails
  */
 export async function GET(req: NextRequest) {
-  // Validation optionnelle du secret (si vous avez un CRON_SECRET)
+  // Vercel Cron appelle cette route automatiquement sans authentification.
+  // Si tu veux ajouter une sécurité, ajoute CRON_SECRET dans Vercel et
+  // décommente le code ci-dessous.
+  /*
   const secret = req.headers.get("authorization");
   if (secret !== `Bearer ${process.env.CRON_SECRET}`) {
-    if (process.env.NODE_ENV === "production") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    // En développement, on laisse passer
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  */
 
   try {
     await processEmailQueue();
