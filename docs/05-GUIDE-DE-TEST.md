@@ -157,6 +157,15 @@ Deux vérifications qui comptent :
 - [ ] La commande passe en « Confirmée » et « Encaissé »
 - [ ] Le tableau de bord met à jour le montant encaissé
 
+Saisie des prix :
+
+- [ ] Ouvrez « Produits » : un bandeau indique combien de formats attendent un vrai prix
+- [ ] Ouvrez un produit, saisissez un prix avec une virgule — par exemple `18,50` — puis
+      enregistrez
+- [ ] La mention « prix de démonstration » disparaît pour ce format, et le compteur décroît
+- [ ] Sur le site public, la fiche affiche le nouveau prix sans la mention provisoire
+- [ ] Essayez un prix barré inférieur au prix de vente : il est refusé avec une explication
+
 ### 3.9 Liens non construits
 
 - [ ] Cliquez sur l'icône de compte, ou sur « Recettes » : vous arrivez sur « Cette page n'est

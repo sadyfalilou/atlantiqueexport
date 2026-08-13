@@ -171,3 +171,120 @@ export async function getDashboard(): Promise<DashboardFigures> {
     lowStock,
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Produits et prix                                                            */
+/* -------------------------------------------------------------------------- */
+
+export interface AdminVariant {
+  id: string;
+  sku: string;
+  label: string;
+  retailPriceCents: number;
+  compareAtPriceCents: number | null;
+  wholesalePriceCents: number | null;
+  priceIsProvisional: boolean;
+  isActive: boolean;
+  available: number;
+}
+
+export interface AdminProduct {
+  id: string;
+  slug: string;
+  name: string;
+  categoryName: string | null;
+  isPublished: boolean;
+  hasProvisionalPrice: boolean;
+  variants: AdminVariant[];
+}
+
+const ADMIN_PRODUCT_SELECT = `
+  id, slug, name_fr, published_at,
+  category:categories(name_fr),
+  variants:product_variants(
+    id, sku, label_fr, retail_price_cents, compare_at_price_cents,
+    wholesale_price_cents, price_is_provisional, is_active, position,
+    stock:stock_levels(quantity_available)
+  )
+`;
+
+function toAdminProduct(row: Row): AdminProduct {
+  const category = row.category as Row | null;
+  const variants = ((row.variants as Row[] | null) ?? [])
+    .sort((a, b) => (a.position as number) - (b.position as number))
+    .map((variant) => {
+      const stock = variant.stock as Row | Row[] | null;
+      const entry = Array.isArray(stock) ? stock[0] : stock;
+      return {
+        id: variant.id as string,
+        sku: variant.sku as string,
+        label: (variant.label_fr as string) ?? "",
+        retailPriceCents: variant.retail_price_cents as number,
+        compareAtPriceCents: (variant.compare_at_price_cents as number | null) ?? null,
+        wholesalePriceCents: (variant.wholesale_price_cents as number | null) ?? null,
+        priceIsProvisional: Boolean(variant.price_is_provisional),
+        isActive: variant.is_active !== false,
+        available: (entry?.quantity_available as number | undefined) ?? 0,
+      };
+    });
+
+  return {
+    id: row.id as string,
+    slug: row.slug as string,
+    name: (row.name_fr as string) ?? "",
+    categoryName: (category?.name_fr as string | undefined) ?? null,
+    isPublished: row.published_at != null,
+    hasProvisionalPrice: variants.some((v) => v.isActive && v.priceIsProvisional),
+    variants,
+  };
+}
+
+export async function getAdminProducts(): Promise<AdminProduct[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("products")
+    .select(ADMIN_PRODUCT_SELECT)
+    .order("name_fr")
+    .limit(500);
+
+  return ((data ?? []) as Row[]).map(toAdminProduct);
+}
+
+export async function getAdminProduct(slug: string): Promise<AdminProduct | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("products")
+    .select(ADMIN_PRODUCT_SELECT)
+    .eq("slug", slug)
+    .limit(1);
+
+  const row = ((data ?? []) as Row[])[0];
+  return row ? toAdminProduct(row) : null;
+}
+
+/**
+ * Combien de formats attendent encore un vrai prix, et le site est-il
+ * toujours en mode « prix de démonstration ». Sert à savoir s'il est possible
+ * de basculer la boutique en mode réel.
+ */
+export async function getPricingReadiness(): Promise<{
+  provisionalCount: number;
+  allowProvisional: boolean;
+}> {
+  const supabase = createAdminClient();
+  const [variants, settings] = await Promise.all([
+    supabase
+      .from("product_variants")
+      .select("id")
+      .eq("price_is_provisional", true)
+      .eq("is_active", true),
+    supabase.from("site_settings").select("allow_provisional_prices").limit(1),
+  ]);
+
+  return {
+    provisionalCount: (variants.data ?? []).length,
+    allowProvisional: Boolean(
+      ((settings.data ?? []) as Row[])[0]?.allow_provisional_prices,
+    ),
+  };
+}

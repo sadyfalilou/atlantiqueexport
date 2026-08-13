@@ -233,7 +233,13 @@ vers laquelle quelqu'un enverrait de l'argent.
 - ✅ **Validation d'un virement Interac**, réservée aux rôles `super_admin` et `manager`,
   journalisée dans `admin_audit_log` avec l'identité de son auteur
 - ✅ Consultation des stocks
-- ⬜ Gestion des produits, prix, catégories et marques
+- ✅ **Gestion des prix** : saisie format par format, en dollars, virgule ou point acceptés.
+  Enregistrer retire la mention « prix de démonstration » du format concerné.
+- ✅ Publication et retrait d'un produit
+- ✅ Bascule de la boutique en **mode réel**, refusée tant qu'un format actif porte encore un
+  prix de démonstration — passer outre publierait des montants inventés comme s'ils étaient
+  réels. Réservée au super administrateur.
+- ⬜ Gestion des catégories, marques, descriptions et images
 - ⬜ Mouvements de stock (réception, ajustement, perte)
 - ⬜ Arrivages, comptes professionnels, promotions, rapports
 
@@ -255,6 +261,16 @@ vers laquelle quelqu'un enverrait de l'argent.
 - compte `super_admin` : tableau de bord affichant le virement en attente
 - validation d'un encaissement : commande passée en `confirmed`/`paid`, ligne de paiement
   créée avec l'identité du valideur, entrée au journal d'audit, historique de statut complété
+
+### Saisir vos vrais prix
+
+`/admin/produits` affiche combien de formats attendent encore un prix. Ouvrez un produit,
+saisissez les montants, enregistrez : la mention « démo » disparaît de ce produit et le
+compteur décroît. Quand il atteint zéro, un bouton propose de passer la boutique en mode réel,
+ce qui retire le bandeau du site et réactive le garde-fou en base.
+
+Un prix barré inférieur ou égal au prix de vente est refusé : la réduction affichée serait
+fausse.
 
 ### Premier accès
 

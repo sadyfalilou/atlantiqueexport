@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ClipboardList, LayoutDashboard, LogOut, Package } from "lucide-react";
+import { ClipboardList, LayoutDashboard, LogOut, Package, Tag } from "lucide-react";
 import { getStaffMember } from "@/lib/supabase/auth";
 import { signOutAction } from "@/app/actions/admin";
 
@@ -34,6 +34,9 @@ export default async function ProtectedAdminLayout({
             </AdminLink>
             <AdminLink href="/admin/commandes" icon={<ClipboardList className="size-4" />}>
               Commandes
+            </AdminLink>
+            <AdminLink href="/admin/produits" icon={<Tag className="size-4" />}>
+              Produits
             </AdminLink>
             <AdminLink href="/admin/stocks" icon={<Package className="size-4" />}>
               Stocks
