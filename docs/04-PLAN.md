@@ -114,7 +114,9 @@ tables n'aient pas à y penser.
 - ✅ Tiroir de filtres sur mobile, fermé par Échap
 - ✅ Pages Nouveautés et Promotions
 - ⬜ Filtres marque, origine, format et vente en gros
-- ⬜ Recherche instantanée avec suggestions (`/api/recherche`, anti-rebond)
+- ✅ **Recherche produit** : insensible aux accents et à la casse, sur le nom et la
+  description, dans les deux langues. Une correspondance en début de nom passe devant.
+- ⬜ Suggestions instantanées sous le champ de l'en-tête (anti-rebond)
 - **Vérification** : 21 tests unitaires sur les filtres et le tri, plus un contrôle des pages
   rendues (comptages, ordre des prix, traduction)
 

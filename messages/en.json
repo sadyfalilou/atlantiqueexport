@@ -305,5 +305,16 @@
     "free": "Free",
     "continueShopping": "Continue shopping",
     "contactUs": "Contact us"
+  },
+  "search": {
+    "title": "Search",
+    "label": "What are you looking for?",
+    "placeholder": "hibiscus, thiakry, coffee…",
+    "submit": "Search",
+    "hint": "Accents don't matter: “cafe” finds “Café Touba”.",
+    "results": "{count, plural, one {# product found} other {# products found}} for “{term}”",
+    "noResultTitle": "Nothing found for “{term}”",
+    "noResultBody": "Try a shorter word, or browse the shop by aisle.",
+    "browseShop": "Browse the shop"
   }
 }

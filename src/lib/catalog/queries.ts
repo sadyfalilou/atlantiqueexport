@@ -430,3 +430,37 @@ export function getEntryVariant(product: Product) {
     current.retailPriceCents < cheapest.retailPriceCents ? current : cheapest,
   );
 }
+
+/**
+ * Recherche produit.
+ *
+ * La normalisation — minuscules, accents — est faite par la fonction SQL, au
+ * même endroit que l'indexation, pour que les deux ne puissent pas diverger.
+ * Le terme est transmis comme paramètre : il n'est jamais concaténé dans une
+ * requête.
+ */
+export async function searchProducts(query: string, limit = 24): Promise<Product[]> {
+  const term = query.trim();
+  if (term.length === 0) return [];
+
+  const supabase = createCatalogClient();
+  const { data, error } = await supabase.rpc("search_products", {
+    p_query: term,
+    p_limit: limit,
+  });
+
+  if (error) throw new Error(`Supabase : ${error.message}`);
+
+  const ids = ((data ?? []) as Row[]).map((row) => row.id as string);
+  if (ids.length === 0) return [];
+
+  // La fonction renvoie les colonnes de `products` sans les relations ; on
+  // recharge les mêmes lignes avec variantes et catégorie, en conservant
+  // l'ordre de pertinence établi par SQL.
+  const rows = unwrap<Row[]>(
+    await supabase.from("products").select(PRODUCT_SELECT).in("id", ids),
+  );
+
+  const byId = new Map(rows.map((row) => [row.id as string, toProduct(row)]));
+  return ids.map((id) => byId.get(id)).filter((p): p is Product => p != null);
+}

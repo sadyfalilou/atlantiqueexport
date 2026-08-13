@@ -28,12 +28,12 @@ C'est le point le plus important avant de commencer : la plupart des liens mène
 
 | Fonctionne aujourd'hui | Pas encore construit |
 | --- | --- |
-| Page d'accueil complète | Recherche |
-| Boutique avec filtres et tri | Paiement en ligne par carte |
+| Page d'accueil complète | Paiement en ligne par carte |
+| Boutique avec filtres et tri | **Courriels de confirmation** |
 | Pages de catégorie | **Création de compte et connexion** (lot 7) |
 | Fiches produit avec choix du format | Gestion des produits et des prix en ligne |
 | Panier : ajout, quantités, retrait | Recettes, arrivages, pages institutionnelles |
-| Commande complète avec Interac | Courriels de confirmation |
+| Commande complète avec Interac | Comptes clients |
 | **Administration : commandes, encaissements, stocks** | |
 | Nouveautés et Promotions | |
 | Bascule français / anglais, méga-menu, navigation mobile | |
@@ -166,14 +166,24 @@ Saisie des prix :
 - [ ] Sur le site public, la fiche affiche le nouveau prix sans la mention provisoire
 - [ ] Essayez un prix barré inférieur au prix de vente : il est refusé avec une explication
 
-### 3.9 Liens non construits
+### 3.9 Recherche
+
+- [ ] Cliquez sur la loupe dans l'en-tête
+- [ ] Tapez `cafe` **sans accent** : « Café Touba » apparaît
+- [ ] Tapez `thia` : les quatre thiakry sortent, celui qui s'appelle exactement
+      « Thiakry » en premier
+- [ ] Tapez `baobab` : la poudre de bouye sort, car le mot est dans sa description
+- [ ] Tapez `zzzz` : un état vide propose de parcourir la boutique
+- [ ] L'adresse contient votre terme : elle se partage telle quelle
+
+### 3.10 Liens non construits
 
 - [ ] Cliquez sur l'icône de compte, ou sur « Recettes » : vous arrivez sur « Cette page n'est
       pas encore en ligne »
 - [ ] L'en-tête et le pied de page restent affichés — ce n'est pas la page d'erreur brute du serveur
 - [ ] Le bouton « Retour à l'accueil » fonctionne
 
-### 3.10 Infolettre
+### 3.11 Infolettre
 
 - [ ] Entrez une adresse invalide, par exemple `abc` : un message explique quoi corriger
 - [ ] Entrez une adresse valide : le message précise que l'infolettre n'est pas encore active et
@@ -182,7 +192,7 @@ Saisie des prix :
 **Rien n'est enregistré pour l'instant, et le message le dit.** L'enregistrement réel viendra avec
 les courriels transactionnels.
 
-### 3.11 Accessibilité
+### 3.12 Accessibilité
 
 - [ ] Appuyez sur `Tab` dès l'ouverture de la page : un lien « Aller au contenu principal » apparaît
 - [ ] Continuez au `Tab` : chaque élément actif est entouré d'un anneau vert bien visible
@@ -224,7 +234,14 @@ npm run check
 Lance le linter, la vérification TypeScript et les tests unitaires. À faire passer avant chaque
 commit.
 
-## 6. Me signaler un problème
+## 6. Un désagrément connu du mode développement
+
+S'il vous arrive de voir un libellé brut à l'écran — `search.title` au lieu de « Rechercher » —
+c'est que le serveur de développement garde une copie périmée des fichiers de traduction.
+Arrêtez-le avec `Ctrl` + `C` et relancez `npm run dev`. Cela n'affecte que le développement,
+jamais un site déployé.
+
+## 7. Me signaler un problème
 
 Le plus utile, dans l'ordre : sur quelle page, à quelle largeur d'écran ou sur quel appareil, ce
 que vous attendiez, ce qui s'est produit. Une capture d'écran vaut souvent mieux qu'un paragraphe.

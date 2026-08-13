@@ -305,5 +305,16 @@
     "free": "Offerts",
     "continueShopping": "Continuer mes achats",
     "contactUs": "Nous écrire"
+  },
+  "search": {
+    "title": "Rechercher",
+    "label": "Que cherchez-vous ?",
+    "placeholder": "bissap, thiakry, café…",
+    "submit": "Chercher",
+    "hint": "Les accents ne comptent pas : « cafe » trouve « Café Touba ».",
+    "results": "{count, plural, one {# produit trouvé} other {# produits trouvés}} pour « {term} »",
+    "noResultTitle": "Rien trouvé pour « {term} »",
+    "noResultBody": "Essayez un mot plus court, ou parcourez la boutique par rayon.",
+    "browseShop": "Voir la boutique"
   }
 }
