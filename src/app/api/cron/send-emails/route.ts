@@ -3,24 +3,33 @@ import { processEmailQueue } from "@/lib/resend";
 
 /**
  * Route de traitement de la queue de courriels.
- * Appelée toutes les 5 minutes (ou moins) par un service de cron.
  *
- * Vercel Cron Triggers : https://vercel.com/docs/cron-jobs
- * Configuration : vercel.json ou environment variables.
+ * Appelée toutes les 5 minutes par un service de cron externe (cron-job.org,
+ * GitHub Actions…), qui doit présenter l'en-tête :
  *
- * En développement, cette route peut être appelée manuellement :
- *   curl http://localhost:3000/api/cron/send-emails
+ *   Authorization: Bearer <CRON_SECRET>
+ *
+ * Le cron de Vercel n'est pas utilisé : le plan hobby ne l'autorise qu'une
+ * fois par jour, ce qui ferait attendre une confirmation de commande jusqu'au
+ * lendemain.
+ *
+ * En développement :
+ *   curl -H "Authorization: Bearer $CRON_SECRET" \
+ *        http://localhost:3000/api/cron/send-emails
  */
 export async function GET(req: NextRequest) {
-  // Vercel Cron appelle cette route automatiquement sans authentification.
-  // Si tu veux ajouter une sécurité, ajoute CRON_SECRET dans Vercel et
-  // décommente le code ci-dessous.
-  /*
-  const secret = req.headers.get("authorization");
-  if (secret !== `Bearer ${process.env.CRON_SECRET}`) {
+  const secret = process.env.CRON_SECRET;
+
+  // Sans secret configuré la route reste fermée, jamais ouverte : n'importe
+  // qui pourrait sinon la marteler et épuiser le quota d'envoi Resend.
+  if (!secret) {
+    console.error("CRON_SECRET absent : la route de cron refuse de servir.");
+    return NextResponse.json({ error: "Not configured" }, { status: 503 });
+  }
+
+  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  */
 
   try {
     await processEmailQueue();
