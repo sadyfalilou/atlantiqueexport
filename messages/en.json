@@ -216,5 +216,40 @@
       "prix-decroissant": "Price, high to low",
       "promotions": "Deals"
     }
+  },
+  "cart": {
+    "title": "Cart",
+    "emptyTitle": "Your cart is empty",
+    "emptyBody": "Browse the shop and add your first products.",
+    "startShopping": "Go to the shop",
+    "addToCart": "Add to cart",
+    "added": "Added to cart.",
+    "viewCart": "View cart",
+    "quantity": "Quantity",
+    "increase": "Increase quantity",
+    "decrease": "Decrease quantity",
+    "update": "Update",
+    "remove": "Remove",
+    "summary": "Summary",
+    "subtotal": "Subtotal",
+    "savings": "Savings",
+    "delivery": "Delivery",
+    "deliveryAtCheckout": "Calculated at checkout",
+    "checkout": "Checkout",
+    "checkoutComingSoon": "Checkout is coming in the next step.",
+    "fixStockFirst": "Adjust the flagged quantities before continuing.",
+    "provisionalPrices": "The prices shown are demo values.",
+    "stockLimit": "{count, plural, =0 {Sold out} one {only # left} other {# available}}",
+    "soldOut": "Sold out",
+    "soldOutHelp": "This size is not available right now.",
+    "unavailable": "This product is no longer available.",
+    "fulfillmentTitle": "Available ways to receive your order",
+    "methodBlocked": "Not possible: your cart contains a {temperature} product.",
+    "methods": {
+      "pickup": "Montréal pickup",
+      "local_delivery": "Local delivery",
+      "shipping": "Shipping across Canada"
+    },
+    "invalidQuantity": "Invalid quantity."
   }
 }

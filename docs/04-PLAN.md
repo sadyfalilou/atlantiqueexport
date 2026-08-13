@@ -131,14 +131,35 @@ tables n'aient pas à y penser.
 - ⬜ Options de préparation du poisson, alerte de retour en stock, réservation d'arrivage
 - ⬜ Produits complémentaires et recettes associées
 
-## Lot 5 — Panier et règles logistiques ⬜
+## Lot 5 — Panier et règles logistiques 🚧
 
-- Panier serveur avec cookie `httpOnly`, fusion à la connexion
-- Tiroir panier et page panier, modification des quantités, suppression
-- **Calcul des modes de réception compatibles** selon les températures présentes, avec explication
-  en clair lorsqu'un mode est écarté
-- Recalcul systématique des prix côté serveur
-- **Vérification** : tests unitaires sur la matrice de compatibilité, end-to-end d'ajout au panier
+- ✅ Panier serveur, identifié par un jeton de 32 octets dans un cookie `httpOnly`
+- ✅ Page panier : quantités modifiables, retrait, récapitulatif
+- ✅ **Modes de réception recalculés à chaque affichage** selon les températures présentes, avec
+  le motif écrit en clair lorsqu'un mode est écarté
+- ✅ Ajout au panier depuis la fiche produit, avec sélecteur de quantité borné par le stock
+- ✅ Pastille de comptage dans l'en-tête
+- ⬜ Tiroir panier (le panier est pour l'instant une page)
+- ⬜ Fusion du panier invité à la connexion (lot 7)
+
+**Trois garanties, et comment elles sont tenues**
+
+1. **Aucun prix ne transite par le navigateur.** `cart_items` ne retient qu'un identifiant de
+   variante et une quantité ; les montants sont relus depuis le catalogue à chaque affichage.
+2. **Le panier est inaccessible depuis le client.** Les tables `carts` et `cart_items` n'ont aucun
+   privilège public ; tout passe par la clé de service, et le jeton vit dans un cookie `httpOnly`
+   que le JavaScript de la page ne peut pas lire.
+3. **La pastille de l'en-tête n'est pas rendue côté serveur.** Lire le cookie dans l'en-tête aurait
+   rendu dynamiques toutes les pages du site ; elle interroge donc `/api/panier` après affichage.
+   L'accueil et les 86 fiches produit restent prégénérés.
+
+**Vérifications exécutées**
+
+- 14 tests unitaires sur le calcul des montants et la compatibilité logistique
+- Parcours réel : ajout de 3 cafés puis d'une pulpe de madd, pastille à 4, sous-total 67,96 $
+- Retrait de la pulpe : sous-total 50,97 $ et **l'expédition redevient possible**
+- Formulaire falsifié à 999 puis à 50 exemplaires : refusé côté serveur dans les deux cas, avec
+  deux messages distincts, et le panier en base reste inchangé
 
 ## Lot 6 — Livraison, ramassage et créneaux ⬜
 

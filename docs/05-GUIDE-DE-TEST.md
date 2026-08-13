@@ -29,10 +29,11 @@ C'est le point le plus important avant de commencer : la plupart des liens mène
 | Fonctionne aujourd'hui | Pas encore construit |
 | --- | --- |
 | Page d'accueil complète | Recherche |
-| **Boutique avec filtres et tri** | Panier et commande |
-| **Pages de catégorie** | **Création de compte et connexion** (lot 7) |
-| **Fiches produit avec choix du format** | **Espace administrateur** (lot 9) |
-| **Nouveautés et Promotions** | Recettes, arrivages, pages institutionnelles |
+| Boutique avec filtres et tri | Tunnel de commande et paiement |
+| Pages de catégorie | **Création de compte et connexion** (lot 7) |
+| Fiches produit avec choix du format | **Espace administrateur** (lot 9) |
+| **Panier : ajout, quantités, retrait** | Recettes, arrivages, pages institutionnelles |
+| Nouveautés et Promotions | |
 | Bascule français / anglais, méga-menu, navigation mobile | |
 
 **Il n'y a donc pas encore de connexion.** L'icône de personnage dans l'en-tête mène à la page
@@ -108,14 +109,30 @@ Sur téléphone :
 - [ ] Le bouton « Filtres » ouvre un tiroir latéral ; `Échap` le referme
 - [ ] Aucune barre de défilement horizontale n'apparaît
 
-### 3.6 Liens non construits
+### 3.6 Panier
+
+- [ ] Sur une fiche produit, réglez la quantité puis « Ajouter au panier » : un message confirme
+      et **la pastille de l'en-tête s'incrémente**
+- [ ] Le bouton « + » se bloque à la quantité disponible en stock
+- [ ] Ouvrez le panier : le sous-total correspond à la somme des lignes
+- [ ] Modifiez une quantité puis « Mettre à jour » : le total suit
+- [ ] « Retirer » enlève la ligne et recalcule le total
+
+Le test le plus intéressant, celui de la chaîne du froid :
+
+- [ ] Ajoutez la **pulpe de madd congelée** au panier
+- [ ] Dans « Modes de réception possibles », « Expédition au Canada » est **barré**, avec le motif :
+      votre panier contient un produit surgelé
+- [ ] Retirez la pulpe : l'expédition redevient disponible aussitôt
+
+### 3.7 Liens non construits
 
 - [ ] Cliquez sur « Panier » ou sur l'icône de compte : vous arrivez sur « Cette page n'est pas
       encore en ligne »
 - [ ] L'en-tête et le pied de page restent affichés — ce n'est pas la page d'erreur brute du serveur
 - [ ] Le bouton « Retour à l'accueil » fonctionne
 
-### 3.7 Infolettre
+### 3.8 Infolettre
 
 - [ ] Entrez une adresse invalide, par exemple `abc` : un message explique quoi corriger
 - [ ] Entrez une adresse valide : le message précise que l'infolettre n'est pas encore active et
@@ -124,7 +141,7 @@ Sur téléphone :
 **Rien n'est enregistré pour l'instant, et le message le dit.** L'enregistrement réel viendra avec
 les courriels transactionnels.
 
-### 3.8 Accessibilité
+### 3.9 Accessibilité
 
 - [ ] Appuyez sur `Tab` dès l'ouverture de la page : un lien « Aller au contenu principal » apparaît
 - [ ] Continuez au `Tab` : chaque élément actif est entouré d'un anneau vert bien visible

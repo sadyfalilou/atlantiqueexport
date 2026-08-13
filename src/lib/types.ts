@@ -86,6 +86,8 @@ export interface ProductVariant {
   wholesalePriceCents?: number | null;
   /** Vrai tant que le prix affiché est une valeur de démonstration. */
   priceIsProvisional?: boolean;
+  /** Quantité disponible à la vente, calculée en base (détenu moins réservé). */
+  availableQuantity?: number;
   minQty: number;
   stepQty: number;
 }

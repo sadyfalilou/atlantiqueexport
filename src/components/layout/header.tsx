@@ -1,8 +1,9 @@
-import { Search, ShoppingBag, User } from "lucide-react";
+import { Search, User } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Container } from "@/components/ui/layout-primitives";
 import { Logo } from "@/components/brand/logo";
+import { CartBadge } from "@/components/cart/cart-badge";
 import { MegaMenu } from "@/components/layout/mega-menu";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
@@ -99,13 +100,7 @@ export async function Header({ locale }: { locale: Locale }) {
                 <User aria-hidden="true" className="size-5" />
               </Link>
 
-              <Link
-                href="/panier"
-                aria-label={t("nav.cart")}
-                className="inline-flex size-11 items-center justify-center rounded-md transition-colors hover:bg-forest-700"
-              >
-                <ShoppingBag aria-hidden="true" className="size-5" />
-              </Link>
+              <CartBadge />
             </div>
           </div>
         </Container>

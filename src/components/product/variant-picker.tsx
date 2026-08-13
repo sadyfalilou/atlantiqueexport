@@ -3,17 +3,16 @@
 import { useState } from "react";
 import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
+import { AddToCartForm } from "@/components/cart/add-to-cart-form";
 import { formatPrice, formatUnitPrice } from "@/lib/utils";
 import type { Locale, ProductVariant } from "@/lib/types";
 
 /**
  * Choix du format, et prix qui suit.
  *
- * Le bouton d'ajout au panier est présent mais DÉSACTIVÉ, avec une explication
- * écrite juste en dessous : le panier n'existe pas encore. Un bouton actif qui
- * ne ferait rien serait un mensonge à l'écran ; un bouton absent laisserait
- * croire que le produit n'est pas vendable.
+ * Chaque format a son propre prix et son propre stock : changer de format
+ * met donc à jour le montant, le prix au kilo et la quantité maximale que le
+ * formulaire d'ajout acceptera.
  */
 export function VariantPicker({
   variants,
@@ -93,14 +92,13 @@ export function VariantPicker({
         </p>
       ) : null}
 
-      <div className="mt-6">
-        <Button size="lg" disabled aria-describedby="cart-unavailable">
-          {t("addToCart")}
-        </Button>
-        <p id="cart-unavailable" className="mt-2 max-w-[32rem] text-sm text-muted">
-          {t("cartComingSoon")}
-        </p>
-      </div>
+      {/* La quantité maximale suit le format choisi : chaque variante a son
+          propre stock. */}
+      <AddToCartForm
+        key={selected.id}
+        variantId={selected.id}
+        maxQuantity={selected.availableQuantity ?? 0}
+      />
     </div>
   );
 }

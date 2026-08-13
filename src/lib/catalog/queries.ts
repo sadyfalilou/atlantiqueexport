@@ -51,7 +51,7 @@ const PRODUCT_SELECT = `
   allergens, tags, is_featured, is_new, is_wholesale_only,
   category:categories!products_category_id_fkey(slug),
   brand:brands!products_brand_id_fkey(slug),
-  variants:product_variants(${VARIANT_COLUMNS})
+  variants:product_variants(${VARIANT_COLUMNS}, stock:stock_levels(quantity_available))
 `;
 
 /* -------------------------------------------------------------------------- */
@@ -84,7 +84,15 @@ function toVariant(row: Row): ProductVariant {
     priceIsProvisional: Boolean(row.price_is_provisional),
     minQty: (row.min_qty as number) ?? 1,
     stepQty: (row.step_qty as number) ?? 1,
+    availableQuantity: readAvailability(row),
   };
+}
+
+/** PostgREST renvoie la relation tantôt en objet, tantôt en tableau. */
+function readAvailability(row: Row): number {
+  const stock = row.stock as Row | Row[] | null | undefined;
+  const entry = Array.isArray(stock) ? stock[0] : stock;
+  return (entry?.quantity_available as number | undefined) ?? 0;
 }
 
 function toProduct(row: Row): Product {
