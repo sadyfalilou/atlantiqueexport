@@ -1,6 +1,6 @@
 # Guide de test
 
-_Dernière mise à jour : 13 août 2026 — état : catalogue, panier et commande Interac en place_
+_Dernière mise à jour : 13 août 2026 — état : catalogue, panier, commande Interac et administration en place_
 
 ## 1. Démarrer le site
 
