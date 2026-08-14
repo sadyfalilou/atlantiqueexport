@@ -313,7 +313,19 @@ npm run grant:admin -- votre@courriel.ca
 - ✅ Intégration dans newsletter (souscription) et commandes
 - ⬜ Intégration complète dans les autres événements (statuts de commande, etc.)
 - ⬜ Tests unitaires des templates
-- **Vérification** : rendu de chaque modèle dans les deux langues, envoi réel en test
+
+**Vérifié — la chaîne complète a envoyé de vrais courriels** (14 août 2026, 01 h 50 UTC)
+
+Deux courriels mis en queue par une commande de test la veille à 20 h 54 sont restés
+`pending` cinq heures, faute de cron. La première exécution du workflow GitHub Actions les
+a traités : passage à `sent`, `resend_message_id` renseigné pour les deux.
+
+- `order_confirmation` → envoyé à 01:50:45.92
+- `interac_pending` → envoyé à 01:50:45.76
+
+Le maillon qui manquait n'était donc ni les modèles ni la queue, mais l'ordonnanceur.
+
+- ⬜ Reste à vérifier : rendu de chaque modèle dans les deux langues
 
 ## Lot 13 — Contenu éditorial et pages institutionnelles ⬜
 
