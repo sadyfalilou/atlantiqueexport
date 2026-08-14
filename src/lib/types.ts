@@ -116,6 +116,8 @@ export interface Product {
   variants: ProductVariant[];
   preparationOptions?: PreparationOption[];
   imageUrl?: string | null;
+  /** Texte alternatif de la photo, dans les deux langues. */
+  imageAlt?: LocalizedText | null;
   tags: string[];
   allergens: string[];
   ingredients?: LocalizedText;

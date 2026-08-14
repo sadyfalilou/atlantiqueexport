@@ -22,6 +22,7 @@ export interface CartLine {
   productName: LocalizedText;
   variantLabel: LocalizedText;
   temperatureClass: TemperatureClass;
+  imageUrl?: string | null;
   unitPriceCents: number;
   compareAtPriceCents: number | null;
   quantity: number;

@@ -316,6 +316,9 @@ export function EmailLayout({
 
   return (
     <html lang={locale}>
+      {/* `next/head` ne s'applique qu'à une page Next ; ce document-ci est un
+          courriel autonome, rendu en HTML brut et lu par une boîte mail. */}
+      {/* eslint-disable-next-line @next/next/no-head-element */}
       <head>
         <meta charSet="utf-8" />
         {/* Sans cette balise, un téléphone suppose une page de 980 px et

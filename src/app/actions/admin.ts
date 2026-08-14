@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -315,6 +316,344 @@ export async function togglePublishAction(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/admin/produits");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Création d'un produit                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Réduit un nom en identifiant d'URL : « Pulpe de madd congelée » devient
+ * « pulpe-de-madd-congelee ». Les accents sont décomposés puis retirés, pour
+ * qu'une URL reste lisible et tapable.
+ */
+function slugify(value: string): string {
+  return value
+    .normalize("NFD")
+    // Les accents deviennent des caractères combinants après NFD ; on les
+    // retire par leur plage Unicode plutôt qu'en les collant dans le source,
+    // où ils seraient invisibles à la relecture.
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+const newProduct = z.object({
+  nameFr: z.string().trim().min(2).max(160),
+  nameEn: z.string().trim().min(2).max(160),
+  categoryId: z.uuid().optional().or(z.literal("")),
+  brandId: z.uuid().optional().or(z.literal("")),
+  originCountry: z.string().trim().max(80).optional(),
+  temperatureClass: z.enum(["ambient", "fresh", "refrigerated", "frozen"]),
+  descriptionFr: z.string().trim().max(4000).optional(),
+  descriptionEn: z.string().trim().max(4000).optional(),
+  // Le premier format est obligatoire : un produit sans variante n'a ni prix
+  // ni stock, donc rien à vendre. Mieux vaut le refuser que créer une coquille.
+  variantLabelFr: z.string().trim().min(1).max(120),
+  variantLabelEn: z.string().trim().min(1).max(120),
+  sku: z.string().trim().min(2).max(60),
+  netWeightG: z.string().trim().optional(),
+});
+
+export type NewProductState = { status: "idle" | "error"; message?: string };
+
+export async function createProductAction(
+  _previous: NewProductState,
+  formData: FormData,
+): Promise<NewProductState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = newProduct.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const field = String(parsed.error.issues[0]?.path?.[0] ?? "");
+    return { status: "error", message: `Champ incomplet ou invalide : ${field}.` };
+  }
+  const input = parsed.data;
+
+  const price = parseAmount(formData.get("retailPrice"));
+  if (price === undefined || price === null) {
+    return { status: "error", message: "Indiquez un prix de vente pour le format." };
+  }
+
+  const weight = input.netWeightG ? Number.parseInt(input.netWeightG, 10) : null;
+  if (weight !== null && (!Number.isFinite(weight) || weight <= 0)) {
+    return { status: "error", message: "Le poids net doit être un nombre de grammes." };
+  }
+
+  const supabase = createAdminClient();
+
+  // Le slug doit être unique. Plutôt que d'échouer sur la contrainte, on
+  // suffixe : « fonio », puis « fonio-2 », « fonio-3 ».
+  const base = slugify(input.nameFr);
+  if (!base) return { status: "error", message: "Le nom ne donne aucune adresse valide." };
+
+  let slug = base;
+  for (let attempt = 2; attempt <= 50; attempt += 1) {
+    const { data } = await supabase
+      .from("products")
+      .select("id")
+      .eq("slug", slug)
+      .limit(1);
+    if (!data?.length) break;
+    slug = `${base}-${attempt}`;
+  }
+
+  const { data: created, error: productError } = await supabase
+    .from("products")
+    .insert({
+      slug,
+      name_fr: input.nameFr,
+      name_en: input.nameEn,
+      description_fr: input.descriptionFr || null,
+      description_en: input.descriptionEn || null,
+      category_id: input.categoryId || null,
+      brand_id: input.brandId || null,
+      origin_country: input.originCountry || null,
+      temperature_class: input.temperatureClass,
+      // Jamais publié à la création : le produit n'a ni photo ni description
+      // relue. C'est à vous de décider quand il paraît.
+      published_at: null,
+    })
+    .select("id")
+    .single();
+
+  if (productError || !created) {
+    console.error("Création du produit refusée :", productError);
+    const duplicate = productError?.code === "23505";
+    return {
+      status: "error",
+      message: duplicate
+        ? "Un produit porte déjà cette adresse. Changez légèrement le nom."
+        : "La création a échoué.",
+    };
+  }
+
+  const { error: variantError } = await supabase.from("product_variants").insert({
+    product_id: created.id,
+    sku: input.sku,
+    label_fr: input.variantLabelFr,
+    label_en: input.variantLabelEn,
+    net_weight_g: weight,
+    retail_price_cents: price,
+    // Le prix vient d'être saisi à la main : ce n'est pas une valeur de
+    // démonstration, contrairement à celles importées du catalogue Sonagoo.
+    price_is_provisional: false,
+    position: 0,
+  });
+
+  if (variantError) {
+    // Sans format, le produit est invendable. On défait plutôt que de laisser
+    // une fiche à moitié créée dans le catalogue.
+    await supabase.from("products").delete().eq("id", created.id);
+    console.error("Création du format refusée :", variantError);
+    return {
+      status: "error",
+      message:
+        variantError.code === "23505"
+          ? "Ce code SKU est déjà utilisé par un autre format."
+          : "Le format n'a pas pu être créé, le produit a donc été annulé.",
+    };
+  }
+
+  await logAdminAction(member.userId, "product.create", "products", created.id, {
+    slug,
+    sku: input.sku,
+  });
+
+  revalidatePath("/admin/produits");
+  redirect(`/admin/produits/${slug}`);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Photographies                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Formats acceptés, vérifiés ici en plus du bucket.
+ *
+ * Le bucket refuse déjà tout le reste, mais un refus côté base remonte comme
+ * une erreur opaque ; ce contrôle-ci permet d'expliquer le problème à la
+ * personne qui téléverse.
+ */
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+export type PhotoState = { status: "idle" | "saved" | "error"; message?: string };
+
+/**
+ * Téléverse une photo et l'attache au produit.
+ *
+ * Le fichier part sous un nom tiré au sort, jamais sous celui d'origine :
+ * « IMG_4821 (copie).JPG » ferait une URL fragile, et un nom fourni par
+ * l'utilisateur permettrait d'écraser un fichier existant en le devinant.
+ */
+export async function uploadProductPhotoAction(
+  _previous: PhotoState,
+  formData: FormData,
+): Promise<PhotoState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const productId = formData.get("productId");
+  const file = formData.get("photo");
+  const slug = String(formData.get("slug") ?? "");
+
+  if (typeof productId !== "string" || !z.uuid().safeParse(productId).success) {
+    return { status: "error", message: "Produit inconnu." };
+  }
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", message: "Choisissez une image." };
+  }
+  if (!IMAGE_TYPES.includes(file.type)) {
+    return {
+      status: "error",
+      message: "Format refusé. Utilisez du JPEG, du PNG, du WebP ou de l'AVIF.",
+    };
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    const mo = (file.size / 1024 / 1024).toFixed(1);
+    return {
+      status: "error",
+      message: `Image trop lourde (${mo} Mo). La limite est de 5 Mo — exportez-la en plus petit.`,
+    };
+  }
+
+  const supabase = createAdminClient();
+  const extension = file.type.split("/")[1].replace("jpeg", "jpg");
+  const storagePath = `${productId}/${randomUUID()}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("produits")
+    .upload(storagePath, file, { contentType: file.type, upsert: false });
+
+  if (uploadError) {
+    console.error("Téléversement refusé :", uploadError);
+    return { status: "error", message: "Le téléversement a échoué. Réessayez." };
+  }
+
+  const { data: existing } = await supabase
+    .from("product_images")
+    .select("id")
+    .eq("product_id", productId);
+
+  const count = (existing ?? []).length;
+
+  const { error: insertError } = await supabase.from("product_images").insert({
+    product_id: productId,
+    storage_path: storagePath,
+    alt_fr: String(formData.get("altFr") ?? "").trim() || null,
+    alt_en: String(formData.get("altEn") ?? "").trim() || null,
+    position: count,
+    // La première photo devient la principale d'office : sans cela, un produit
+    // avec une seule photo n'en afficherait aucune.
+    is_primary: count === 0,
+  });
+
+  if (insertError) {
+    // Le fichier est déjà en ligne : le retirer évite de laisser un orphelin
+    // que plus rien ne référence et que personne ne saura retrouver.
+    await supabase.storage.from("produits").remove([storagePath]);
+    console.error("Enregistrement de la photo refusé :", insertError);
+    return { status: "error", message: "La photo n'a pas pu être enregistrée." };
+  }
+
+  await logAdminAction(member.userId, "product.photo.add", "products", productId, {
+    storage_path: storagePath,
+  });
+
+  revalidatePath(`/admin/produits/${slug}`);
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+export async function deleteProductPhotoAction(formData: FormData): Promise<void> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) return;
+
+  const photoId = formData.get("photoId");
+  const slug = String(formData.get("slug") ?? "");
+  if (typeof photoId !== "string" || !z.uuid().safeParse(photoId).success) return;
+
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("product_images")
+    .select("id, product_id, storage_path, is_primary")
+    .eq("id", photoId)
+    .limit(1);
+
+  const photo = data?.[0];
+  if (!photo) return;
+
+  await supabase.from("product_images").delete().eq("id", photoId);
+  await supabase.storage.from("produits").remove([photo.storage_path as string]);
+
+  // Si la principale disparaît, la suivante prend le relais — sinon le produit
+  // se retrouverait avec des photos mais plus aucune à afficher.
+  if (photo.is_primary) {
+    const { data: rest } = await supabase
+      .from("product_images")
+      .select("id")
+      .eq("product_id", photo.product_id as string)
+      .order("position")
+      .limit(1);
+    if (rest?.[0]) {
+      await supabase
+        .from("product_images")
+        .update({ is_primary: true })
+        .eq("id", rest[0].id as string);
+    }
+  }
+
+  await logAdminAction(
+    member.userId,
+    "product.photo.remove",
+    "products",
+    photo.product_id as string,
+    { storage_path: photo.storage_path },
+  );
+
+  revalidatePath(`/admin/produits/${slug}`);
+  revalidatePath("/", "layout");
+}
+
+export async function setPrimaryPhotoAction(formData: FormData): Promise<void> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) return;
+
+  const photoId = formData.get("photoId");
+  const slug = String(formData.get("slug") ?? "");
+  if (typeof photoId !== "string" || !z.uuid().safeParse(photoId).success) return;
+
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("product_images")
+    .select("product_id")
+    .eq("id", photoId)
+    .limit(1);
+
+  const productId = data?.[0]?.product_id as string | undefined;
+  if (!productId) return;
+
+  // L'ancienne principale est retirée AVANT que la nouvelle soit posée :
+  // un index unique interdit deux principales pour un même produit, et
+  // l'ordre inverse ferait échouer la mise à jour.
+  await supabase
+    .from("product_images")
+    .update({ is_primary: false })
+    .eq("product_id", productId)
+    .eq("is_primary", true);
+
+  await supabase.from("product_images").update({ is_primary: true }).eq("id", photoId);
+
+  revalidatePath(`/admin/produits/${slug}`);
+  revalidatePath("/", "layout");
 }
 
 /**

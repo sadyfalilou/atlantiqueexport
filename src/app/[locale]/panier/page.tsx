@@ -5,7 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { Container, Section } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/empty-state";
-import { ProductPlaceholder } from "@/components/shared/product-placeholder";
+import { ProductImage } from "@/components/shared/product-image";
 import { buttonVariants } from "@/components/ui/button";
 import { removeItemAction, updateQuantityAction } from "@/app/actions/cart";
 import { getCart } from "@/lib/cart/cart";
@@ -89,10 +89,14 @@ export default async function CartPage({
                     href={`/produit/${line.productSlug}`}
                     className="size-20 shrink-0 overflow-hidden rounded-md border border-line sm:size-24"
                   >
-                    <ProductPlaceholder
-                      name={line.productName[typedLocale]}
-                      label={tCommon("photoComing")}
-                    />
+                    <div className="relative size-full">
+                      <ProductImage
+                        src={line.imageUrl}
+                        name={line.productName[typedLocale]}
+                        placeholderLabel={tCommon("photoComing")}
+                        sizes="96px"
+                      />
+                    </div>
                   </Link>
 
                   <div className="flex min-w-0 flex-1 flex-col gap-1">

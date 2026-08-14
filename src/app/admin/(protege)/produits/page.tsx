@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, EyeOff, Plus } from "lucide-react";
 import { getAdminProducts, getPricingReadiness } from "@/lib/admin/queries";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
 import { disableProvisionalPricesAction } from "@/app/actions/admin";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn, formatPrice } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Produits" };
 export const dynamic = "force-dynamic";
@@ -22,11 +22,28 @@ export default async function AdminProductsPage() {
 
   return (
     <div>
-      <h1 className="font-display text-[1.75rem] font-semibold text-forest-900">Produits</h1>
-      <p className="mt-1 text-sm text-muted">
-        {products.length} produits · {products.reduce((n, p) => n + p.variants.length, 0)}{" "}
-        formats
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-[1.75rem] font-semibold text-forest-900">
+            Produits
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            {products.length} produits ·{" "}
+            {products.reduce((n, p) => n + p.variants.length, 0)} formats ·{" "}
+            {products.filter((p) => p.photos.length === 0).length} sans photo
+          </p>
+        </div>
+
+        {member != null && hasRole(member, "super_admin", "manager") ? (
+          <Link
+            href="/admin/produits/nouveau"
+            className={cn(buttonVariants({ variant: "primary" }))}
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            Nouveau produit
+          </Link>
+        ) : null}
+      </div>
 
       {/* --- Sortie du mode démonstration --- */}
       {readiness.allowProvisional ? (

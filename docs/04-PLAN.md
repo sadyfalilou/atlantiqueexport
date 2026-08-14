@@ -250,7 +250,14 @@ une adresse d'exemple vers laquelle quelqu'un enverrait de l'argent.
 - ✅ Bascule de la boutique en **mode réel**, refusée tant qu'un format actif porte encore un
   prix de démonstration — passer outre publierait des montants inventés comme s'ils étaient
   réels. Réservée au super administrateur.
-- ⬜ Gestion des catégories, marques, descriptions et images
+- ✅ **Photographies de produits** : bucket Supabase `produits`, public en lecture et fermé
+  en écriture à tout le monde sauf au serveur. Téléversement depuis la fiche produit, choix
+  de la photo principale, suppression. La photo apparaît alors dans la boutique, sur la
+  fiche et dans le panier ; sans photo, le substitut à l'initiale reste.
+- ✅ **Création d'un produit** : `/admin/produits/nouveau`. Le produit et son premier format
+  sont créés ensemble — un produit sans format n'a ni prix ni stock, donc rien à vendre.
+  Créé **non publié** : c'est vous qui décidez quand il paraît.
+- ⬜ Gestion des catégories, marques et descriptions d'un produit existant
 - ⬜ Mouvements de stock (réception, ajustement, perte)
 - ⬜ Arrivages, comptes professionnels, promotions, rapports
 

@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { productImageUrl } from "@/lib/catalog/queries";
 
 /**
  * Lectures de l'administration.
@@ -188,6 +189,16 @@ export interface AdminVariant {
   available: number;
 }
 
+export interface AdminPhoto {
+  id: string;
+  url: string;
+  storagePath: string;
+  altFr: string;
+  altEn: string;
+  isPrimary: boolean;
+  position: number;
+}
+
 export interface AdminProduct {
   id: string;
   slug: string;
@@ -196,11 +207,13 @@ export interface AdminProduct {
   isPublished: boolean;
   hasProvisionalPrice: boolean;
   variants: AdminVariant[];
+  photos: AdminPhoto[];
 }
 
 const ADMIN_PRODUCT_SELECT = `
   id, slug, name_fr, published_at,
   category:categories(name_fr),
+  images:product_images(id, storage_path, alt_fr, alt_en, position, is_primary),
   variants:product_variants(
     id, sku, label_fr, retail_price_cents, compare_at_price_cents,
     wholesale_price_cents, price_is_provisional, is_active, position,
@@ -228,6 +241,21 @@ function toAdminProduct(row: Row): AdminProduct {
       };
     });
 
+  const photos = ((row.images as Row[] | null) ?? [])
+    .map((image) => ({
+      id: image.id as string,
+      storagePath: image.storage_path as string,
+      url: productImageUrl(image.storage_path as string),
+      altFr: (image.alt_fr as string | null) ?? "",
+      altEn: (image.alt_en as string | null) ?? "",
+      isPrimary: Boolean(image.is_primary),
+      position: (image.position as number) ?? 0,
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.isPrimary) - Number(a.isPrimary) || a.position - b.position,
+    );
+
   return {
     id: row.id as string,
     slug: row.slug as string,
@@ -236,6 +264,7 @@ function toAdminProduct(row: Row): AdminProduct {
     isPublished: row.published_at != null,
     hasProvisionalPrice: variants.some((v) => v.isActive && v.priceIsProvisional),
     variants,
+    photos,
   };
 }
 
@@ -286,5 +315,32 @@ export async function getPricingReadiness(): Promise<{
     allowProvisional: Boolean(
       ((settings.data ?? []) as Row[])[0]?.allow_provisional_prices,
     ),
+  };
+}
+
+/** Listes déroulantes du formulaire de création d'un produit. */
+export async function getProductFormOptions(): Promise<{
+  categories: Array<{ id: string; name: string }>;
+  brands: Array<{ id: string; name: string }>;
+}> {
+  const supabase = createAdminClient();
+  const [categories, brands] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, name_fr, is_virtual")
+      .order("position"),
+    supabase.from("brands").select("id, name").order("name"),
+  ]);
+
+  return {
+    // Les catégories virtuelles — « Nouveautés », « Promotions » — sont des vues
+    // calculées, pas des rayons : on ne peut pas y ranger un produit.
+    categories: ((categories.data ?? []) as Row[])
+      .filter((row) => !row.is_virtual)
+      .map((row) => ({ id: row.id as string, name: row.name_fr as string })),
+    brands: ((brands.data ?? []) as Row[]).map((row) => ({
+      id: row.id as string,
+      name: row.name as string,
+    })),
   };
 }

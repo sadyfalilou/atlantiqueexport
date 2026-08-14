@@ -51,8 +51,21 @@ const PRODUCT_SELECT = `
   allergens, tags, is_featured, is_new, is_wholesale_only,
   category:categories!products_category_id_fkey(slug),
   brand:brands!products_brand_id_fkey(slug),
+  images:product_images(storage_path, alt_fr, alt_en, position, is_primary),
   variants:product_variants(${VARIANT_COLUMNS}, stock:stock_levels(quantity_available))
 `;
+
+/**
+ * Adresse publique d'un fichier du bucket `produits`.
+ *
+ * Le bucket est public : l'URL est donc prévisible et se met en cache, sans
+ * jeton qui expire. Construite ici plutôt que rangée en base, pour que changer
+ * de projet Supabase ne demande pas de réécrire toutes les lignes.
+ */
+export function productImageUrl(storagePath: string): string {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? "";
+  return `${base}/storage/v1/object/public/produits/${storagePath}`;
+}
 
 /* -------------------------------------------------------------------------- */
 /* Conversion des lignes vers les types du domaine                             */
@@ -104,6 +117,16 @@ function toProduct(row: Row): Product {
   const category = row.category as { slug: string } | null;
   const brand = row.brand as { slug: string } | null;
 
+  // La photo principale, sinon la première dans l'ordre choisi. Un produit sans
+  // photo garde `null`, et l'affichage retombe sur le substitut plutôt que sur
+  // une image cassée.
+  const images = ((row.images as Row[] | null) ?? []).sort(
+    (a, b) =>
+      Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary)) ||
+      ((a.position as number) ?? 0) - ((b.position as number) ?? 0),
+  );
+  const cover = images[0];
+
   return {
     id: row.id as string,
     slug: row.slug as string,
@@ -117,7 +140,13 @@ function toProduct(row: Row): Product {
     taxClass: row.tax_class as Product["taxClass"],
     stockStatus: row.availability_status as StockStatus,
     variants,
-    imageUrl: null,
+    imageUrl: cover ? productImageUrl(cover.storage_path as string) : null,
+    imageAlt: cover
+      ? {
+          fr: (cover.alt_fr as string | null) ?? "",
+          en: (cover.alt_en as string | null) ?? "",
+        }
+      : null,
     tags: (row.tags as string[] | null) ?? [],
     allergens: (row.allergens as string[] | null) ?? [],
     isFeatured: Boolean(row.is_featured),

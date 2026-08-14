@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeTotals, type CartLine, type CartTotals } from "@/lib/cart/pricing";
+import { productImageUrl } from "@/lib/catalog/queries";
 import type { TemperatureClass } from "@/lib/types";
 
 /**
@@ -113,7 +114,10 @@ export async function getCart(): Promise<Cart> {
        variant:product_variants(
          id, label_fr, label_en, retail_price_cents, compare_at_price_cents,
          price_is_provisional, net_weight_g, is_active,
-         product:products(slug, name_fr, name_en, temperature_class, published_at),
+         product:products(
+           slug, name_fr, name_en, temperature_class, published_at,
+           images:product_images(storage_path, alt_fr, alt_en, position, is_primary)
+         ),
          stock:stock_levels(quantity_available)
        )`,
     )
@@ -121,6 +125,17 @@ export async function getCart(): Promise<Cart> {
     .order("created_at");
 
   if (error) throw new Error(`Lecture du panier : ${error.message}`);
+
+  /** Photo principale du produit, ou la première, ou rien. */
+  function coverUrl(product: Row): string | null {
+    const images = ((product.images as Row[] | null) ?? []).sort(
+      (a, b) =>
+        Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary)) ||
+        ((a.position as number) ?? 0) - ((b.position as number) ?? 0),
+    );
+    const cover = images[0];
+    return cover ? productImageUrl(cover.storage_path as string) : null;
+  }
 
   const lines: CartLine[] = [];
 
@@ -150,6 +165,7 @@ export async function getCart(): Promise<Cart> {
         en: (variant.label_en as string) ?? "",
       },
       temperatureClass: product.temperature_class as TemperatureClass,
+      imageUrl: coverUrl(product),
       unitPriceCents: variant.retail_price_cents as number,
       compareAtPriceCents: (variant.compare_at_price_cents as number | null) ?? null,
       quantity: row.quantity as number,

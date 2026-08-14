@@ -6,6 +6,7 @@ import { getAdminProduct } from "@/lib/admin/queries";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
 import { togglePublishAction } from "@/app/actions/admin";
 import { PriceForm } from "@/components/admin/price-form";
+import { PhotoManager } from "@/components/admin/photo-manager";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -85,6 +86,32 @@ export default async function AdminProductPage({
           ) : null}
         </div>
       </div>
+
+      <section className="mt-8">
+        <h2 className="font-display text-lg font-semibold text-forest-900">
+          Photographies
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          La photo principale est celle qui paraît dans la boutique, sur la fiche
+          et dans le panier.
+        </p>
+
+        <div className="mt-4">
+          {canEdit ? (
+            <PhotoManager
+              productId={product.id}
+              slug={product.slug}
+              productName={product.name}
+              photos={product.photos}
+            />
+          ) : (
+            <p className="rounded-lg border border-line bg-surface p-5 text-sm text-muted">
+              Seuls un gestionnaire ou un super administrateur peuvent modifier
+              les photographies.
+            </p>
+          )}
+        </div>
+      </section>
 
       <section className="mt-8">
         <h2 className="font-display text-lg font-semibold text-forest-900">Prix</h2>

@@ -5,7 +5,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Container, Section } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/badge";
-import { ProductPlaceholder } from "@/components/shared/product-placeholder";
+import { ProductImage } from "@/components/shared/product-image";
 import { VariantPicker } from "@/components/product/variant-picker";
 import {
   getCategoryBySlug,
@@ -149,9 +149,13 @@ export default async function ProductPage({
 
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
           <div className="relative aspect-square overflow-hidden rounded-xl border border-line bg-surface">
-            <ProductPlaceholder
+            <ProductImage
+              src={product.imageUrl}
+              alt={product.imageAlt?.[typedLocale]}
               name={product.name[typedLocale]}
-              label={tCommon("photoComing")}
+              placeholderLabel={tCommon("photoComing")}
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              priority
             />
             <div className="absolute top-4 left-4 flex flex-wrap gap-2">
               {product.isNew ? <Badge variant="new">{t("from")}</Badge> : null}

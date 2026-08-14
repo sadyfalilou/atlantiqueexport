@@ -2,7 +2,7 @@ import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
-import { ProductPlaceholder } from "@/components/shared/product-placeholder";
+import { ProductImage } from "@/components/shared/product-image";
 import { PriceDisplay } from "@/components/product/price-display";
 import { getEntryVariant } from "@/lib/catalog/queries";
 import type { Locale, Product, StockStatus, TemperatureClass } from "@/lib/types";
@@ -56,9 +56,12 @@ export function ProductCard({
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-sm transition-shadow duration-200 hover:shadow-md focus-within:shadow-md">
       <div className="relative aspect-[4/5] overflow-hidden bg-cream-100">
-        <ProductPlaceholder
+        <ProductImage
+          src={product.imageUrl}
+          alt={product.imageAlt?.[locale]}
           name={product.name[locale]}
-          label={t("common.photoComing")}
+          placeholderLabel={t("common.photoComing")}
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
         />
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
           {product.isNew ? (
