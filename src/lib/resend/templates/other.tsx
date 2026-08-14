@@ -1,8 +1,23 @@
 // Autres modèles de courriels transactionnels
 
 interface SimpleEmailProps {
-  recipientName: string;
+  // Le nom est facultatif : une commande en ramassage n'en porte aucun, faute
+  // d'adresse de livraison où le lire. « Bonjour, votre commande… » se lit
+  // très bien ; « Bonjour , votre commande… » trahit un gabarit cassé.
+  recipientName?: string | null;
   locale: "fr" | "en";
+}
+
+/** « Bonjour Awa » ou « Bonjour » selon ce que la commande nous apprend. */
+function greet(name: string | null | undefined, locale: "fr" | "en") {
+  const hello = locale === "fr" ? "Bonjour" : "Hello";
+  return name ? `${hello} ${name}` : hello;
+}
+
+/** Même principe pour les formules de remerciement. */
+function thank(name: string | null | undefined, locale: "fr" | "en") {
+  const thanks = locale === "fr" ? "Merci" : "Thank you";
+  return name ? `${thanks} ${name}` : thanks;
 }
 
 interface PasswordResetEmailProps extends SimpleEmailProps {
@@ -10,17 +25,23 @@ interface PasswordResetEmailProps extends SimpleEmailProps {
   expiresIn: string;
 }
 
-export function PaymentConfirmedEmail({ recipientName, locale }: SimpleEmailProps) {
+export function PaymentConfirmedEmail({
+  recipientName,
+  orderNumber,
+  locale,
+}: SimpleEmailProps & { orderNumber: string }) {
+  // Le numéro de commande n'est pas décoratif : c'est la seule chose qui
+  // rattache l'accusé de réception au virement que la personne vient de faire.
   const t =
     locale === "fr"
       ? {
           greeting: "Votre paiement est confirmé",
-          message: `Merci ${recipientName}, nous avons bien reçu votre paiement. Votre commande va maintenant être préparée.`,
+          message: `${thank(recipientName, "fr")}, nous avons bien reçu votre paiement pour la commande ${orderNumber}. Elle va maintenant être préparée.`,
           tracking: "Vous pouvez suivre votre commande dans votre espace client.",
         }
       : {
           greeting: "Your payment is confirmed",
-          message: `Thank you ${recipientName}, we have received your payment. Your order will now be prepared.`,
+          message: `${thank(recipientName, "en")}, we have received your payment for order ${orderNumber}. It will now be prepared.`,
           tracking: "You can track your order in your account.",
         };
 
@@ -42,11 +63,11 @@ export function OrderPreparingEmail({ recipientName, orderNumber, locale }: Simp
     locale === "fr"
       ? {
           greeting: "Votre commande est en préparation",
-          message: `Bonjour ${recipientName}, votre commande ${orderNumber} est en cours de préparation. Nous vous enverrons un message dès qu'elle sera prête.`,
+          message: `${greet(recipientName, "fr")}, votre commande ${orderNumber} est en cours de préparation. Nous vous enverrons un message dès qu'elle sera prête.`,
         }
       : {
           greeting: "Your order is being prepared",
-          message: `Hello ${recipientName}, your order ${orderNumber} is being prepared. We'll send you a message as soon as it's ready.`,
+          message: `${greet(recipientName, "en")}, your order ${orderNumber} is being prepared. We'll send you a message as soon as it's ready.`,
         };
 
   return (
@@ -66,12 +87,12 @@ export function ReadyForPickupEmail({ recipientName, orderNumber, pickupDetails,
     locale === "fr"
       ? {
           greeting: "Votre commande est prête",
-          message: `Bonjour ${recipientName}, votre commande ${orderNumber} est prête pour le ramassage.`,
+          message: `${greet(recipientName, "fr")}, votre commande ${orderNumber} est prête pour le ramassage.`,
           details: "Détails du ramassage",
         }
       : {
           greeting: "Your order is ready",
-          message: `Hello ${recipientName}, your order ${orderNumber} is ready for pickup.`,
+          message: `${greet(recipientName, "en")}, your order ${orderNumber} is ready for pickup.`,
           details: "Pickup details",
         };
 
@@ -97,11 +118,11 @@ export function InDeliveryEmail({ recipientName, orderNumber, locale }: SimpleEm
     locale === "fr"
       ? {
           greeting: "Votre commande est en livraison",
-          message: `Bonjour ${recipientName}, votre commande ${orderNumber} est en route vers vous.`,
+          message: `${greet(recipientName, "fr")}, votre commande ${orderNumber} est en route vers vous.`,
         }
       : {
           greeting: "Your order is in delivery",
-          message: `Hello ${recipientName}, your order ${orderNumber} is on its way to you.`,
+          message: `${greet(recipientName, "en")}, your order ${orderNumber} is on its way to you.`,
         };
 
   return (
@@ -121,12 +142,12 @@ export function OrderDeliveredEmail({ recipientName, orderNumber, locale }: Simp
     locale === "fr"
       ? {
           greeting: "Votre commande a été livrée",
-          message: `Bonjour ${recipientName}, votre commande ${orderNumber} a été livrée. Nous espérons qu'elle vous plaira !`,
+          message: `${greet(recipientName, "fr")}, votre commande ${orderNumber} a été livrée. Nous espérons qu'elle vous plaira !`,
           thanks: "Merci de votre confiance.",
         }
       : {
           greeting: "Your order has been delivered",
-          message: `Hello ${recipientName}, your order ${orderNumber} has been delivered. We hope you enjoy it!`,
+          message: `${greet(recipientName, "en")}, your order ${orderNumber} has been delivered. We hope you enjoy it!`,
           thanks: "Thank you for your trust.",
         };
 
@@ -148,11 +169,11 @@ export function PreorderConfirmationEmail({ recipientName, locale }: SimpleEmail
     locale === "fr"
       ? {
           greeting: "Votre précommande est confirmée",
-          message: `Merci ${recipientName} pour votre précommande. Nous vous enverrons une notification dès que le produit sera disponible.`,
+          message: `${thank(recipientName, "fr")} pour votre précommande. Nous vous enverrons une notification dès que le produit sera disponible.`,
         }
       : {
           greeting: "Your preorder is confirmed",
-          message: `Thank you ${recipientName} for your preorder. We'll notify you as soon as the product becomes available.`,
+          message: `${thank(recipientName, "en")} for your preorder. We'll notify you as soon as the product becomes available.`,
         };
 
   return (
@@ -172,12 +193,12 @@ export function ArrivalAvailableEmail({ recipientName, productName, locale }: Si
     locale === "fr"
       ? {
           greeting: "Votre arrivage est disponible",
-          message: `Bonjour ${recipientName}, ${productName} est maintenant disponible pour la réservation.`,
+          message: `${greet(recipientName, "fr")}, ${productName} est maintenant disponible pour la réservation.`,
           action: "Voir les détails",
         }
       : {
           greeting: "Your arrival is available",
-          message: `Hello ${recipientName}, ${productName} is now available for reservation.`,
+          message: `${greet(recipientName, "en")}, ${productName} is now available for reservation.`,
           action: "View details",
         };
 
@@ -214,12 +235,12 @@ export function BackInStockEmail({ recipientName, productName, locale }: SimpleE
     locale === "fr"
       ? {
           greeting: "De retour en stock",
-          message: `Bonjour ${recipientName}, ${productName} est de retour en stock.`,
+          message: `${greet(recipientName, "fr")}, ${productName} est de retour en stock.`,
           action: "Commander maintenant",
         }
       : {
           greeting: "Back in stock",
-          message: `Hello ${recipientName}, ${productName} is back in stock.`,
+          message: `${greet(recipientName, "en")}, ${productName} is back in stock.`,
           action: "Order now",
         };
 
@@ -256,14 +277,14 @@ export function PasswordResetEmail({ recipientName, resetLink, expiresIn, locale
     locale === "fr"
       ? {
           greeting: "Réinitialisez votre mot de passe",
-          message: `Bonjour ${recipientName}, cliquez ci-dessous pour réinitialiser votre mot de passe.`,
+          message: `${greet(recipientName, "fr")}, cliquez ci-dessous pour réinitialiser votre mot de passe.`,
           action: "Réinitialiser",
           expires: `Ce lien expire dans ${expiresIn}.`,
           warning: "Si vous n'avez pas demandé cette réinitialisation, ignorez cet e-mail.",
         }
       : {
           greeting: "Reset your password",
-          message: `Hello ${recipientName}, click below to reset your password.`,
+          message: `${greet(recipientName, "en")}, click below to reset your password.`,
           action: "Reset password",
           expires: `This link expires in ${expiresIn}.`,
           warning: "If you didn't request a password reset, ignore this email.",

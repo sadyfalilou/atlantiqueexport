@@ -10,6 +10,11 @@ import {
   hasRole,
   logAdminAction,
 } from "@/lib/supabase/auth";
+import {
+  isNotifiableStatus,
+  queueOrderStatusEmail,
+  queuePaymentConfirmedEmail,
+} from "@/lib/resend/order-emails";
 
 /**
  * Actions de l'administration.
@@ -121,6 +126,10 @@ export async function confirmInteracPaymentAction(formData: FormData): Promise<v
     amount_cents: order.total_cents,
   });
 
+  // Le garde `payment_status === "paid"` plus haut interdit de rejouer cette
+  // action : le client ne recevra donc pas deux fois le même accusé.
+  await queuePaymentConfirmedEmail(order.id);
+
   revalidatePath("/admin/commandes");
   revalidatePath(`/admin/commandes/${order.order_number}`);
 }
@@ -149,18 +158,41 @@ export async function updateOrderStatusAction(formData: FormData): Promise<void>
   if (!parsed.success) return;
 
   const supabase = createAdminClient();
+
+  // Lu avant l'écriture, pour le seul journal d'audit : savoir d'où l'on vient
+  // vaut mieux que de savoir seulement où l'on va.
+  const { data: previous } = await supabase
+    .from("orders")
+    .select("status")
+    .eq("id", parsed.data.orderId)
+    .limit(1);
+
+  // Le `neq` fait tout le travail : PostgreSQL ne met à jour la ligne que si
+  // elle n'est pas déjà dans ce statut, et ne renvoie donc rien au second
+  // appel. Deux clics sur « en préparation », ou deux employés qui cliquent
+  // en même temps, n'envoient qu'un seul courriel — ce qu'un contrôle en
+  // JavaScript, lu puis écrit en deux temps, ne garantirait pas.
   const { data } = await supabase
     .from("orders")
     .update({ status: parsed.data.status })
     .eq("id", parsed.data.orderId)
+    .neq("status", parsed.data.status)
     .select("order_number");
 
+  const changed = data?.[0];
+  if (!changed) return;
+
   await logAdminAction(member.userId, "order.status", "orders", parsed.data.orderId, {
+    from: previous?.[0]?.status ?? null,
     to: parsed.data.status,
   });
 
+  if (isNotifiableStatus(parsed.data.status)) {
+    await queueOrderStatusEmail(parsed.data.orderId, parsed.data.status);
+  }
+
   revalidatePath("/admin/commandes");
-  if (data?.[0]) revalidatePath(`/admin/commandes/${data[0].order_number}`);
+  revalidatePath(`/admin/commandes/${changed.order_number}`);
 }
 
 /* -------------------------------------------------------------------------- */

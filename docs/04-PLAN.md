@@ -311,8 +311,18 @@ npm run grant:admin -- votre@courriel.ca
   Le cron de Vercel est écarté : le plan hobby ne l'autorise qu'une fois par jour, une
   confirmation de commande passée à 10 h serait partie le lendemain matin.
 - ✅ Intégration dans newsletter (souscription) et commandes
-- ⬜ Intégration complète dans les autres événements (statuts de commande, etc.)
-- ⬜ Tests unitaires des templates
+- ✅ **Courriels de statut branchés dans l'administration** : `payment_confirmed` à la
+  validation d'un virement, puis `order_preparing`, `ready_for_pickup`, `in_delivery` et
+  `order_delivered` au fil de l'avancement. Le courriel de ramassage porte le point, le
+  créneau et les consignes, relus en base.
+- ✅ **Un changement de statut n'envoie qu'un seul courriel.** L'écriture porte un
+  `neq` sur le statut visé : PostgreSQL ne met la ligne à jour que si elle n'y est pas
+  déjà, et ne renvoie rien au second appel. Deux clics, ou deux employés simultanés,
+  ne déclenchent qu'un envoi — ce qu'un contrôle lu-puis-écrit en JavaScript ne
+  garantirait pas.
+- ✅ **23 tests de rendu** : les 5 modèles de statut, dans les deux langues, avec et
+  sans nom de client
+- ⬜ Intégration des événements de stock et d'arrivage (lots 10 et 11)
 
 **Vérifié — la chaîne complète a envoyé de vrais courriels** (14 août 2026, 01 h 50 UTC)
 
@@ -325,7 +335,11 @@ a traités : passage à `sent`, `resend_message_id` renseigné pour les deux.
 
 Le maillon qui manquait n'était donc ni les modèles ni la queue, mais l'ordonnanceur.
 
-- ⬜ Reste à vérifier : rendu de chaque modèle dans les deux langues
+⚠️ **Le nom du client n'est pas stocké pour une commande en ramassage.** `orders` ne le
+retient que dans `delivery_address`, absente dans ce cas — le formulaire le collecte puis
+le jette. Les modèles saluent donc sans nom (« Bonjour, votre commande… »), ce qui se lit
+correctement mais reste un pis-aller. Le vrai correctif demande une colonne
+`customer_name` et une reprise de `place_order`.
 
 ## Lot 13 — Contenu éditorial et pages institutionnelles ⬜
 

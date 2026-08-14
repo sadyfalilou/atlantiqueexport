@@ -119,9 +119,13 @@ export async function generateEmailContent(
         locale === "fr"
           ? { subject: "Paiement confirmé" }
           : { subject: "Payment confirmed" };
-      const d = data as { recipientName: string };
+      const d = data as { recipientName: string; orderNumber: string };
       component = (
-        <PaymentConfirmedEmail recipientName={d.recipientName} locale={locale} />
+        <PaymentConfirmedEmail
+          recipientName={d.recipientName}
+          orderNumber={d.orderNumber}
+          locale={locale}
+        />
       );
       subject = t.subject;
       break;
