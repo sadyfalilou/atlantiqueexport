@@ -257,7 +257,12 @@ une adresse d'exemple vers laquelle quelqu'un enverrait de l'argent.
 - ✅ **Création d'un produit** : `/admin/produits/nouveau`. Le produit et son premier format
   sont créés ensemble — un produit sans format n'a ni prix ni stock, donc rien à vendre.
   Créé **non publié** : c'est vous qui décidez quand il paraît.
-- ⬜ Gestion des catégories, marques et descriptions d'un produit existant
+- ✅ **Reprise d'un produit existant** : nom, accroche, description et conservation dans les
+  deux langues, catégorie, marque, origine, température de transport, allergènes, mise en
+  avant. **L'adresse (`slug`) reste figée** : déjà indexée et partagée dans des liens, la
+  changer transformerait chacun d'eux en page introuvable.
+- ⬜ Ajout d'un format à un produit existant, et gestion des catégories et des marques
+  elles-mêmes
 - ⬜ Mouvements de stock (réception, ajustement, perte)
 - ⬜ Arrivages, comptes professionnels, promotions, rapports
 

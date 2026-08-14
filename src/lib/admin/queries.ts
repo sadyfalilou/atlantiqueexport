@@ -208,10 +208,32 @@ export interface AdminProduct {
   hasProvisionalPrice: boolean;
   variants: AdminVariant[];
   photos: AdminPhoto[];
+  /** Champs modifiables depuis la fiche. */
+  fields: {
+    nameFr: string;
+    nameEn: string;
+    shortDescriptionFr: string;
+    shortDescriptionEn: string;
+    descriptionFr: string;
+    descriptionEn: string;
+    storageFr: string;
+    storageEn: string;
+    categoryId: string | null;
+    brandId: string | null;
+    originCountry: string;
+    temperatureClass: string;
+    allergens: string[];
+    isFeatured: boolean;
+    isNew: boolean;
+  };
 }
 
 const ADMIN_PRODUCT_SELECT = `
-  id, slug, name_fr, published_at,
+  id, slug, name_fr, name_en, published_at,
+  short_description_fr, short_description_en,
+  description_fr, description_en, storage_fr, storage_en,
+  origin_country, temperature_class, allergens, is_featured, is_new,
+  category_id, brand_id,
   category:categories(name_fr),
   images:product_images(id, storage_path, alt_fr, alt_en, position, is_primary),
   variants:product_variants(
@@ -265,6 +287,23 @@ function toAdminProduct(row: Row): AdminProduct {
     hasProvisionalPrice: variants.some((v) => v.isActive && v.priceIsProvisional),
     variants,
     photos,
+    fields: {
+      nameFr: (row.name_fr as string | null) ?? "",
+      nameEn: (row.name_en as string | null) ?? "",
+      shortDescriptionFr: (row.short_description_fr as string | null) ?? "",
+      shortDescriptionEn: (row.short_description_en as string | null) ?? "",
+      descriptionFr: (row.description_fr as string | null) ?? "",
+      descriptionEn: (row.description_en as string | null) ?? "",
+      storageFr: (row.storage_fr as string | null) ?? "",
+      storageEn: (row.storage_en as string | null) ?? "",
+      categoryId: (row.category_id as string | null) ?? null,
+      brandId: (row.brand_id as string | null) ?? null,
+      originCountry: (row.origin_country as string | null) ?? "",
+      temperatureClass: (row.temperature_class as string | null) ?? "ambient",
+      allergens: (row.allergens as string[] | null) ?? [],
+      isFeatured: Boolean(row.is_featured),
+      isNew: Boolean(row.is_new),
+    },
   };
 }
 

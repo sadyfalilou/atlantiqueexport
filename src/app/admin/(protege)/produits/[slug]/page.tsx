@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff, ExternalLink } from "lucide-react";
-import { getAdminProduct } from "@/lib/admin/queries";
+import { getAdminProduct, getProductFormOptions } from "@/lib/admin/queries";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
 import { togglePublishAction } from "@/app/actions/admin";
 import { PriceForm } from "@/components/admin/price-form";
 import { PhotoManager } from "@/components/admin/photo-manager";
+import { ProductEditForm } from "@/components/admin/product-edit-form";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ export default async function AdminProductPage({
 
   const member = await getStaffMember();
   const canEdit = member != null && hasRole(member, "super_admin", "manager");
+  const { categories, brands } = await getProductFormOptions();
 
   return (
     <div>
@@ -86,6 +88,30 @@ export default async function AdminProductPage({
           ) : null}
         </div>
       </div>
+
+      <section className="mt-8">
+        <h2 className="font-display text-lg font-semibold text-forest-900">
+          Informations
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          Ce que le client lit sur la fiche, dans les deux langues.
+        </p>
+
+        <div className="mt-4">
+          {canEdit ? (
+            <ProductEditForm
+              product={product}
+              categories={categories}
+              brands={brands}
+            />
+          ) : (
+            <p className="rounded-lg border border-line bg-surface p-5 text-sm text-muted">
+              Seuls un gestionnaire ou un super administrateur peuvent modifier
+              un produit.
+            </p>
+          )}
+        </div>
+      </section>
 
       <section className="mt-8">
         <h2 className="font-display text-lg font-semibold text-forest-900">

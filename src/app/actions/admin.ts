@@ -470,6 +470,102 @@ export async function createProductAction(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Modification d'un produit                                                   */
+/* -------------------------------------------------------------------------- */
+
+const editProduct = z.object({
+  productId: z.uuid(),
+  slug: z.string().trim().min(1),
+  nameFr: z.string().trim().min(2).max(160),
+  nameEn: z.string().trim().min(2).max(160),
+  shortDescriptionFr: z.string().trim().max(400).optional(),
+  shortDescriptionEn: z.string().trim().max(400).optional(),
+  descriptionFr: z.string().trim().max(4000).optional(),
+  descriptionEn: z.string().trim().max(4000).optional(),
+  storageFr: z.string().trim().max(400).optional(),
+  storageEn: z.string().trim().max(400).optional(),
+  categoryId: z.uuid().optional().or(z.literal("")),
+  brandId: z.uuid().optional().or(z.literal("")),
+  originCountry: z.string().trim().max(80).optional(),
+  temperatureClass: z.enum(["ambient", "fresh", "refrigerated", "frozen"]),
+  allergens: z.string().trim().max(400).optional(),
+});
+
+/**
+ * Enregistre les informations d'un produit existant.
+ *
+ * **L'adresse (`slug`) n'est pas modifiable.** Elle est déjà indexée par les
+ * moteurs de recherche, partagée dans des liens et peut-être imprimée quelque
+ * part ; la changer transformerait chacun de ces liens en page introuvable.
+ * Renommer un produit ne touche donc que ce qui s'affiche.
+ */
+export async function updateProductAction(
+  _previous: PricingState,
+  formData: FormData,
+): Promise<PricingState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = editProduct.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const field = String(parsed.error.issues[0]?.path?.[0] ?? "");
+    return { status: "error", message: `Champ incomplet ou invalide : ${field}.` };
+  }
+  const input = parsed.data;
+
+  // Saisis séparés par des virgules, rangés en tableau. Les doublons et les
+  // entrées vides disparaissent : « gluten, , Gluten » donne un seul allergène.
+  const allergens = Array.from(
+    new Set(
+      (input.allergens ?? "")
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("products")
+    .update({
+      name_fr: input.nameFr,
+      name_en: input.nameEn,
+      short_description_fr: input.shortDescriptionFr || null,
+      short_description_en: input.shortDescriptionEn || null,
+      description_fr: input.descriptionFr || null,
+      description_en: input.descriptionEn || null,
+      storage_fr: input.storageFr || null,
+      storage_en: input.storageEn || null,
+      category_id: input.categoryId || null,
+      brand_id: input.brandId || null,
+      origin_country: input.originCountry || null,
+      temperature_class: input.temperatureClass,
+      allergens,
+      is_featured: formData.get("isFeatured") === "on",
+      is_new: formData.get("isNew") === "on",
+    })
+    .eq("id", input.productId);
+
+  if (error) {
+    console.error("Modification du produit refusée :", error);
+    return { status: "error", message: "L'enregistrement a échoué." };
+  }
+
+  await logAdminAction(member.userId, "product.update", "products", input.productId, {
+    slug: input.slug,
+  });
+
+  revalidatePath(`/admin/produits/${input.slug}`);
+  revalidatePath("/admin/produits");
+  // La fiche publique et la boutique sont prégénérées : sans cela, le nouveau
+  // nom n'apparaîtrait qu'à la prochaine revalidation, dans cinq minutes.
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Photographies                                                               */
 /* -------------------------------------------------------------------------- */
 
