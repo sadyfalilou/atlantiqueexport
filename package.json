@@ -24,7 +24,8 @@
     "seed:logistics": "node scripts/seed-logistics.mjs",
     "smoke:order": "node scripts/smoke-order.mjs",
     "grant:admin": "node scripts/grant-admin.mjs",
-    "emails:preview": "EMAIL_PREVIEW_DIR=./public/_apercus-courriels vitest run src/lib/resend/preview.gen.test.ts && echo '→ http://localhost:3000/_apercus-courriels/index.html (npm run dev)'"
+    "emails:preview": "EMAIL_PREVIEW_DIR=./public/_apercus-courriels vitest run src/lib/resend/preview.gen.test.ts && echo '→ http://localhost:3000/_apercus-courriels/index.html (npm run dev)'",
+    "emails:supabase": "SUPABASE_TEMPLATE_DIR=./public/_apercus-courriels vitest run src/lib/resend/supabase-template.gen.test.tsx"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
