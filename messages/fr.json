@@ -105,7 +105,7 @@
       "cta": "M'inscrire",
       "consent": "Vous pouvez vous désabonner en tout temps.",
       "invalidEmail": "Entrez une adresse courriel valide, par exemple nom@exemple.ca",
-      "notYetActive": "Adresse valide. L'infolettre n'est pas encore active : les inscriptions seront enregistrées à l'ouverture de la boutique."
+      "subscribed": "Merci, votre inscription est enregistrée. Un courriel de bienvenue vous a été envoyé."
     },
     "social": {
       "title": "Suivez-nous",

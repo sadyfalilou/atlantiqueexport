@@ -52,14 +52,15 @@ export async function subscribeToNewsletter(
       return { status: "error" };
     }
 
-    // Met l'email de confirmation en queue
+    // Le formulaire ne demande que l'adresse : on ne connaît donc aucun nom.
+    // Le modèle sait saluer sans — « Bonjour, merci de vous être inscrit ».
+    // Découper l'adresse pour en tirer un prénom donnerait « Bonjour
+    // sadyfalilou1988 », ce qui est pire que pas de nom du tout.
     await queueEmail({
       type: "welcome",
       recipientEmail: email,
       locale,
-      data: {
-        recipientName: email.split("@")[0], // Utilise la partie avant @ comme nom
-      },
+      data: { recipientName: null },
     });
 
     return { status: "accepted" };

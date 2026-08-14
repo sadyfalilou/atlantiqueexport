@@ -1,10 +1,17 @@
 # Guide de test
 
-_Dernière mise à jour : 13 août 2026 — état : catalogue, panier, commande Interac et administration en place_
+_Dernière mise à jour : 13 août 2026 — état : site déployé, courriels transactionnels en service_
 
-## 1. Démarrer le site
+## 1. Où tester
 
-Le site tourne sur votre machine, pas en ligne. Il n'est pas encore déployé.
+**Le site est en ligne** : <https://atlantiqueexport.vercel.app>. Chaque `git push` sur `main`
+y déclenche un déploiement automatique.
+
+Les deux endroits partagent **la même base Supabase**. Une commande passée en local apparaît
+donc dans l'administration en ligne, et inversement. C'est pratique, mais cela veut dire qu'un
+test n'est jamais « pour rire » : il crée une vraie commande et envoie de vrais courriels.
+
+Testez en ligne ce qui concerne les courriels et le cron, en local le reste.
 
 Une seule fois, pour installer les dépendances :
 
@@ -29,8 +36,9 @@ C'est le point le plus important avant de commencer : la plupart des liens mène
 | Fonctionne aujourd'hui | Pas encore construit |
 | --- | --- |
 | Page d'accueil complète | Paiement en ligne par carte |
-| Boutique avec filtres et tri | **Courriels de confirmation** |
+| Boutique avec filtres et tri | Alertes de stock et d'arrivage (lots 10 et 11) |
 | Pages de catégorie | **Création de compte et connexion** (lot 7) |
+| **Courriels : commande, Interac, et les 4 étapes de suivi** | |
 | Fiches produit avec choix du format | Gestion des produits et des prix en ligne |
 | Panier : ajout, quantités, retrait | Recettes, arrivages, pages institutionnelles |
 | Commande complète avec Interac | Comptes clients |
@@ -156,6 +164,8 @@ Deux vérifications qui comptent :
 - [ ] Ouvrez une commande en attente, puis « J'ai reçu le virement »
 - [ ] La commande passe en « Confirmée » et « Encaissé »
 - [ ] Le tableau de bord met à jour le montant encaissé
+- [ ] **Cliquez une seconde fois** sur le même bouton d'avancement : rien ne se passe, et
+      surtout aucun deuxième courriel ne part au client
 
 Saisie des prix :
 
@@ -186,11 +196,10 @@ Saisie des prix :
 ### 3.11 Infolettre
 
 - [ ] Entrez une adresse invalide, par exemple `abc` : un message explique quoi corriger
-- [ ] Entrez une adresse valide : le message précise que l'infolettre n'est pas encore active et
-      que les inscriptions seront enregistrées à l'ouverture de la boutique
-
-**Rien n'est enregistré pour l'instant, et le message le dit.** L'enregistrement réel viendra avec
-les courriels transactionnels.
+- [ ] Entrez une adresse valide : le message confirme l'inscription et annonce un courriel
+- [ ] Vous recevez le courriel de bienvenue (au prochain passage du cron, voir §5)
+- [ ] Réinscrivez **la même adresse** : le message est identique, et aucun second courriel ne
+      part. C'est voulu — répondre « vous êtes déjà inscrit » révélerait quelles adresses le sont
 
 ### 3.12 Accessibilité
 
@@ -199,6 +208,58 @@ les courriels transactionnels.
 - [ ] Aucun élément ne se laisse traverser sans qu'on voie où l'on se trouve
 - [ ] Si vous avez activé « Réduire les animations » dans les réglages de votre système, plus rien
       ne bouge au survol
+
+### 3.13 Le parcours complet des courriels
+
+C'est le test le plus utile aujourd'hui, et le seul qui traverse tout le système. Comptez
+vingt minutes, et gardez votre boîte de réception ouverte à côté.
+
+**Avant de commencer**, sachez comment un courriel voyage : une action ne l'envoie pas, elle le
+**met en file d'attente** en base. Un cron GitHub Actions vide cette file **toutes les cinq
+minutes**. Un courriel qui n'arrive pas dans la seconde n'est donc pas un bogue — voyez §5 pour
+le déclencher à la main sans attendre.
+
+### Étape 1 — Passer commande
+
+- [ ] Sur <https://atlantiqueexport.vercel.app>, ajoutez deux ou trois produits au panier
+- [ ] Passez commande avec **votre vraie adresse courriel**
+- [ ] Notez le numéro affiché, par exemple `AE-2026-00009`
+
+Deux courriels doivent arriver :
+
+- [ ] **« Votre commande est confirmée »** — vérifiez que **tous les articles y figurent**, avec
+      le sous-total, les frais et le total. C'était le défaut le plus grave : la liste partait vide
+- [ ] **« Finalisez votre commande par virement Interac »** — l'adresse affichée doit être
+      **exportatlantique@gmail.com**, le montant doit correspondre au total, et le numéro de
+      commande doit apparaître comme message à inscrire
+- [ ] Aucune section « question de sécurité » : le dépôt automatique est activé
+- [ ] Ouvrez-les **sur votre téléphone** : rien ne doit dépasser sur le côté ni être coupé
+
+### Étape 2 — Encaisser le virement
+
+- [ ] Faites un vrai virement de test, ou passez directement à la validation
+- [ ] Dans `/admin`, ouvrez la commande et cliquez « J'ai reçu le virement »
+- [ ] Vous recevez **« Votre paiement est confirmé »**, qui cite le numéro de commande
+
+### Étape 3 — Faire avancer la commande
+
+Faites passer la commande d'un statut au suivant, en attendant le courriel à chaque fois :
+
+- [ ] « En préparation » → **« Votre commande est en préparation »**
+- [ ] « Prête » → **« Votre commande vous attend »**, avec le point de ramassage et le créneau
+- [ ] « En livraison » → **« Votre commande est en route »**
+- [ ] « Livrée » → **« Votre commande a été livrée »**
+
+### Étape 4 — Le piège à vérifier
+
+- [ ] Revenez sur la commande et **recliquez** sur un statut déjà atteint
+- [ ] **Aucun second courriel ne doit partir.** C'est garanti en base, pas dans le navigateur :
+      la commande n'est mise à jour que si son statut change réellement
+
+### Ce qui doit être vrai à la fin
+
+Une commande, huit courriels reçus, aucun doublon, et chaque montant identique à celui de la
+page de confirmation.
 
 ## 4. Vérifier la base de données
 
@@ -225,7 +286,37 @@ npm run smoke:stock
 Démontre qu'une réservation dépassant le stock est refusée. Ce script crée puis supprime des
 données de test dans votre base.
 
-## 5. Vérifier le code
+## 5. Piloter la file d'attente des courriels
+
+Un courriel mis en file part au prochain passage du cron, **dans les cinq minutes**. Pour ne pas
+attendre pendant un test :
+
+1. Ouvrez <https://github.com/sadyfalilou/atlantiqueexport/actions>
+2. Choisissez « Traiter la queue de courriels » dans la colonne de gauche
+3. Bouton **« Run workflow »** → la file est vidée en une dizaine de secondes
+
+Une exécution verte qui affiche `{"success":true,"message":"Email queue processed"}` a bien
+fait son travail — y compris quand la file était vide.
+
+**Si les courriels cessent d'arriver**, regardez dans cet ordre :
+
+| Symptôme | Cause probable |
+| --- | --- |
+| Le workflow échoue en `401` | `CRON_SECRET` diffère entre Vercel et les secrets GitHub |
+| Le workflow ne se déclenche plus seul | GitHub désactive les tâches planifiées après 60 jours sans activité sur le dépôt |
+| Le workflow est vert mais rien n'arrive | Regardez la colonne `resend_error` de la table `email_queue` |
+
+**Voir les modèles sans rien envoyer :**
+
+```bash
+npm run emails:preview
+```
+
+Rend les douze modèles dans les deux langues. Ouvrez ensuite
+<http://localhost:3000/_apercus-courriels/index.html> avec `npm run dev`. Rien n'est envoyé,
+rien n'est écrit en base : c'est le bon outil pour juger une formulation ou une mise en page.
+
+## 6. Vérifier le code
 
 ```bash
 npm run check
@@ -234,14 +325,14 @@ npm run check
 Lance le linter, la vérification TypeScript et les tests unitaires. À faire passer avant chaque
 commit.
 
-## 6. Un désagrément connu du mode développement
+## 7. Un désagrément connu du mode développement
 
 S'il vous arrive de voir un libellé brut à l'écran — `search.title` au lieu de « Rechercher » —
 c'est que le serveur de développement garde une copie périmée des fichiers de traduction.
 Arrêtez-le avec `Ctrl` + `C` et relancez `npm run dev`. Cela n'affecte que le développement,
 jamais un site déployé.
 
-## 7. Me signaler un problème
+## 8. Me signaler un problème
 
 Le plus utile, dans l'ordre : sur quelle page, à quelle largeur d'écran ou sur quel appareil, ce
 que vous attendiez, ce qui s'est produit. Une capture d'écran vaut souvent mieux qu'un paragraphe.

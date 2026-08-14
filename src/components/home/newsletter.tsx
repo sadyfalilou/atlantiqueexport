@@ -81,7 +81,7 @@ export function Newsletter() {
               {state.status === "accepted" ? (
                 <span className="inline-flex items-center gap-1.5 text-success">
                   <CheckCircle2 aria-hidden="true" className="size-4" />
-                  {t("notYetActive")}
+                  {t("subscribed")}
                 </span>
               ) : null}
             </p>

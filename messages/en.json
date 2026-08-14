@@ -105,7 +105,7 @@
       "cta": "Sign up",
       "consent": "You can unsubscribe at any time.",
       "invalidEmail": "Enter a valid email address, for example name@example.ca",
-      "notYetActive": "Valid address. The newsletter is not live yet — sign-ups will be recorded when the shop opens."
+      "subscribed": "Thank you, your sign-up is recorded. A welcome email is on its way."
     },
     "social": {
       "title": "Follow us",
