@@ -58,7 +58,13 @@ export async function CatalogueView({
           {subtitle ? <p className="mt-2 text-muted">{subtitle}</p> : null}
         </header>
 
-        <div className="lg:grid lg:grid-cols-[16rem_1fr] lg:gap-10">
+        {/* Les deux colonnes ne valent QUE s'il y a un panneau de filtres.
+            Sans lui, l'`aside` n'est pas rendu, la liste de produits devient le
+            premier enfant de la grille et hérite de la colonne de 16 rem
+            prévue pour les filtres : les cartes se retrouvaient écrasées sur
+            un quart de la largeur. C'est ce qui arrivait aux pages Nouveautés
+            et Promotions, qui masquent les filtres. */}
+        <div className={panel ? "lg:grid lg:grid-cols-[16rem_1fr] lg:gap-10" : undefined}>
           {panel ? (
             <aside className="hidden lg:block" aria-label={t("filters")}>
               {panel}
