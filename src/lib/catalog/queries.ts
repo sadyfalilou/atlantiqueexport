@@ -3,6 +3,7 @@ import { createCatalogClient } from "@/lib/supabase/server";
 import type {
   Brand,
   Category,
+  LocalizedText,
   Product,
   ProductVariant,
   Recipe,
@@ -492,4 +493,54 @@ export async function searchProducts(query: string, limit = 24): Promise<Product
 
   const byId = new Map(rows.map((row) => [row.id as string, toProduct(row)]));
   return ids.map((id) => byId.get(id)).filter((p): p is Product => p != null);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Pages institutionnelles                                                     */
+/* -------------------------------------------------------------------------- */
+
+export interface SitePage {
+  slug: string;
+  title: LocalizedText;
+  body: LocalizedText;
+  /** Texte juridique non encore relu par un professionnel. */
+  isDraftLegal: boolean;
+  updatedAt: string;
+}
+
+/**
+ * Une page institutionnelle, par son chemin (« livraison »,
+ * « politiques/confidentialite »).
+ *
+ * La lecture passe par la clé publique : la politique RLS ne rend visibles que
+ * les pages publiées, si bien qu'un brouillon reste invisible même si son
+ * adresse est devinée.
+ */
+export async function getSitePage(slug: string): Promise<SitePage | null> {
+  const supabase = createCatalogClient();
+  const { data, error } = await supabase
+    .from("pages")
+    .select("slug, title_fr, title_en, body_fr, body_en, is_draft_legal, updated_at")
+    .eq("slug", slug)
+    .limit(1);
+
+  if (error) throw new Error(`Supabase : ${error.message}`);
+
+  const row = ((data ?? []) as Row[])[0];
+  if (!row) return null;
+
+  return {
+    slug: row.slug as string,
+    title: toLocalized(row, "title"),
+    body: toLocalized(row, "body"),
+    isDraftLegal: Boolean(row.is_draft_legal),
+    updatedAt: row.updated_at as string,
+  };
+}
+
+/** Chemins des pages publiées, pour la prégénération. */
+export async function getSitePageSlugs(): Promise<string[]> {
+  const supabase = createCatalogClient();
+  const { data } = await supabase.from("pages").select("slug").limit(100);
+  return ((data ?? []) as Row[]).map((row) => row.slug as string);
 }

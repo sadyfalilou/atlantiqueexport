@@ -316,5 +316,10 @@
     "noResultTitle": "Nothing found for “{term}”",
     "noResultBody": "Try a shorter word, or browse the shop by aisle.",
     "browseShop": "Browse the shop"
+  },
+  "pages": {
+    "updated": "Updated {date}",
+    "draftTitle": "Draft — pending review",
+    "draftBody": "This text is a starting point. It has not been reviewed by a legal professional and does not yet bind Atlantique Export. Have it validated before the first sale."
   }
 }

@@ -316,5 +316,10 @@
     "noResultTitle": "Rien trouvé pour « {term} »",
     "noResultBody": "Essayez un mot plus court, ou parcourez la boutique par rayon.",
     "browseShop": "Voir la boutique"
+  },
+  "pages": {
+    "updated": "Mise à jour le {date}",
+    "draftTitle": "Brouillon — à faire valider",
+    "draftBody": "Ce texte est une proposition rédigée pour servir de point de départ. Il n'a pas été relu par un professionnel du droit et n'engage pas encore Atlantique Export. Faites-le valider avant la première vente."
   }
 }

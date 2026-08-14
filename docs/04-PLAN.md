@@ -411,11 +411,35 @@ le jette. Les modèles saluent donc sans nom (« Bonjour, votre commande… »),
 correctement mais reste un pis-aller. Le vrai correctif demande une colonne
 `customer_name` et une reprise de `place_order`.
 
-## Lot 13 — Contenu éditorial et pages institutionnelles ⬜
+## Lot 13 — Contenu éditorial et pages institutionnelles 🚧
 
-- Recettes avec « Ajouter les ingrédients au panier », données structurées `Recipe`
-- Pages institutionnelles administrables ; **brouillons juridiques marqués « à faire valider »**
-- **Vérification** : audit d'accessibilité de chaque page
+- ✅ **Onze pages institutionnelles**, servies depuis la table `pages` par la route
+  attrape-tout : ajouter une page ne demande plus de code, seulement une ligne en base.
+  La politique RLS n'expose que les pages publiées, donc un brouillon reste introuvable
+  même si son adresse est devinée.
+- ✅ **Six brouillons juridiques** — confidentialité, conditions de vente, remboursement,
+  expédition, témoins, accessibilité. Chacun porte `is_draft_legal`, ce qui affiche un
+  encadré « à faire valider » en tête de page **et les retire de l'indexation** : un texte
+  non relu n'a pas à être cité par un moteur de recherche comme la position de l'entreprise.
+- ✅ **Cinq pages factuelles** — livraison, FAQ, contact, à propos, comptes professionnels.
+  Zones, frais, seuils et règles de chaîne du froid sont repris de la configuration réelle.
+- ✅ **18 mentions « [à confirmer] »** marquent ce que seule l'entreprise peut fournir :
+  raison sociale, NEQ, adresse, téléphone, délais de remboursement, pays d'hébergement des
+  données. Un trou signalé vaut mieux qu'une valeur plausible.
+- ⬜ `/nos-producteurs` — délibérément non écrite. Le seul fournisseur connu est Sonagoo,
+  dont la marque a été **volontairement masquée** du site au lot 2 ; inventer des portraits
+  de producteurs serait contraire à la règle du projet.
+- ⬜ Recettes avec « Ajouter les ingrédients au panier », données structurées `Recipe`
+  (six recettes sont déjà publiées en base)
+- ⬜ Administration des pages depuis `/admin`
+- **Vérification** : les 11 pages rendues dans les deux langues, sans reste de balisage ;
+  audit d'accessibilité encore à faire
+
+**Le corps des pages n'est jamais injecté en HTML.** Il est écrit dans un Markdown pauvre
+et converti en composants React. Un `dangerouslySetInnerHTML` sur du contenu venu de la base
+laisserait quiconque obtiendrait un accès en écriture exécuter du script chez chaque
+visiteur ; la conversion en éléments React ferme la porte par construction, et les liens
+sont filtrés pour écarter `javascript:`.
 
 ## Lot 14 — SEO, performance, PWA ⬜
 
