@@ -1,4 +1,6 @@
+import { notFound } from "next/navigation";
 import { Info } from "lucide-react";
+import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Container } from "@/components/ui/layout-primitives";
 import { Hero } from "@/components/home/hero";
@@ -22,6 +24,7 @@ import {
   getPromotedProducts,
   getSiteSettings,
 } from "@/lib/catalog/queries";
+import { routing } from "@/i18n/routing";
 import type { Locale } from "@/lib/types";
 
 /**
@@ -37,6 +40,14 @@ export default async function HomePage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+
+  // Le segment `[locale]` avale tout chemin d'un seul niveau. Un navigateur
+  // qui réclame /favicon.ico faisait donc rendre l'accueil avec la « langue »
+  // « favicon.ico », et chaque `titre[locale]` renvoyait `undefined` : les
+  // journaux se remplissaient d'exceptions à chaque visite. Le garde du layout
+  // arrive trop tard — la page se rend en parallèle et jette avant lui.
+  if (!hasLocale(routing.locales, locale)) notFound();
+
   setRequestLocale(locale);
 
   const t = await getTranslations("home");
