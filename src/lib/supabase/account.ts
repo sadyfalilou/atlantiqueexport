@@ -46,3 +46,69 @@ export async function getCurrentCustomer(): Promise<Customer | null> {
     locale: profile?.locale === "en" ? "en" : "fr",
   };
 }
+
+export interface SavedAddress {
+  id: string;
+  label: string | null;
+  fullName: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  province: string;
+  postalCode: string;
+  phone: string | null;
+  isDefault: boolean;
+}
+
+/**
+ * Les adresses du client connecté.
+ *
+ * Lues avec sa session : la politique `addresses_own` ne lui montre que les
+ * siennes. Aucun filtre n'est écrit ici, donc aucun ne peut être oublié.
+ */
+export async function getSavedAddresses(): Promise<SavedAddress[]> {
+  const supabase = await createSessionClient();
+  const { data } = await supabase
+    .from("addresses")
+    .select("*")
+    .order("is_default", { ascending: false })
+    .order("created_at");
+
+  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    id: row.id as string,
+    label: (row.label as string | null) ?? null,
+    fullName: (row.full_name as string) ?? "",
+    line1: (row.line1 as string) ?? "",
+    line2: (row.line2 as string | null) ?? null,
+    city: (row.city as string) ?? "",
+    province: (row.province as string) ?? "",
+    postalCode: (row.postal_code as string) ?? "",
+    phone: (row.phone as string | null) ?? null,
+    isDefault: Boolean(row.is_default),
+  }));
+}
+
+export interface BusinessAccount {
+  companyName: string;
+  businessNumber: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
+  notes: string | null;
+  status: "pending" | "approved" | "rejected";
+}
+
+export async function getBusinessAccount(): Promise<BusinessAccount | null> {
+  const supabase = await createSessionClient();
+  const { data } = await supabase.from("business_accounts").select("*").limit(1);
+  const row = (data ?? [])[0] as Record<string, unknown> | undefined;
+  if (!row) return null;
+
+  return {
+    companyName: (row.company_name as string) ?? "",
+    businessNumber: (row.business_number as string | null) ?? null,
+    contactName: (row.contact_name as string | null) ?? null,
+    contactPhone: (row.contact_phone as string | null) ?? null,
+    notes: (row.notes as string | null) ?? null,
+    status: (row.status as BusinessAccount["status"]) ?? "pending",
+  };
+}

@@ -6,6 +6,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Container, Section } from "@/components/ui/layout-primitives";
 import { EmptyState } from "@/components/shared/empty-state";
+import { AccountNav } from "@/components/account/account-nav";
 import { buttonVariants } from "@/components/ui/button";
 import { signOutCustomerAction } from "@/app/actions/account";
 import { getCurrentCustomer } from "@/lib/supabase/account";
@@ -88,7 +89,11 @@ export default async function AccountPage({
           </form>
         </div>
 
-        <section className="mt-10">
+        <div className="mt-6">
+          <AccountNav current="commandes" />
+        </div>
+
+        <section className="mt-8">
           <h2 className="font-display text-xl font-semibold text-forest-900">
             {t("ordersTitle")}
           </h2>

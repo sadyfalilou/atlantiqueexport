@@ -193,8 +193,27 @@ postaux, eux, sont exacts : H1 à H9 pour l'île de Montréal, J pour les couron
   formulaire un annuaire de la clientèle.
 - ✅ **Commande sans compte inchangée** : le compte apporte l'historique, pas le droit
   d'acheter.
-- ⬜ Adresses enregistrées, profil modifiable, factures PDF, recommander
-- ⬜ Demande de compte professionnel avec validation manuelle
+- ✅ **Profil modifiable** : nom, téléphone, langue des courriels, consentement à
+  l'infolettre. L'adresse courriel n'y est pas modifiable — elle sert d'identifiant.
+- ✅ **Adresses enregistrées** : ajout, suppression, adresse par défaut. Une seule à la
+  fois : l'ancienne est retirée avant que la nouvelle soit posée, sinon deux se
+  disputeraient la place au paiement. Le code postal est rangé en majuscules, la zone de
+  livraison se déduisant de son préfixe.
+- ✅ **Demande de compte professionnel**, en statut `pending`. `business_accounts`
+  n'accorde au client qu'un droit de **lecture** : personne ne peut s'octroyer un tarif de
+  gros en insérant sa propre ligne. La demande passe par le serveur, et l'administration
+  tranche.
+- ⬜ Factures PDF, recommander une commande passée
+
+**Isolation vérifiée avec deux comptes réels.** Le profil et les adresses s'écrivent avec
+la session du client, jamais avec la clé de service : les politiques `profiles_update_self`
+et `addresses_own` font la garde en base, si bien qu'aucun filtre applicatif ne peut être
+oublié. Mesuré :
+
+- B ne voit aucune adresse de A
+- B ne peut pas insérer une adresse au nom de A — refus PostgreSQL 42501
+- B ne peut pas modifier le profil de A — zéro ligne touchée
+- personne ne peut s'insérer un compte professionnel « approuvé » — refus 42501
 
 **Les commandes sont lues avec la session du client, pas avec la clé de service.** La
 politique `orders_select_own` fait le tri en base : le serveur n'a aucun filtre à écrire,
