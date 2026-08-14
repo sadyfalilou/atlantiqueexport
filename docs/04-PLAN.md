@@ -431,7 +431,15 @@ correctement mais reste un pis-aller. Le vrai correctif demande une colonne
   de producteurs serait contraire à la règle du projet.
 - ⬜ Recettes avec « Ajouter les ingrédients au panier », données structurées `Recipe`
   (six recettes sont déjà publiées en base)
-- ⬜ Administration des pages depuis `/admin`
+- ✅ **Administration des pages** (`/admin/pages`) : titre et texte dans les deux langues,
+  publication, création. Le tableau compte les mentions « à confirmer » restantes et les
+  annonce en tête — 36 aujourd'hui, deux langues confondues.
+- ✅ **La mention « brouillon juridique » est réservée au super administrateur.** Un
+  gestionnaire corrige librement un texte ; seul un super administrateur peut retirer
+  l'encadré d'avertissement, parce que le retirer déclare que le texte a été relu et
+  engage l'entreprise. Un avertissement le rappelle au moment de décocher la case.
+- ✅ **L'adresse d'une page est figée après création**, comme celle d'un produit ou d'une
+  catégorie : elle vit dans des liens déjà partagés et indexés.
 - **Vérification** : les 11 pages rendues dans les deux langues, sans reste de balisage ;
   audit d'accessibilité encore à faire
 

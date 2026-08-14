@@ -882,6 +882,121 @@ export async function saveBrandAction(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Pages institutionnelles                                                     */
+/* -------------------------------------------------------------------------- */
+
+const pageInput = z.object({
+  id: z.uuid().optional().or(z.literal("")),
+  slug: z.string().trim().min(1).max(120),
+  titleFr: z.string().trim().min(2).max(200),
+  titleEn: z.string().trim().min(2).max(200),
+  bodyFr: z.string().max(60000).optional(),
+  bodyEn: z.string().max(60000).optional(),
+});
+
+/**
+ * Enregistre une page institutionnelle.
+ *
+ * Deux cases décident de ce que le visiteur voit, et méritent d'être
+ * comprises avant d'être cochées :
+ *
+ * - **Publiée** — la politique RLS ne montre au public que les pages
+ *   publiées. Décocher retire la page du site sans la supprimer.
+ * - **Brouillon juridique** — affiche l'encadré « à faire valider » et retire
+ *   la page de l'indexation. La décocher revient à déclarer que le texte a
+ *   été relu et engage l'entreprise ; c'est pour cela qu'elle est réservée au
+ *   super administrateur.
+ */
+export async function savePageAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = pageInput.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const field = String(parsed.error.issues[0]?.path?.[0] ?? "");
+    return { status: "error", message: `Champ incomplet ou invalide : ${field}.` };
+  }
+  const input = parsed.data;
+
+  const supabase = createAdminClient();
+
+  // Retirer la mention « brouillon » déclare qu'un professionnel a relu le
+  // texte. Un gestionnaire peut corriger une faute ; seul le super
+  // administrateur peut engager l'entreprise sur un contenu juridique.
+  const wantsDraft = formData.get("isDraftLegal") === "on";
+  const canChangeDraft = hasRole(member, "super_admin");
+
+  const values: Record<string, unknown> = {
+    slug: input.slug,
+    title_fr: input.titleFr,
+    title_en: input.titleEn,
+    body_fr: input.bodyFr || null,
+    body_en: input.bodyEn || null,
+    is_published: formData.get("isPublished") === "on",
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.id) {
+    const { data: before } = await supabase
+      .from("pages")
+      .select("is_draft_legal")
+      .eq("id", input.id)
+      .limit(1);
+
+    const previousDraft = Boolean(before?.[0]?.is_draft_legal);
+    values.is_draft_legal = canChangeDraft ? wantsDraft : previousDraft;
+
+    const { error } = await supabase.from("pages").update(values).eq("id", input.id);
+    if (error) {
+      console.error("Modification de la page refusée :", error);
+      return { status: "error", message: "L'enregistrement a échoué." };
+    }
+
+    await logAdminAction(member.userId, "page.update", "pages", input.id, {
+      slug: input.slug,
+      draft_legal: values.is_draft_legal,
+    });
+
+    if (!canChangeDraft && wantsDraft !== previousDraft) {
+      return {
+        status: "error",
+        message:
+          "Texte enregistré, mais seul un super administrateur peut retirer ou poser la mention « brouillon juridique ».",
+      };
+    }
+  } else {
+    // Une page créée ici part en brouillon juridique si la case est cochée,
+    // et non publiée par défaut : on ne met pas un texte en ligne par accident.
+    values.is_draft_legal = wantsDraft;
+
+    const { error } = await supabase.from("pages").insert(values);
+    if (error) {
+      console.error("Création de la page refusée :", error);
+      return {
+        status: "error",
+        message:
+          error.code === "23505"
+            ? "Une page occupe déjà cette adresse."
+            : "La création a échoué.",
+      };
+    }
+    await logAdminAction(member.userId, "page.create", "pages", null, { slug: input.slug });
+  }
+
+  revalidatePath("/admin/pages");
+  revalidatePath(`/admin/pages/${input.slug}`);
+  // La page publique est prégénérée : sans cela, la correction n'apparaîtrait
+  // qu'à la revalidation suivante, cinq minutes plus tard.
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Mouvements de stock                                                         */
 /* -------------------------------------------------------------------------- */
 

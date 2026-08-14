@@ -470,3 +470,55 @@ export async function getAdminBrands(): Promise<AdminBrand[]> {
     productCount: counts.get(row.id as string) ?? 0,
   }));
 }
+
+/* -------------------------------------------------------------------------- */
+/* Pages institutionnelles                                                     */
+/* -------------------------------------------------------------------------- */
+
+export interface AdminPage {
+  id: string;
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  bodyFr: string;
+  bodyEn: string;
+  isPublished: boolean;
+  isDraftLegal: boolean;
+  updatedAt: string;
+  /** Nombre de « [à confirmer] » restants, les deux langues confondues. */
+  pendingCount: number;
+}
+
+const PLACEHOLDER = /\[(?:à confirmer|to confirm)\]/g;
+
+function toAdminPage(row: Row): AdminPage {
+  const bodyFr = (row.body_fr as string | null) ?? "";
+  const bodyEn = (row.body_en as string | null) ?? "";
+
+  return {
+    id: row.id as string,
+    slug: row.slug as string,
+    titleFr: (row.title_fr as string | null) ?? "",
+    titleEn: (row.title_en as string | null) ?? "",
+    bodyFr,
+    bodyEn,
+    isPublished: Boolean(row.is_published),
+    isDraftLegal: Boolean(row.is_draft_legal),
+    updatedAt: row.updated_at as string,
+    pendingCount:
+      (bodyFr.match(PLACEHOLDER) ?? []).length + (bodyEn.match(PLACEHOLDER) ?? []).length,
+  };
+}
+
+export async function getAdminPages(): Promise<AdminPage[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("pages").select("*").order("slug");
+  return ((data ?? []) as Row[]).map(toAdminPage);
+}
+
+export async function getAdminPage(slug: string): Promise<AdminPage | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("pages").select("*").eq("slug", slug).limit(1);
+  const row = ((data ?? []) as Row[])[0];
+  return row ? toAdminPage(row) : null;
+}

@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
+  FileText,
   Store,
   Tag,
 } from "lucide-react";
@@ -54,6 +55,9 @@ export default async function ProtectedAdminLayout({
             </AdminLink>
             <AdminLink href="/admin/stocks" icon={<Package className="size-4" />}>
               Stocks
+            </AdminLink>
+            <AdminLink href="/admin/pages" icon={<FileText className="size-4" />}>
+              Pages
             </AdminLink>
           </nav>
 
