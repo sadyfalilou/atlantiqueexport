@@ -177,13 +177,40 @@ tables n'aient pas à y penser.
 comme tel — le point de ramassage s'intitule « adresse à confirmer ». Les préfixes de codes
 postaux, eux, sont exacts : H1 à H9 pour l'île de Montréal, J pour les couronnes.
 
-## Lot 7 — Authentification et espace client ⬜
+## Lot 7 — Authentification et espace client 🚧
 
-- Supabase Auth : courriel/mot de passe et lien magique, réinitialisation
-- **Commande invité autorisée** avec suivi par jeton
-- Espace client : commandes, détails, suivi, factures PDF, recommander, adresses, profil
-- Demande de compte professionnel avec validation manuelle
-- **Vérification** : end-to-end connexion, commande invité, recommande
+- ✅ **Inscription, connexion, déconnexion** par courriel et mot de passe
+- ✅ **Réinitialisation du mot de passe**, envoyée par **Resend avec le gabarit de la
+  marque** et non par le service intégré de Supabase, dont le débit est limité et
+  l'expéditeur étranger au domaine. Le lien est fabriqué côté serveur
+  (`auth.admin.generateLink`) puis mis en file. Cela branche enfin le modèle
+  `password_reset`, écrit au lot 12 et sans appelant depuis.
+- ✅ **Espace client** `/compte` : historique des commandes, avec leur état traduit
+- ✅ **Le panier de l'invité est rattaché au compte à la connexion.** Sans cela, quelqu'un
+  qui remplit son panier puis se connecte pour payer le verrait se vider — au pire moment.
+- ✅ **Aucun message ne révèle si une adresse est connue**, ni à l'inscription, ni à la
+  connexion, ni à la réinitialisation. Répondre « cette adresse n'existe pas » ferait du
+  formulaire un annuaire de la clientèle.
+- ✅ **Commande sans compte inchangée** : le compte apporte l'historique, pas le droit
+  d'acheter.
+- ⬜ Adresses enregistrées, profil modifiable, factures PDF, recommander
+- ⬜ Demande de compte professionnel avec validation manuelle
+
+**Les commandes sont lues avec la session du client, pas avec la clé de service.** La
+politique `orders_select_own` fait le tri en base : le serveur n'a aucun filtre à écrire,
+donc aucun moyen de se tromper. Vérifié — un compte neuf voit zéro commande.
+
+⚠️ **La confirmation d'inscription passe encore par Supabase.** Son service intégré est
+limité à quelques envois par heure et n'utilise pas le domaine d'Atlantique Export. À
+faire avant l'ouverture : configurer Resend comme serveur SMTP de Supabase, dans
+Authentication → Emails. La réinitialisation, elle, passe déjà par Resend.
+
+**Écueil rencontré.** `/auth/callback` était réécrit en `/fr/auth/callback` par le
+middleware de langue : chaque lien de réinitialisation aurait fini sur une page
+introuvable. Le chemin `auth` est désormais exclu du `matcher`. La destination de retour
+est par ailleurs contrainte aux chemins internes — sans quoi `?next=https://…` aurait fait
+de ce lien, signé par le domaine et arrivé dans un vrai courriel, un tremplin vers un site
+tiers.
 
 ## Lot 8 — Paiement et commandes 🚧
 
