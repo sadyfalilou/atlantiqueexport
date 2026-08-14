@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Fichier intermédiaire produit par npm run brand:build.
 assets/brand/.logo-original.png
+
+# Aperçus de courriels générés localement
+/public/_apercus-courriels/

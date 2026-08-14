@@ -23,7 +23,8 @@
     "brand:build": "node scripts/build-brand-assets.mjs",
     "seed:logistics": "node scripts/seed-logistics.mjs",
     "smoke:order": "node scripts/smoke-order.mjs",
-    "grant:admin": "node scripts/grant-admin.mjs"
+    "grant:admin": "node scripts/grant-admin.mjs",
+    "emails:preview": "EMAIL_PREVIEW_DIR=./public/_apercus-courriels vitest run src/lib/resend/preview.gen.test.ts && echo '→ http://localhost:3000/_apercus-courriels/index.html (npm run dev)'"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",

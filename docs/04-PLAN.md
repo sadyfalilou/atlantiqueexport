@@ -299,6 +299,17 @@ npm run grant:admin -- votre@courriel.ca
 ## Lot 12 — Courriels transactionnels 🚧
 
 - ✅ Migration `email_queue` avec statuts et système de relance (backoff exponentiel)
+**Trois défauts de rendu corrigés, chacun invisible au typecheck**
+
+1. **`display: flex` pour aligner les totaux.** Outlook rend le HTML avec le moteur de
+   Word : le sous-total et son montant se retrouvaient sur deux lignes. Tout est
+   maintenant en tableaux.
+2. **Aucun `<head>`.** Sans balise de fenêtre d'affichage, un téléphone suppose une page
+   de 980 px et réduit le courriel à l'échelle — illisible là où on le lit le plus.
+3. **`width="600"` en attribut HTML.** Il impose une largeur intrinsèque que `max-width`
+   ne peut plus contraindre : le courriel débordait de l'écran et coupait la colonne des
+   totaux. Vérifié à 390 px : plus aucun élément hors cadre.
+
 - ✅ Douze modèles bilingues via Resend, rendus en JSX/React :
   - Bienvenue, confirmation de commande, attente Interac, paiement confirmé, préparation,
     ramassage, livraison, livrée, précommande, arrivage disponible, stock, réinitialisation
@@ -322,6 +333,11 @@ npm run grant:admin -- votre@courriel.ca
   garantirait pas.
 - ✅ **23 tests de rendu** : les 5 modèles de statut, dans les deux langues, avec et
   sans nom de client
+- ✅ **Habillage refait sur la charte** : bandeau vert du logo, filet orange, encadrés
+  crème, bouton mango-700 (le seul orange qui porte du texte blanc). Aperçu des douze
+  modèles dans les deux langues : `npm run emails:preview`.
+- ✅ **Courriel de confirmation complet** : les articles, le sous-total et les frais sont
+  relus depuis `order_items`. Ils étaient auparavant vides et remplacés par « À confirmer ».
 - ⬜ Intégration des événements de stock et d'arrivage (lots 10 et 11)
 
 **Vérifié — la chaîne complète a envoyé de vrais courriels** (14 août 2026, 01 h 50 UTC)

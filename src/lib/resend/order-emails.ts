@@ -197,6 +197,116 @@ export async function queueOrderStatusEmail(
   }
 }
 
+/** Formate des cents en dollars canadiens, selon la langue du client. */
+function money(cents: number, locale: "fr" | "en"): string {
+  return new Intl.NumberFormat(locale === "en" ? "en-CA" : "fr-CA", {
+    style: "currency",
+    currency: "CAD",
+  }).format(cents / 100);
+}
+
+/**
+ * Met en queue les deux courriels qui suivent une commande : la confirmation
+ * détaillée, puis les instructions de virement Interac.
+ *
+ * Les articles et les montants sont **relus depuis `order_items`**, jamais
+ * repris du panier ni du formulaire. Le panier est vidé par la transaction de
+ * commande, et surtout les montants qui font foi sont ceux que PostgreSQL a
+ * calculés — un récapitulatif qui ne correspondrait pas à la somme réclamée
+ * serait pire que pas de récapitulatif du tout.
+ */
+export async function queueOrderPlacedEmails(
+  orderNumber: string,
+  fallbackName?: string | null,
+): Promise<void> {
+  try {
+    const db = createAdminClient();
+
+    const { data, error } = await db
+      .from("orders")
+      .select(
+        `email, locale, fulfillment_method, delivery_address, placed_at,
+         subtotal_cents, delivery_fee_cents, total_cents,
+         items:order_items(product_name_snapshot, unit_label_snapshot, quantity,
+                           unit_price_cents, line_total_cents)`,
+      )
+      .eq("order_number", orderNumber)
+      .limit(1);
+
+    const order = data?.[0];
+    if (error || !order) {
+      console.error("Courriels de commande : commande introuvable", orderNumber, error);
+      return;
+    }
+
+    const locale = order.locale === "en" ? "en" : "fr";
+    const address = order.delivery_address as { fullName?: string } | null;
+    const recipientName = address?.fullName?.trim() || fallbackName?.trim() || null;
+    const email = order.email as string;
+
+    const rows = (order.items ?? []) as Array<{
+      product_name_snapshot: string;
+      unit_label_snapshot: string;
+      quantity: number;
+      unit_price_cents: number;
+      line_total_cents: number;
+    }>;
+
+    const items = rows.map((row) => ({
+      name: row.unit_label_snapshot
+        ? `${row.product_name_snapshot} — ${row.unit_label_snapshot}`
+        : row.product_name_snapshot,
+      quantity: row.quantity,
+      pricePerUnit: `${money(row.unit_price_cents, locale)} / ${locale === "en" ? "unit" : "unité"}`,
+      total: money(row.line_total_cents, locale),
+    }));
+
+    const feeCents = order.delivery_fee_cents as number;
+
+    await queueEmail({
+      type: "order_confirmation",
+      recipientEmail: email,
+      recipientName: recipientName ?? undefined,
+      locale,
+      data: {
+        recipientName,
+        orderNumber,
+        orderDate: new Date((order.placed_at as string) ?? Date.now()).toLocaleDateString(
+          locale === "en" ? "en-CA" : "fr-CA",
+          { day: "numeric", month: "long", year: "numeric" },
+        ),
+        items,
+        subtotal: money(order.subtotal_cents as number, locale),
+        // Zéro n'est pas « 0,00 $ » ici : c'est un ramassage ou la gratuité
+        // acquise, et le dire vaut mieux que de laisser calculer.
+        shippingFee: feeCents === 0 ? (locale === "en" ? "Free" : "Offerts") : money(feeCents, locale),
+        total: money(order.total_cents as number, locale),
+        fulfillmentMethod: order.fulfillment_method as string,
+        fulfillmentDetails: "",
+      },
+    });
+
+    await queueEmail({
+      type: "interac_pending",
+      recipientEmail: email,
+      recipientName: recipientName ?? undefined,
+      locale,
+      data: {
+        recipientName,
+        orderNumber,
+        totalAmount: money(order.total_cents as number, locale),
+        // Laissée vide tant que l'adresse réelle n'est pas connue : le gabarit
+        // dit alors de ne rien envoyer, plutôt que d'afficher une adresse
+        // d'exemple vers laquelle quelqu'un virerait de l'argent.
+        recipientEmail: process.env.INTERAC_RECIPIENT_EMAIL || "",
+        securityAnswer: process.env.INTERAC_SECURITY_ANSWER || null,
+      },
+    });
+  } catch (err) {
+    console.error("Mise en queue des courriels de commande échouée :", err);
+  }
+}
+
 /** Met en queue le courriel qui accuse réception d'un paiement. */
 export async function queuePaymentConfirmedEmail(orderId: string): Promise<void> {
   try {
