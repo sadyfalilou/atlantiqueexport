@@ -270,9 +270,27 @@ une adresse d'exemple vers laquelle quelqu'un enverrait de l'argent.
   avant toute modification. Les rayons calculés — Nouveautés, Promotions — sont montrés
   à part et non modifiables : ils ne contiennent aucun produit rangé.
 - ✅ **Marques** (`/admin/marques`) : nom, origine, descriptions, visibilité, partenariat.
-- ⬜ Mouvements de stock (réception, ajustement, perte)
-- ⬜ Mouvements de stock (réception, ajustement, perte)
+- ✅ **Mouvements de stock** (`/admin/stocks`) : réception avec lot et date de péremption,
+  ajustement de comptage dans les deux sens, perte, retour. Le registre des quarante
+  derniers mouvements est affiché en dessous, ventes comprises.
 - ⬜ Arrivages, comptes professionnels, promotions, rapports
+
+**Aucune quantité ne s'écrit à la main.** Tout passe par `record_stock_movement`, une
+fonction SQL qui, dans une seule transaction :
+
+1. **verrouille la ligne de stock** — deux corrections simultanées se suivraient sinon sur
+   un même total lu avant écriture, et la seconde écraserait la première ;
+2. **refuse de descendre sous les quantités déjà réservées** pour des commandes en cours,
+   avec un message lisible plutôt qu'une violation de contrainte ;
+3. **refuse les types non saisissables** — vente, réservation et libération sont écrites par
+   la transaction de commande ; les accepter ici laisserait fabriquer des ventes qui n'ont
+   jamais eu lieu ;
+4. **écrit le registre avec l'identité de l'auteur.** `receive_stock` l'attribuait à
+   `auth.uid()`, nul avec la clé de service : chaque réception aurait été anonyme.
+
+**Vérifié contre la base réelle** — réception, perte et ajustement acceptés ; mouvement
+nul, retrait excessif et type `sale` refusés avec le bon message ; total revenu à sa
+valeur de départ et écritures de test retirées du registre.
 
 **Trois précautions**
 

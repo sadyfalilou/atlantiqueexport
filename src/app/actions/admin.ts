@@ -882,6 +882,92 @@ export async function saveBrandAction(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Mouvements de stock                                                         */
+/* -------------------------------------------------------------------------- */
+
+export type StockState = { status: "idle" | "saved" | "error"; message?: string };
+
+const stockMovement = z.object({
+  variantId: z.uuid(),
+  // `reception` et `return` font entrer de la marchandise, `loss` en fait
+  // sortir, `adjustment` corrige dans les deux sens.
+  movementType: z.enum(["reception", "adjustment", "loss", "return"]),
+  quantity: z.string().trim().min(1),
+  direction: z.enum(["in", "out"]).optional(),
+  reason: z.string().trim().max(300).optional(),
+  lotCode: z.string().trim().max(80).optional(),
+  expiresAt: z.string().trim().max(10).optional(),
+});
+
+/**
+ * Enregistre une réception, un ajustement ou une perte.
+ *
+ * Rien n'écrit `stock_levels` directement : tout passe par la fonction SQL,
+ * qui verrouille la ligne, refuse de descendre sous les quantités déjà
+ * réservées et écrit le registre dans la même transaction. Une quantité
+ * corrigée sans trace est un écart d'inventaire que plus personne ne saura
+ * expliquer trois mois plus tard.
+ */
+export async function recordStockMovementAction(
+  _previous: StockState,
+  formData: FormData,
+): Promise<StockState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = stockMovement.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { status: "error", message: "Formulaire incomplet." };
+  }
+  const input = parsed.data;
+
+  const quantity = Number.parseInt(input.quantity, 10);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return { status: "error", message: "Indiquez un nombre d'unités supérieur à zéro." };
+  }
+
+  // La quantité est toujours saisie en positif ; c'est le type de mouvement,
+  // ou le sens choisi pour un ajustement, qui décide du signe. Demander un
+  // nombre négatif à quelqu'un qui déclare une casse serait une invitation à
+  // se tromper.
+  const negative =
+    input.movementType === "loss" ||
+    (input.movementType === "adjustment" && input.direction === "out");
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.rpc("record_stock_movement", {
+    p_variant_id: input.variantId,
+    p_quantity_delta: negative ? -quantity : quantity,
+    p_movement_type: input.movementType,
+    p_actor_id: member.userId,
+    p_reason: input.reason || null,
+    p_lot_code: input.movementType === "reception" ? input.lotCode || null : null,
+    p_expires_at:
+      input.movementType === "reception" && input.expiresAt ? input.expiresAt : null,
+  });
+
+  if (error) {
+    // Les messages de la fonction sont écrits pour être lus tels quels par la
+    // personne qui saisit : « il n'y a que 12 en stock » vaut mieux que
+    // « violation de contrainte ».
+    console.error("Mouvement de stock refusé :", error);
+    return { status: "error", message: error.message };
+  }
+
+  await logAdminAction(member.userId, "stock.movement", "product_variants", input.variantId, {
+    type: input.movementType,
+    delta: negative ? -quantity : quantity,
+  });
+
+  revalidatePath("/admin/stocks");
+  revalidatePath("/admin");
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Photographies                                                               */
 /* -------------------------------------------------------------------------- */
 
