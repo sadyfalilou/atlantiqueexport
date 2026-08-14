@@ -27,8 +27,10 @@ const samples: Record<string, Record<string, unknown>> = {
     recipientName: "Awa Diop",
     orderNumber: "AE-2026-00042",
     totalAmount: "58,96 $",
-    recipientEmail: "paiements@atlantiqueexport.com",
-    securityAnswer: "atlantique",
+    // L'adresse réelle, et aucune question de sécurité : le dépôt automatique
+    // est activé sur le compte, donc la banque ne la pose pas.
+    recipientEmail: "exportatlantique@gmail.com",
+    securityAnswer: null,
   },
   interac_pending_sans_adresse: {
     recipientName: null,

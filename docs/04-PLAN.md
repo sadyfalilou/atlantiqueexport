@@ -219,10 +219,19 @@ commande inexistante dès qu'une ligne échoue au milieu — et la compensation 
 - surgelé par la poste : refusé
 - panier vide : refusé
 
-⚠️ **`INTERAC_RECIPIENT_EMAIL` doit rester vide** tant que l'adresse réelle n'est pas connue.
-Elle s'affiche telle quelle au client comme destination de son virement. Tant qu'elle est vide,
-la page affiche « adresse à confirmer » — ce qui vaut infiniment mieux qu'une adresse d'exemple
-vers laquelle quelqu'un enverrait de l'argent.
+### Virement Interac — adresse réelle en place (13 août 2026)
+
+`INTERAC_RECIPIENT_EMAIL` vaut **exportatlantique@gmail.com**, en local et dans les variables
+Vercel (production et prévisualisation). C'est cette adresse que la page de confirmation et le
+courriel d'instructions affichent désormais au client comme destination de son virement.
+
+`INTERAC_SECURITY_ANSWER` reste **vide**, et c'est voulu : le dépôt automatique est activé sur
+le compte, donc aucune question de sécurité n'est posée. Le courriel supprime alors la section
+correspondante au lieu d'annoncer une question qui n'existe pas.
+
+Le garde-fou d'origine tient toujours : si la variable était vidée, la page afficherait de
+nouveau « adresse à confirmer » et le courriel dirait de ne rien envoyer, plutôt que d'exposer
+une adresse d'exemple vers laquelle quelqu'un enverrait de l'argent.
 
 ## Lot 9 — Administration 🚧
 
