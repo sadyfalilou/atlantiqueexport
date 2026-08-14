@@ -203,7 +203,30 @@ postaux, eux, sont exacts : H1 à H9 pour l'île de Montréal, J pour les couron
   n'accorde au client qu'un droit de **lecture** : personne ne peut s'octroyer un tarif de
   gros en insérant sa propre ligne. La demande passe par le serveur, et l'administration
   tranche.
+- ✅ **La commande est rattachée au compte** quand une session est ouverte.
 - ⬜ Factures PDF, recommander une commande passée
+
+### ⚠️ Défaut trouvé et corrigé (14 août 2026)
+
+`place_order` ne renseignait **jamais** `orders.user_id`, alors que la politique
+`orders_select_own` filtre précisément là-dessus. Un client connecté n'aurait donc vu
+**aucune** de ses commandes — l'historique aurait été vide pour tout le monde, en
+permanence. Le défaut est resté invisible tant que l'espace client n'existait pas, et ma
+vérification de la veille — « un compte neuf voit zéro commande » — validait l'isolation
+sans distinguer ce cas.
+
+Deux enseignements, gardés ici parce qu'ils se reproduiront :
+
+1. **Ne pas réécrire de mémoire une fonction critique.** J'avais commencé par retranscrire
+   `place_order` : la copie perdait `book_delivery_slot`, changeait les codes d'erreur et
+   déplaçait la vérification du montant minimum. La migration finale est **générée depuis
+   le fichier d'origine** par remplacement de chaînes, et son diff ne montre que les quatre
+   lignes voulues.
+2. **`create or replace` ne remplace pas si la signature change.** Ajouter un paramètre,
+   même avec une valeur par défaut, crée une SECONDE fonction. Les deux ont coexisté et
+   PostgREST a refusé de choisir (`PGRST203`) : plus aucune commande ne passait. C'est
+   `npm run smoke:order` qui l'a signalé aussitôt — l'ancienne signature est maintenant
+   supprimée, et les 14 assertions repassent.
 
 **Isolation vérifiée avec deux comptes réels.** Le profil et les adresses s'écrivent avec
 la session du client, jamais avec la clé de service : les politiques `profiles_update_self`

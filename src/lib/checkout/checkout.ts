@@ -126,6 +126,8 @@ export interface PlaceOrderInput {
   slotId: string | null;
   address: Record<string, string> | null;
   notes: string | null;
+  /** Renseigné si la personne est connectée ; NULL pour une commande invité. */
+  userId?: string | null;
 }
 
 export type PlaceOrderResult =
@@ -148,6 +150,10 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     p_address: input.address,
     p_notes: input.notes,
     p_guest_token: guestToken,
+    // Rattache la commande au compte lorsqu'une session est ouverte. Sans
+    // cela, la politique `orders_select_own` ne lui montrerait jamais rien :
+    // elle filtre sur `user_id`, qui restait NULL pour tout le monde.
+    p_user_id: input.userId ?? null,
   });
 
   if (error) {

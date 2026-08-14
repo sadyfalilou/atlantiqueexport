@@ -5,6 +5,7 @@ import { redirect } from "@/i18n/navigation";
 import { getCartId } from "@/lib/cart/cart";
 import { findZone, getLogistics, placeOrder } from "@/lib/checkout/checkout";
 import { queueOrderPlacedEmails } from "@/lib/resend/order-emails";
+import { getCurrentCustomer } from "@/lib/supabase/account";
 
 /**
  * Passage de commande.
@@ -91,8 +92,14 @@ export async function placeOrderAction(
     };
   }
 
+  // Une commande passée en étant connecté est rattachée au compte : elle
+  // apparaît alors dans l'historique. Sans session, elle reste consultable par
+  // son jeton, comme avant.
+  const customer = await getCurrentCustomer();
+
   const result = await placeOrder({
     cartId,
+    userId: customer?.id ?? null,
     email: input.email,
     phone: input.phone ?? null,
     locale,
