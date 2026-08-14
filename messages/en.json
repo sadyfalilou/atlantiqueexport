@@ -321,5 +321,21 @@
     "updated": "Updated {date}",
     "draftTitle": "Draft — pending review",
     "draftBody": "This text is a starting point. It has not been reviewed by a legal professional and does not yet bind Atlantique Export. Have it validated before the first sale."
+  },
+  "recipes": {
+    "title": "Recipes",
+    "subtitle": "Simple preparations to get the best from our products.",
+    "emptyTitle": "No recipes yet",
+    "emptyBody": "The first recipes are coming soon.",
+    "comingSoon": "Recipe being written",
+    "notWrittenYet": "The ingredients and steps for this recipe are not written yet. We would rather give it to you complete than half-done.",
+    "ingredients": "Ingredients",
+    "steps": "Method",
+    "noIngredients": "No ingredients listed.",
+    "prep": "Prep",
+    "cook": "Cook",
+    "total": "Total",
+    "minutes": "{count} min",
+    "servings": "{count} servings"
   }
 }

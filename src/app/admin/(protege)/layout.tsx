@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
+  BookOpen,
   FileText,
   Store,
   Tag,
@@ -58,6 +59,9 @@ export default async function ProtectedAdminLayout({
             </AdminLink>
             <AdminLink href="/admin/pages" icon={<FileText className="size-4" />}>
               Pages
+            </AdminLink>
+            <AdminLink href="/admin/recettes" icon={<BookOpen className="size-4" />}>
+              Recettes
             </AdminLink>
           </nav>
 

@@ -154,6 +154,20 @@ export interface Shipment {
   }>;
 }
 
+/**
+ * Une ligne d'ingrédient ou une étape, dans les deux langues.
+ *
+ * `variantSku` est facultatif et prépare le « ajouter les ingrédients au
+ * panier » : quand il désigne un format du catalogue, la ligne devient
+ * cliquable. Sans lui, l'ingrédient reste du texte — un litre d'eau ou une
+ * pincée de sel n'a pas à figurer au catalogue.
+ */
+export interface RecipeLine {
+  fr: string;
+  en: string;
+  variantSku?: string | null;
+}
+
 export interface Recipe {
   id: string;
   slug: string;
@@ -162,6 +176,8 @@ export interface Recipe {
   prepTimeMinutes: number;
   cookTimeMinutes: number;
   servings: number;
+  ingredients: RecipeLine[];
+  steps: RecipeLine[];
   productSlugs: string[];
   imageUrl?: string | null;
 }

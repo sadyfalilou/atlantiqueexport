@@ -429,8 +429,23 @@ correctement mais reste un pis-aller. Le vrai correctif demande une colonne
 - ⬜ `/nos-producteurs` — délibérément non écrite. Le seul fournisseur connu est Sonagoo,
   dont la marque a été **volontairement masquée** du site au lot 2 ; inventer des portraits
   de producteurs serait contraire à la règle du projet.
-- ⬜ Recettes avec « Ajouter les ingrédients au panier », données structurées `Recipe`
-  (six recettes sont déjà publiées en base)
+- ✅ **Pages de recettes** : liste et fiche, avec ingrédients, étapes numérotées, durées
+  et portions. Les données structurées `Recipe` ne sont émises **que si la recette est
+  écrite** — déclarer une recette sans ingrédients ni étapes ferait remonter une fiche
+  vide dans les moteurs de recherche, au nom d'Atlantique Export.
+- ✅ **Éditeur de recettes** (`/admin/recettes`) : une ligne par ingrédient ou par étape,
+  les deux langues séparées par une barre verticale. Sans barre, le même texte sert
+  partout — « 1 litre d'eau » n'a pas besoin d'être traduit.
+- ✅ **Une recette sans étape ne peut pas être publiée**, l'action le refuse.
+
+⚠️ **Les six recettes sont des coquilles vides** : titre, accroche, durées et portions,
+mais `ingredients: []` et `steps: []`. Le site les affiche avec la mention « recette en
+cours de rédaction » plutôt que d'ouvrir une page qui n'apprend rien. **Rien n'a été
+inventé** : des quantités et des étapes fabriquées pour des produits alimentaires
+n'auraient pas leur place ici. Elles attendent votre texte dans `/admin/recettes`.
+
+- ⬜ « Ajouter les ingrédients au panier » — le champ `variantSku` est prévu sur chaque
+  ligne d'ingrédient, il reste à le relier au catalogue
 - ✅ **Administration des pages** (`/admin/pages`) : titre et texte dans les deux langues,
   publication, création. Le tableau compte les mentions « à confirmer » restantes et les
   annonce en tête — 36 aujourd'hui, deux langues confondues.

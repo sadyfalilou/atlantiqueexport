@@ -997,6 +997,111 @@ export async function savePageAction(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Recettes                                                                    */
+/* -------------------------------------------------------------------------- */
+
+const recipeInput = z.object({
+  id: z.uuid(),
+  titleFr: z.string().trim().min(2).max(200),
+  titleEn: z.string().trim().min(2).max(200),
+  descriptionFr: z.string().trim().max(600).optional(),
+  descriptionEn: z.string().trim().max(600).optional(),
+  prepTime: z.string().trim().optional(),
+  cookTime: z.string().trim().optional(),
+  servings: z.string().trim().optional(),
+  ingredients: z.string().max(8000).optional(),
+  steps: z.string().max(20000).optional(),
+});
+
+/**
+ * Une ligne par entrée, les deux langues séparées par une barre verticale :
+ *
+ *   2 c. à soupe de poudre de baobab | 2 tbsp baobab powder
+ *
+ * Sans barre, le même texte sert dans les deux langues — pratique pour
+ * « 1 litre d'eau », qui n'a pas besoin d'être traduit.
+ */
+function parseRecipeLines(raw: string | undefined) {
+  return (raw ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [fr, en] = line.split("|").map((part) => part.trim());
+      return { fr, en: en || fr };
+    })
+    .filter((line) => line.fr.length > 0);
+}
+
+function parseCount(raw: string | undefined): number {
+  const value = Number.parseInt((raw ?? "").trim() || "0", 10);
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+export async function saveRecipeAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = recipeInput.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const field = String(parsed.error.issues[0]?.path?.[0] ?? "");
+    return { status: "error", message: `Champ incomplet ou invalide : ${field}.` };
+  }
+  const input = parsed.data;
+
+  const ingredients = parseRecipeLines(input.ingredients);
+  const steps = parseRecipeLines(input.steps);
+  const wantsPublished = formData.get("isPublished") === "on";
+
+  // Publier une recette sans étapes met en ligne une page qui n'apprend rien,
+  // et ferait remonter une fiche vide dans les moteurs de recherche.
+  if (wantsPublished && steps.length === 0) {
+    return {
+      status: "error",
+      message:
+        "Une recette sans étape ne peut pas être publiée. Écrivez la préparation, ou décochez « visible sur le site ».",
+    };
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("recipes")
+    .update({
+      title_fr: input.titleFr,
+      title_en: input.titleEn,
+      description_fr: input.descriptionFr || null,
+      description_en: input.descriptionEn || null,
+      prep_time_minutes: parseCount(input.prepTime),
+      cook_time_minutes: parseCount(input.cookTime),
+      servings: parseCount(input.servings),
+      ingredients,
+      steps,
+      is_published: wantsPublished,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.id);
+
+  if (error) {
+    console.error("Modification de la recette refusée :", error);
+    return { status: "error", message: "L'enregistrement a échoué." };
+  }
+
+  await logAdminAction(member.userId, "recipe.update", "recipes", input.id, {
+    ingredients: ingredients.length,
+    steps: steps.length,
+  });
+
+  revalidatePath("/admin/recettes");
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Mouvements de stock                                                         */
 /* -------------------------------------------------------------------------- */
 

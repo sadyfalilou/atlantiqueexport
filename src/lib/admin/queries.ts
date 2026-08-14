@@ -522,3 +522,75 @@ export async function getAdminPage(slug: string): Promise<AdminPage | null> {
   const row = ((data ?? []) as Row[])[0];
   return row ? toAdminPage(row) : null;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Recettes                                                                    */
+/* -------------------------------------------------------------------------- */
+
+export interface AdminRecipe {
+  id: string;
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  servings: number;
+  /** Une ligne par entrée, « français | anglais » — la forme saisie. */
+  ingredientsText: string;
+  stepsText: string;
+  isPublished: boolean;
+  ingredientCount: number;
+  stepCount: number;
+}
+
+/** `[{fr, en}]` → « français | anglais », une ligne par entrée. */
+function linesToText(value: unknown): string {
+  if (!Array.isArray(value)) return "";
+  return value
+    .map((entry) => {
+      if (typeof entry === "string") return entry;
+      const row = (entry ?? {}) as Record<string, unknown>;
+      const fr = typeof row.fr === "string" ? row.fr : "";
+      const en = typeof row.en === "string" ? row.en : "";
+      return en && en !== fr ? `${fr} | ${en}` : fr;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+function toAdminRecipe(row: Row): AdminRecipe {
+  const ingredients = Array.isArray(row.ingredients) ? row.ingredients : [];
+  const steps = Array.isArray(row.steps) ? row.steps : [];
+
+  return {
+    id: row.id as string,
+    slug: row.slug as string,
+    titleFr: (row.title_fr as string | null) ?? "",
+    titleEn: (row.title_en as string | null) ?? "",
+    descriptionFr: (row.description_fr as string | null) ?? "",
+    descriptionEn: (row.description_en as string | null) ?? "",
+    prepTimeMinutes: (row.prep_time_minutes as number) ?? 0,
+    cookTimeMinutes: (row.cook_time_minutes as number) ?? 0,
+    servings: (row.servings as number) ?? 0,
+    ingredientsText: linesToText(row.ingredients),
+    stepsText: linesToText(row.steps),
+    isPublished: Boolean(row.is_published),
+    ingredientCount: ingredients.length,
+    stepCount: steps.length,
+  };
+}
+
+export async function getAdminRecipes(): Promise<AdminRecipe[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("recipes").select("*").order("title_fr");
+  return ((data ?? []) as Row[]).map(toAdminRecipe);
+}
+
+export async function getAdminRecipe(slug: string): Promise<AdminRecipe | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("recipes").select("*").eq("slug", slug).limit(1);
+  const row = ((data ?? []) as Row[])[0];
+  return row ? toAdminRecipe(row) : null;
+}

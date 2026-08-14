@@ -321,5 +321,21 @@
     "updated": "Mise à jour le {date}",
     "draftTitle": "Brouillon — à faire valider",
     "draftBody": "Ce texte est une proposition rédigée pour servir de point de départ. Il n'a pas été relu par un professionnel du droit et n'engage pas encore Atlantique Export. Faites-le valider avant la première vente."
+  },
+  "recipes": {
+    "title": "Recettes",
+    "subtitle": "Des préparations simples pour tirer le meilleur de nos produits.",
+    "emptyTitle": "Aucune recette pour l'instant",
+    "emptyBody": "Les premières recettes arrivent bientôt.",
+    "comingSoon": "Recette en cours de rédaction",
+    "notWrittenYet": "Les ingrédients et les étapes de cette recette ne sont pas encore rédigés. Nous préférons vous la donner complète plutôt qu'à moitié.",
+    "ingredients": "Ingrédients",
+    "steps": "Préparation",
+    "noIngredients": "Aucun ingrédient listé.",
+    "prep": "Préparation",
+    "cook": "Cuisson",
+    "total": "Total",
+    "minutes": "{count} min",
+    "servings": "{count} portions"
   }
 }

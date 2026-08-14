@@ -7,6 +7,7 @@ import type {
   Product,
   ProductVariant,
   Recipe,
+  RecipeLine,
   Shipment,
   StockStatus,
   TemperatureClass,
@@ -428,9 +429,36 @@ export async function getRecipes(limit?: number): Promise<Recipe[]> {
     prepTimeMinutes: (row.prep_time_minutes as number) ?? 0,
     cookTimeMinutes: (row.cook_time_minutes as number) ?? 0,
     servings: (row.servings as number) ?? 0,
+    ingredients: toRecipeLines(row.ingredients),
+    steps: toRecipeLines(row.steps),
     productSlugs: [],
     imageUrl: (row.image_url as string | null) ?? null,
   }));
+}
+
+/**
+ * Les lignes d'une recette viennent d'une colonne `jsonb` libre. On ne fait
+ * donc confiance à rien : une entrée sans texte est écartée plutôt que rendue
+ * en ligne vide, et un tableau mal formé donne une liste vide, pas une erreur.
+ */
+function toRecipeLines(value: unknown): RecipeLine[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => {
+      if (typeof entry === "string") return { fr: entry, en: entry };
+      if (entry && typeof entry === "object") {
+        const row = entry as Record<string, unknown>;
+        const fr = typeof row.fr === "string" ? row.fr : "";
+        const en = typeof row.en === "string" ? row.en : "";
+        return {
+          fr: fr || en,
+          en: en || fr,
+          variantSku: typeof row.variantSku === "string" ? row.variantSku : null,
+        };
+      }
+      return { fr: "", en: "" };
+    })
+    .filter((line) => line.fr.trim().length > 0);
 }
 
 export async function getRecipeBySlug(slug: string) {
