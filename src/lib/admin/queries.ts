@@ -383,3 +383,90 @@ export async function getProductFormOptions(): Promise<{
     })),
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Catégories et marques                                                       */
+/* -------------------------------------------------------------------------- */
+
+export interface AdminCategory {
+  id: string;
+  slug: string;
+  nameFr: string;
+  nameEn: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  position: number;
+  isActive: boolean;
+  showInMegaMenu: boolean;
+  isVirtual: boolean;
+  productCount: number;
+}
+
+export async function getAdminCategories(): Promise<AdminCategory[]> {
+  const supabase = createAdminClient();
+  const [categories, products] = await Promise.all([
+    supabase.from("categories").select("*").order("position"),
+    supabase.from("products").select("category_id"),
+  ]);
+
+  // Compté ici plutôt qu'en base : savoir combien de produits une catégorie
+  // porte change ce qu'on ose en faire, et l'information doit être visible
+  // avant de la désactiver.
+  const counts = new Map<string, number>();
+  for (const row of (products.data ?? []) as Row[]) {
+    const id = row.category_id as string | null;
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+
+  return ((categories.data ?? []) as Row[]).map((row) => ({
+    id: row.id as string,
+    slug: row.slug as string,
+    nameFr: (row.name_fr as string | null) ?? "",
+    nameEn: (row.name_en as string | null) ?? "",
+    descriptionFr: (row.description_fr as string | null) ?? "",
+    descriptionEn: (row.description_en as string | null) ?? "",
+    position: (row.position as number) ?? 0,
+    isActive: row.is_active !== false,
+    showInMegaMenu: Boolean(row.show_in_mega_menu),
+    isVirtual: Boolean(row.is_virtual),
+    productCount: counts.get(row.id as string) ?? 0,
+  }));
+}
+
+export interface AdminBrand {
+  id: string;
+  slug: string;
+  name: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  originCountry: string;
+  isActive: boolean;
+  isPartner: boolean;
+  productCount: number;
+}
+
+export async function getAdminBrands(): Promise<AdminBrand[]> {
+  const supabase = createAdminClient();
+  const [brands, products] = await Promise.all([
+    supabase.from("brands").select("*").order("name"),
+    supabase.from("products").select("brand_id"),
+  ]);
+
+  const counts = new Map<string, number>();
+  for (const row of (products.data ?? []) as Row[]) {
+    const id = row.brand_id as string | null;
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+
+  return ((brands.data ?? []) as Row[]).map((row) => ({
+    id: row.id as string,
+    slug: row.slug as string,
+    name: (row.name as string | null) ?? "",
+    descriptionFr: (row.description_fr as string | null) ?? "",
+    descriptionEn: (row.description_en as string | null) ?? "",
+    originCountry: (row.origin_country as string | null) ?? "",
+    isActive: row.is_active !== false,
+    isPartner: Boolean(row.is_partner),
+    productCount: counts.get(row.id as string) ?? 0,
+  }));
+}

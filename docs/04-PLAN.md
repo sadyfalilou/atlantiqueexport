@@ -261,8 +261,16 @@ une adresse d'exemple vers laquelle quelqu'un enverrait de l'argent.
   deux langues, catégorie, marque, origine, température de transport, allergènes, mise en
   avant. **L'adresse (`slug`) reste figée** : déjà indexée et partagée dans des liens, la
   changer transformerait chacun d'eux en page introuvable.
-- ⬜ Ajout d'un format à un produit existant, et gestion des catégories et des marques
-  elles-mêmes
+- ✅ **Formats d'un produit existant** : ajout, retrait de la vente, suppression.
+  Retirer de la vente est le geste habituel — le format disparaît du site et des paniers
+  en gardant son historique. La suppression n'est acceptée que pour un format **jamais
+  commandé et sans mouvement de stock** : au-delà, elle effacerait le registre.
+- ✅ **Catégories** (`/admin/categories`) : nom et description dans les deux langues,
+  position, visibilité, présence au méga-menu. Le nombre de produits rangés est affiché
+  avant toute modification. Les rayons calculés — Nouveautés, Promotions — sont montrés
+  à part et non modifiables : ils ne contiennent aucun produit rangé.
+- ✅ **Marques** (`/admin/marques`) : nom, origine, descriptions, visibilité, partenariat.
+- ⬜ Mouvements de stock (réception, ajustement, perte)
 - ⬜ Mouvements de stock (réception, ajustement, perte)
 - ⬜ Arrivages, comptes professionnels, promotions, rapports
 

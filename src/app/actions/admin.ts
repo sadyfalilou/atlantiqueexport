@@ -566,6 +566,322 @@ export async function updateProductAction(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Formats d'un produit                                                        */
+/* -------------------------------------------------------------------------- */
+
+const newVariant = z.object({
+  productId: z.uuid(),
+  slug: z.string().trim().min(1),
+  labelFr: z.string().trim().min(1).max(120),
+  labelEn: z.string().trim().min(1).max(120),
+  sku: z.string().trim().min(2).max(60),
+  netWeightG: z.string().trim().optional(),
+});
+
+/** Ajoute un format à un produit existant. */
+export async function addVariantAction(
+  _previous: PricingState,
+  formData: FormData,
+): Promise<PricingState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = newVariant.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const field = String(parsed.error.issues[0]?.path?.[0] ?? "");
+    return { status: "error", message: `Champ incomplet ou invalide : ${field}.` };
+  }
+  const input = parsed.data;
+
+  const price = parseAmount(formData.get("retailPrice"));
+  if (price === undefined || price === null) {
+    return { status: "error", message: "Indiquez un prix de vente." };
+  }
+
+  const weight = input.netWeightG ? Number.parseInt(input.netWeightG, 10) : null;
+  if (weight !== null && (!Number.isFinite(weight) || weight <= 0)) {
+    return { status: "error", message: "Le poids net doit être un nombre de grammes." };
+  }
+
+  const supabase = createAdminClient();
+
+  // Le nouveau format se range après les autres.
+  const { data: existing } = await supabase
+    .from("product_variants")
+    .select("position")
+    .eq("product_id", input.productId);
+
+  const position = (existing ?? []).reduce(
+    (max, row) => Math.max(max, ((row.position as number) ?? 0) + 1),
+    0,
+  );
+
+  const { error } = await supabase.from("product_variants").insert({
+    product_id: input.productId,
+    sku: input.sku,
+    label_fr: input.labelFr,
+    label_en: input.labelEn,
+    net_weight_g: weight,
+    retail_price_cents: price,
+    price_is_provisional: false,
+    position,
+  });
+
+  if (error) {
+    console.error("Ajout du format refusé :", error);
+    return {
+      status: "error",
+      message:
+        error.code === "23505"
+          ? "Ce code SKU est déjà utilisé par un autre format."
+          : "Le format n'a pas pu être ajouté.",
+    };
+  }
+
+  await logAdminAction(member.userId, "variant.create", "products", input.productId, {
+    sku: input.sku,
+  });
+
+  revalidatePath(`/admin/produits/${input.slug}`);
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/**
+ * Active ou retire un format de la vente.
+ *
+ * Désactiver plutôt que supprimer, par défaut : un format retiré disparaît du
+ * site et des paniers, mais son historique de stock et ses lignes de commande
+ * restent lisibles. Supprimer effacerait le registre des mouvements.
+ */
+export async function toggleVariantActiveAction(formData: FormData): Promise<void> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) return;
+
+  const variantId = formData.get("variantId");
+  const slug = String(formData.get("slug") ?? "");
+  const active = formData.get("active") === "1";
+  if (typeof variantId !== "string" || !z.uuid().safeParse(variantId).success) return;
+
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("product_variants")
+    .update({ is_active: active })
+    .eq("id", variantId)
+    .select("product_id, sku");
+
+  if (data?.[0]) {
+    await logAdminAction(
+      member.userId,
+      active ? "variant.activate" : "variant.deactivate",
+      "products",
+      data[0].product_id as string,
+      { sku: data[0].sku },
+    );
+  }
+
+  revalidatePath(`/admin/produits/${slug}`);
+  revalidatePath("/", "layout");
+}
+
+/**
+ * Supprime un format — réservé à ceux qui n'ont jamais été commandés.
+ *
+ * `order_items` conserve un instantané du nom et du prix, donc l'historique
+ * survivrait à la suppression ; mais le registre des mouvements de stock, lui,
+ * disparaîtrait en cascade. Un format qui a servi se désactive, il ne
+ * s'efface pas.
+ */
+export async function deleteVariantAction(formData: FormData): Promise<void> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) return;
+
+  const variantId = formData.get("variantId");
+  const slug = String(formData.get("slug") ?? "");
+  if (typeof variantId !== "string" || !z.uuid().safeParse(variantId).success) return;
+
+  const supabase = createAdminClient();
+
+  const { data: ordered } = await supabase
+    .from("order_items")
+    .select("id")
+    .eq("variant_id", variantId)
+    .limit(1);
+
+  if (ordered && ordered.length > 0) return;
+
+  const { data: moved } = await supabase
+    .from("stock_movements")
+    .select("id")
+    .eq("variant_id", variantId)
+    .limit(1);
+
+  if (moved && moved.length > 0) return;
+
+  const { data } = await supabase
+    .from("product_variants")
+    .delete()
+    .eq("id", variantId)
+    .select("product_id, sku");
+
+  if (data?.[0]) {
+    await logAdminAction(
+      member.userId,
+      "variant.delete",
+      "products",
+      data[0].product_id as string,
+      { sku: data[0].sku },
+    );
+  }
+
+  revalidatePath(`/admin/produits/${slug}`);
+  revalidatePath("/", "layout");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Catégories et marques                                                       */
+/* -------------------------------------------------------------------------- */
+
+export type TaxonomyState = { status: "idle" | "saved" | "error"; message?: string };
+
+const categoryInput = z.object({
+  id: z.uuid().optional().or(z.literal("")),
+  nameFr: z.string().trim().min(2).max(120),
+  nameEn: z.string().trim().min(2).max(120),
+  descriptionFr: z.string().trim().max(1000).optional(),
+  descriptionEn: z.string().trim().max(1000).optional(),
+  position: z.string().trim().optional(),
+});
+
+export async function saveCategoryAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = categoryInput.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { status: "error", message: "Nom manquant ou trop court." };
+  }
+  const input = parsed.data;
+
+  const position = Number.parseInt(input.position || "0", 10);
+  const supabase = createAdminClient();
+
+  const values = {
+    name_fr: input.nameFr,
+    name_en: input.nameEn,
+    description_fr: input.descriptionFr || null,
+    description_en: input.descriptionEn || null,
+    position: Number.isFinite(position) ? position : 0,
+    is_active: formData.get("isActive") === "on",
+    show_in_mega_menu: formData.get("showInMegaMenu") === "on",
+  };
+
+  if (input.id) {
+    // L'adresse d'une catégorie n'est pas modifiable, pour la même raison que
+    // celle d'un produit : elle vit dans des liens déjà partagés.
+    const { error } = await supabase
+      .from("categories")
+      .update(values)
+      .eq("id", input.id);
+    if (error) {
+      console.error("Modification de la catégorie refusée :", error);
+      return { status: "error", message: "L'enregistrement a échoué." };
+    }
+    await logAdminAction(member.userId, "category.update", "categories", input.id);
+  } else {
+    const slug = slugify(input.nameFr);
+    if (!slug) return { status: "error", message: "Le nom ne donne aucune adresse valide." };
+
+    const { error } = await supabase.from("categories").insert({ ...values, slug });
+    if (error) {
+      console.error("Création de la catégorie refusée :", error);
+      return {
+        status: "error",
+        message:
+          error.code === "23505"
+            ? "Une catégorie porte déjà cette adresse."
+            : "La création a échoué.",
+      };
+    }
+    await logAdminAction(member.userId, "category.create", "categories", null, { slug });
+  }
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+const brandInput = z.object({
+  id: z.uuid().optional().or(z.literal("")),
+  name: z.string().trim().min(2).max(120),
+  descriptionFr: z.string().trim().max(1000).optional(),
+  descriptionEn: z.string().trim().max(1000).optional(),
+  originCountry: z.string().trim().max(80).optional(),
+});
+
+export async function saveBrandAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = brandInput.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { status: "error", message: "Nom manquant ou trop court." };
+  }
+  const input = parsed.data;
+
+  const supabase = createAdminClient();
+  const values = {
+    name: input.name,
+    description_fr: input.descriptionFr || null,
+    description_en: input.descriptionEn || null,
+    origin_country: input.originCountry || null,
+    is_active: formData.get("isActive") === "on",
+    is_partner: formData.get("isPartner") === "on",
+  };
+
+  if (input.id) {
+    const { error } = await supabase.from("brands").update(values).eq("id", input.id);
+    if (error) {
+      console.error("Modification de la marque refusée :", error);
+      return { status: "error", message: "L'enregistrement a échoué." };
+    }
+    await logAdminAction(member.userId, "brand.update", "brands", input.id);
+  } else {
+    const slug = slugify(input.name);
+    if (!slug) return { status: "error", message: "Le nom ne donne aucune adresse valide." };
+
+    const { error } = await supabase.from("brands").insert({ ...values, slug });
+    if (error) {
+      console.error("Création de la marque refusée :", error);
+      return {
+        status: "error",
+        message:
+          error.code === "23505"
+            ? "Une marque porte déjà cette adresse."
+            : "La création a échoué.",
+      };
+    }
+    await logAdminAction(member.userId, "brand.create", "brands", null, { slug });
+  }
+
+  revalidatePath("/admin/marques");
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Photographies                                                               */
 /* -------------------------------------------------------------------------- */
 
