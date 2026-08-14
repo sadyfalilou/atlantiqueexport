@@ -1,0 +1,50 @@
+name: Traiter la queue de courriels
+
+# Le plan hobby de Vercel ne déclenche un cron qu'une fois par jour, ce qui
+# ferait attendre une confirmation de commande jusqu'au lendemain. Ce workflow
+# appelle donc la route de traitement toutes les 5 minutes.
+#
+# ⚠️ GitHub ne garantit pas l'heure d'exécution : un retard de 5 à 15 minutes
+# est courant aux heures de pointe, et une exécution peut être sautée. Les
+# courriels partent donc « dans les minutes qui suivent », jamais à la seconde.
+#
+# ⚠️ GitHub désactive les workflows planifiés après 60 jours sans activité sur
+# le dépôt. Si les courriels cessent de partir, vérifier d'abord ici.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  # Permet de déclencher un traitement à la main depuis l'onglet Actions,
+  # utile pour vider la queue sans attendre le prochain créneau.
+  workflow_dispatch:
+
+# Aucun droit sur le dépôt : le workflow ne fait qu'un appel sortant.
+permissions: {}
+
+concurrency:
+  # Deux traitements simultanés enverraient deux fois le même courriel.
+  group: traiter-courriels
+  cancel-in-progress: false
+
+jobs:
+  traiter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Appeler /api/cron/send-emails
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://atlantiqueexport.vercel.app' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::Le secret CRON_SECRET n'est pas défini dans ce dépôt."
+            exit 1
+          fi
+
+          # --fail-with-body : sortir en erreur sur un statut >= 400, tout en
+          # affichant le corps de la réponse, qui porte le détail de l'échec.
+          curl --fail-with-body -sS \
+            --max-time 120 \
+            --retry 2 --retry-delay 10 --retry-connrefused \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/send-emails"

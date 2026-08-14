@@ -305,7 +305,11 @@ npm run grant:admin -- votre@courriel.ca
 - ✅ Client Resend avec validation des clés au démarrage
 - ✅ Fonction `queueEmail()` pour mettre un courriel en queue
 - ✅ Fonction `processEmailQueue()` pour traiter les courriels avec gestion d'erreurs
-- ✅ Route `/api/cron/send-emails` pour orchestration par un service de cron
+- ✅ Route `/api/cron/send-emails`, fermée derrière `CRON_SECRET` : sans le secret elle
+  répond 503 plutôt que de laisser n'importe qui vider la queue et épuiser le quota Resend
+- ✅ Cron **externe** toutes les 5 minutes (`.github/workflows/traiter-courriels.yml`).
+  Le cron de Vercel est écarté : le plan hobby ne l'autorise qu'une fois par jour, une
+  confirmation de commande passée à 10 h serait partie le lendemain matin.
 - ✅ Intégration dans newsletter (souscription) et commandes
 - ⬜ Intégration complète dans les autres événements (statuts de commande, etc.)
 - ⬜ Tests unitaires des templates
