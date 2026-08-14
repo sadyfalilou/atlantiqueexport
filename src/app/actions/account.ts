@@ -5,7 +5,8 @@ import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
 import { createSessionClient } from "@/lib/supabase/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCartId } from "@/lib/cart/cart";
+import { addToCart, getCartId } from "@/lib/cart/cart";
+import { getOrderForCurrentVisitor } from "@/lib/checkout/checkout";
 import { queueEmail } from "@/lib/resend";
 
 /**
@@ -330,6 +331,70 @@ export async function deleteAddressAction(formData: FormData): Promise<void> {
   await supabase.from("addresses").delete().eq("id", id);
 
   revalidatePath("/", "layout");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Recommander                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Remet au panier le contenu d'une commande passée.
+ *
+ * Une commande ancienne n'est pas une liste de courses garantie : un format a
+ * pu être retiré de la vente, un produit dépublié, un stock tomber à zéro.
+ * L'action ajoute donc **ce qu'elle peut** et dit précisément ce qu'elle n'a
+ * pas pu ajouter, plutôt que d'échouer en bloc ou — pire — de faire croire que
+ * tout y est.
+ *
+ * L'accès repose sur `getOrderForCurrentVisitor`, qui n'accepte que le
+ * porteur du jeton ou le compte propriétaire : on ne recommande pas la
+ * commande d'un inconnu.
+ */
+export async function reorderAction(formData: FormData): Promise<void> {
+  const orderNumber = String(formData.get("orderNumber") ?? "").trim();
+  const locale = formData.get("locale") === "en" ? "en" : "fr";
+  if (!orderNumber) return;
+
+  const order = await getOrderForCurrentVisitor(orderNumber);
+  if (!order) return;
+
+  const db = createAdminClient();
+  let ajoutes = 0;
+  let ecartes = 0;
+
+  for (const line of order.items) {
+    // Le SKU sert de pivot : c'est lui qui a été figé dans la commande, et il
+    // survit à un changement de libellé ou de prix.
+    const { data } = await db
+      .from("product_variants")
+      .select("id, is_active, product:products(published_at)")
+      .eq("sku", line.sku)
+      .limit(1);
+
+    // PostgREST renvoie la relation tantôt en objet, tantôt en tableau.
+    const variant = data?.[0];
+    const relation = variant?.product as
+      | { published_at: string | null }
+      | Array<{ published_at: string | null }>
+      | null;
+    const product = Array.isArray(relation) ? relation[0] : relation;
+
+    if (!variant || variant.is_active === false || !product?.published_at) {
+      ecartes += 1;
+      continue;
+    }
+
+    const result = await addToCart(variant.id as string, line.quantity, locale);
+    if (result.ok) ajoutes += 1;
+    else ecartes += 1;
+  }
+
+  // Le résultat voyage dans l'URL : la page du panier l'affiche, et un
+  // rafraîchissement ne rejoue pas l'ajout.
+  redirect({
+    href: `/panier?repris=${ajoutes}&ecartes=${ecartes}`,
+    locale,
+  });
 }
 
 /* -------------------------------------------------------------------------- */

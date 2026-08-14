@@ -51,3 +51,6 @@ assets/brand/.logo-original.png
 
 # Aperçus de courriels générés localement
 /public/_apercus-courriels/
+
+# Aperçus de reçus générés localement
+/public/_apercus-recus/

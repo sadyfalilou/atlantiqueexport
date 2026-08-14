@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentCustomer } from "@/lib/supabase/account";
 import type { FulfillmentMethod, TemperatureClass } from "@/lib/types";
 
 /**
@@ -205,6 +206,8 @@ export interface OrderSummary {
   address: Record<string, string> | null;
   items: Array<{
     name: string;
+    /** Figé à la commande : survit à un changement de libellé ou de prix. */
+    sku: string;
     label: string;
     quantity: number;
     unitPriceCents: number;
@@ -213,17 +216,21 @@ export interface OrderSummary {
 }
 
 /**
- * Une commande n'est consultable que par le porteur de son jeton, rangé dans
- * un cookie httpOnly. Connaître le numéro de commande ne suffit pas : sans
- * cela, une numérotation lisible comme AE-2026-00042 laisserait deviner les
- * commandes voisines.
+ * Une commande n'est consultable que par deux personnes : le porteur de son
+ * jeton, rangé dans un cookie httpOnly, ou le compte auquel elle est
+ * rattachée. Connaître le numéro ne suffit jamais — sans cette garde, une
+ * numérotation lisible comme AE-2026-00042 laisserait deviner les commandes
+ * voisines une par une.
  */
 export async function getOrderForCurrentVisitor(
   orderNumber: string,
 ): Promise<OrderSummary | null> {
   const store = await cookies();
   const tokens = store.get(GUEST_COOKIE)?.value.split(",").filter(Boolean) ?? [];
-  if (tokens.length === 0) return null;
+  const customer = await getCurrentCustomer();
+
+  // Ni jeton ni session : rien à montrer, et inutile d'interroger la base.
+  if (tokens.length === 0 && !customer) return null;
 
   const supabase = createAdminClient();
   const { data } = await supabase
@@ -231,17 +238,20 @@ export async function getOrderForCurrentVisitor(
     .select(
       `order_number, email, status, payment_status, fulfillment_method,
        subtotal_cents, delivery_fee_cents, total_cents, placed_at,
-       delivery_address, guest_token,
+       delivery_address, guest_token, user_id,
        slot:delivery_slots(slot_date, start_time, end_time),
-       items:order_items(product_name_snapshot, unit_label_snapshot, quantity,
-                         unit_price_cents, line_total_cents)`,
+       items:order_items(product_name_snapshot, sku_snapshot, unit_label_snapshot,
+                         quantity, unit_price_cents, line_total_cents)`,
     )
     .eq("order_number", orderNumber)
     .limit(1);
 
   const row = ((data ?? []) as Row[])[0];
   if (!row) return null;
-  if (!tokens.includes(row.guest_token as string)) return null;
+
+  const parLeJeton = tokens.includes(row.guest_token as string);
+  const parLeCompte = customer != null && row.user_id === customer.id;
+  if (!parLeJeton && !parLeCompte) return null;
 
   const slot = row.slot as Row | null;
 
@@ -265,6 +275,7 @@ export async function getOrderForCurrentVisitor(
     address: (row.delivery_address as Record<string, string> | null) ?? null,
     items: ((row.items as Row[] | null) ?? []).map((item) => ({
       name: item.product_name_snapshot as string,
+      sku: item.sku_snapshot as string,
       label: item.unit_label_snapshot as string,
       quantity: item.quantity as number,
       unitPriceCents: item.unit_price_cents as number,

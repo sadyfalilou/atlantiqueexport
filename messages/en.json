@@ -250,7 +250,9 @@
       "local_delivery": "Local delivery",
       "shipping": "Shipping across Canada"
     },
-    "invalidQuantity": "Invalid quantity."
+    "invalidQuantity": "Invalid quantity.",
+    "reordered": "{count} item(s) added back to your cart.",
+    "reorderSkipped": "{count} item(s) could not be added back: they are no longer on sale."
   },
   "checkout": {
     "title": "Checkout",
@@ -304,7 +306,9 @@
     "total": "Total",
     "free": "Free",
     "continueShopping": "Continue shopping",
-    "contactUs": "Contact us"
+    "contactUs": "Contact us",
+    "receipt": "Receipt (PDF)",
+    "reorder": "Order again"
   },
   "search": {
     "title": "Search",

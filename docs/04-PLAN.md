@@ -204,7 +204,27 @@ postaux, eux, sont exacts : H1 à H9 pour l'île de Montréal, J pour les couron
   gros en insérant sa propre ligne. La demande passe par le serveur, et l'administration
   tranche.
 - ✅ **La commande est rattachée au compte** quand une session est ouverte.
-- ⬜ Factures PDF, recommander une commande passée
+- ✅ **Reçu en PDF**, `/commande/{numéro}/recu`, dans les deux langues. Même contrôle
+  d'accès que la page de confirmation : porteur du jeton ou compte propriétaire.
+- ✅ **Recommander** une commande passée : les articles encore en vente sont remis au
+  panier, et le panier indique combien ont été écartés. Le **SKU** sert de pivot — il est
+  figé dans la commande et survit à un changement de libellé ou de prix.
+
+### Le document s'appelle « Reçu », pas « Facture »
+
+Au Québec, une facture émise par une entreprise inscrite doit porter ses numéros de TPS et
+de TVQ ainsi que les montants perçus. Tant que le calcul des taxes est reporté et que ces
+numéros restent des « [à confirmer] », intituler ce document « Facture » induirait en
+erreur un client qui voudrait le passer en dépense — le PDF le dit d'ailleurs en toutes
+lettres. **Le titre bascule tout seul** en « Facture » dès que le montant de taxe cesse
+d'être nul : il suffira de le passer à la route.
+
+**Écueil rencontré.** Les premiers PDF étaient corrompus — `Bad FCHECK in flate stream`,
+illisibles par tout lecteur. La cause n'était pas le document mais l'environnement du
+test : `vitest` tourne sous `jsdom`, dont les polyfills abîment la sortie binaire de
+`@react-pdf/renderer`. Un `// @vitest-environment node` a suffi. Le serveur Next tourne
+déjà en Node, donc la route n'a jamais été touchée — mais sans vérification par un vrai
+lecteur PDF, le défaut serait passé pour un succès.
 
 ### ⚠️ Défaut trouvé et corrigé (14 août 2026)
 

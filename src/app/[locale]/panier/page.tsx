@@ -32,11 +32,19 @@ export async function generateMetadata({
 
 export default async function CartPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+
+  // Résultat d'un « recommander » : combien d'articles ont été repris, et
+  // combien ont été écartés faute d'être encore en vente.
+  const query = await searchParams;
+  const repris = Number.parseInt(String(query.repris ?? ""), 10);
+  const ecartes = Number.parseInt(String(query.ecartes ?? ""), 10);
 
   const typedLocale = locale as Locale;
   const t = await getTranslations("cart");
@@ -78,6 +86,17 @@ export default async function CartPage({
         <h1 className="mb-8 font-display text-[1.75rem] font-semibold text-forest-900 lg:text-[2.5rem]">
           {t("title")}
         </h1>
+
+        {Number.isFinite(repris) && repris > 0 ? (
+          <p role="status" className="mb-6 rounded-lg border border-line bg-cream-50 p-4 text-sm text-forest-900">
+            {t("reordered", { count: repris })}
+            {Number.isFinite(ecartes) && ecartes > 0 ? (
+              <span className="mt-1 block text-warning">
+                {t("reorderSkipped", { count: ecartes })}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
 
         <div className="lg:grid lg:grid-cols-[1fr_20rem] lg:items-start lg:gap-10">
           <ul className="divide-y divide-line border-y border-line">

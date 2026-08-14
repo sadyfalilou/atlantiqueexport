@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CheckCircle2, Info } from "lucide-react";
+import { CheckCircle2, FileText, Info, RotateCcw } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Container, Section } from "@/components/ui/layout-primitives";
 import { buttonVariants } from "@/components/ui/button";
+import { reorderAction } from "@/app/actions/account";
 import { getOrderForCurrentVisitor } from "@/lib/checkout/checkout";
 import { cn, formatDate, formatPrice } from "@/lib/utils";
 import type { Locale } from "@/lib/types";
@@ -172,13 +173,32 @@ export default async function OrderConfirmationPage({
           </section>
 
           <div className="mt-10 flex flex-wrap gap-3">
-            <Link href="/boutique" className={cn(buttonVariants({ variant: "outline" }))}>
+            {/* Le reçu s'ouvre dans un onglet : on le lit avant de décider de
+                l'enregistrer, plutôt que de le voir atterrir dans un dossier
+                de téléchargements sans l'avoir regardé. */}
+            <a
+              href={`/${locale}/commande/${order.orderNumber}/recu`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              <FileText aria-hidden="true" className="size-4" />
+              {t("receipt")}
+            </a>
+
+            <form action={reorderAction}>
+              <input type="hidden" name="orderNumber" value={order.orderNumber} />
+              <input type="hidden" name="locale" value={locale} />
+              <button type="submit" className={cn(buttonVariants({ variant: "outline" }))}>
+                <RotateCcw aria-hidden="true" className="size-4" />
+                {t("reorder")}
+              </button>
+            </form>
+
+            <Link href="/boutique" className={cn(buttonVariants({ variant: "ghost" }))}>
               {t("continueShopping")}
             </Link>
-            <Link href="/contact" className={cn(buttonVariants({ variant: "ghost" }))}>
-              {t("contactUs")}
-            </Link>
-          </div>
+                      </div>
         </div>
       </Container>
     </Section>

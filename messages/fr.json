@@ -250,7 +250,9 @@
       "local_delivery": "Livraison locale",
       "shipping": "Expédition au Canada"
     },
-    "invalidQuantity": "Quantité invalide."
+    "invalidQuantity": "Quantité invalide.",
+    "reordered": "{count} article(s) remis au panier.",
+    "reorderSkipped": "{count} article(s) n'ont pas pu être repris : ils ne sont plus en vente."
   },
   "checkout": {
     "title": "Commander",
@@ -304,7 +306,9 @@
     "total": "Total",
     "free": "Offerts",
     "continueShopping": "Continuer mes achats",
-    "contactUs": "Nous écrire"
+    "contactUs": "Nous écrire",
+    "receipt": "Reçu (PDF)",
+    "reorder": "Recommander"
   },
   "search": {
     "title": "Rechercher",
