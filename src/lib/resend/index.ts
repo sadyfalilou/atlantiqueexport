@@ -56,17 +56,15 @@ export async function queueEmail({
 export async function processEmailQueue() {
   const db = createAdminClient();
 
-  // Récupère les courriels prêts à être envoyés (en attente ou en échec avec relance programmée)
-  const { data: emails, error } = await db
-    .from("email_queue")
-    .select("*")
-    .in("status", ["pending", "failed"])
-    .or(
-      "next_retry_at.is.null,next_retry_at.lte.now()",
-    );
+  // `claim_emails` ne se contente pas de lire : elle **réserve** les courriels
+  // qu'elle rend, en une seule écriture atomique. Un second traitement lancé
+  // au même moment saute les lignes déjà tenues au lieu de renvoyer les mêmes
+  // courriels. Lire puis envoyer, en deux temps, laissait deux ordonnanceurs
+  // simultanés écrire deux fois au même client.
+  const { data: emails, error } = await db.rpc("claim_emails", { p_limit: 25 });
 
   if (error) {
-    console.error("Erreur lors de la lecture de la queue:", error);
+    console.error("Erreur lors de la réservation des courriels :", error);
     return;
   }
 
@@ -118,6 +116,10 @@ async function sendSingleEmail(
           attempts: email.attempts + 1,
           next_retry_at: nextRetry.toISOString(),
           last_attempted_at: new Date().toISOString(),
+          // Relâche la réservation : sans cela, le courriel resterait tenu
+          // jusqu'à l'expiration de dix minutes et sa relance serait retardée
+          // d'autant.
+          claimed_at: null,
         })
         .eq("id", email.id);
 
@@ -131,6 +133,7 @@ async function sendSingleEmail(
           resend_message_id: result.data?.id || null,
           sent_at: new Date().toISOString(),
           last_attempted_at: new Date().toISOString(),
+          claimed_at: null,
         })
         .eq("id", email.id);
 
@@ -151,6 +154,7 @@ async function sendSingleEmail(
         attempts: email.attempts + 1,
         next_retry_at: nextRetry.toISOString(),
         last_attempted_at: new Date().toISOString(),
+        claimed_at: null,
       })
       .eq("id", email.id);
   }

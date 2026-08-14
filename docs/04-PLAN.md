@@ -365,9 +365,16 @@ npm run grant:admin -- votre@courriel.ca
 - ✅ Fonction `processEmailQueue()` pour traiter les courriels avec gestion d'erreurs
 - ✅ Route `/api/cron/send-emails`, fermée derrière `CRON_SECRET` : sans le secret elle
   répond 503 plutôt que de laisser n'importe qui vider la queue et épuiser le quota Resend
-- ✅ Cron **externe** toutes les 5 minutes (`.github/workflows/traiter-courriels.yml`).
-  Le cron de Vercel est écarté : le plan hobby ne l'autorise qu'une fois par jour, une
-  confirmation de commande passée à 10 h serait partie le lendemain matin.
+- ✅ Cron **externe** toutes les 5 minutes, chez **cron-job.org**. Deux ordonnanceurs ont
+  été écartés en chemin : celui de Vercel, qu'un plan hobby limite à une fois par jour ;
+  et GitHub Actions, qui n'a produit **aucune exécution planifiée en une heure quarante-cinq**
+  alors qu'il était réglé sur 5 minutes — GitHub traite ces tâches « au mieux ».
+  Le workflow du dépôt reste en filet de sécurité, à la demi-heure.
+- ✅ **La file est réservée avant envoi** (`claim_emails`, avec `for update skip locked`).
+  Le traitement lisait puis envoyait en deux temps : deux ordonnanceurs simultanés
+  envoyaient donc le même courriel deux fois. Vérifié — deux réservations lancées en
+  parallèle ne se chevauchent sur aucun courriel. Une réservation abandonnée est reprise
+  au bout de dix minutes.
 - ✅ Intégration dans newsletter (souscription) et commandes
 - ✅ **Courriels de statut branchés dans l'administration** : `payment_confirmed` à la
   validation d'un virement, puis `order_preparing`, `ready_for_pickup`, `in_delivery` et

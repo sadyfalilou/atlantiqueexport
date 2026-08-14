@@ -1,19 +1,24 @@
 name: Traiter la queue de courriels
 
-# Le plan hobby de Vercel ne déclenche un cron qu'une fois par jour, ce qui
-# ferait attendre une confirmation de commande jusqu'au lendemain. Ce workflow
-# appelle donc la route de traitement toutes les 5 minutes.
+# ⚠️ CE WORKFLOW N'EST QU'UN FILET DE SÉCURITÉ.
 #
-# ⚠️ GitHub ne garantit pas l'heure d'exécution : un retard de 5 à 15 minutes
-# est courant aux heures de pointe, et une exécution peut être sautée. Les
-# courriels partent donc « dans les minutes qui suivent », jamais à la seconde.
+# L'ordonnanceur principal est cron-job.org, qui appelle la même route toutes
+# les 5 minutes. La raison est mesurée, pas théorique : réglé ici sur toutes
+# les 5 minutes, ce workflow n'a produit AUCUNE exécution planifiée en une
+# heure quarante-cinq. GitHub traite les tâches planifiées « au mieux » et
+# peut n'en exécuter aucune pendant des heures — acceptable pour une tâche de
+# ménage, pas pour un accusé de paiement.
+#
+# Il reste ici en secours, à cadence lente, au cas où le service externe
+# tomberait. Deux appels simultanés sont sans danger depuis que la file est
+# réservée par `claim_emails` : le second saute les courriels déjà pris.
 #
 # ⚠️ GitHub désactive les workflows planifiés après 60 jours sans activité sur
-# le dépôt. Si les courriels cessent de partir, vérifier d'abord ici.
+# le dépôt.
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/30 * * * *"
   # Permet de déclencher un traitement à la main depuis l'onglet Actions,
   # utile pour vider la queue sans attendre le prochain créneau.
   workflow_dispatch:

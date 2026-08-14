@@ -288,23 +288,34 @@ données de test dans votre base.
 
 ## 5. Piloter la file d'attente des courriels
 
-Un courriel mis en file part au prochain passage du cron, **dans les cinq minutes**. Pour ne pas
-attendre pendant un test :
+Un courriel mis en file part au prochain passage du cron, **dans les cinq minutes**.
 
-1. Ouvrez <https://github.com/sadyfalilou/atlantiqueexport/actions>
-2. Choisissez « Traiter la queue de courriels » dans la colonne de gauche
-3. Bouton **« Run workflow »** → la file est vidée en une dizaine de secondes
+**L'ordonnanceur est cron-job.org**, un service externe qui appelle
+`/api/cron/send-emails` toutes les 5 minutes. Le workflow GitHub Actions du dépôt n'est
+plus qu'un filet de sécurité, à la demi-heure : réglé sur 5 minutes, il n'avait produit
+aucune exécution planifiée en une heure quarante-cinq. GitHub traite les tâches planifiées
+« au mieux », ce qui ne convient pas à un accusé de paiement.
 
-Une exécution verte qui affiche `{"success":true,"message":"Email queue processed"}` a bien
-fait son travail — y compris quand la file était vide.
+Pour vider la file tout de suite pendant un test, deux voies :
+
+- **cron-job.org** → votre tâche → bouton **« Run now »**
+- ou <https://github.com/sadyfalilou/atlantiqueexport/actions> → « Traiter la queue de
+  courriels » → **« Run workflow »**
+
+Une exécution qui affiche `{"success":true,"message":"Email queue processed"}` a fait son
+travail — y compris quand la file était vide.
+
+Les deux peuvent tourner en même temps sans danger : la file est **réservée** avant envoi,
+si bien qu'un second traitement saute les courriels déjà pris par le premier.
 
 **Si les courriels cessent d'arriver**, regardez dans cet ordre :
 
 | Symptôme | Cause probable |
 | --- | --- |
-| Le workflow échoue en `401` | `CRON_SECRET` diffère entre Vercel et les secrets GitHub |
-| Le workflow ne se déclenche plus seul | GitHub désactive les tâches planifiées après 60 jours sans activité sur le dépôt |
-| Le workflow est vert mais rien n'arrive | Regardez la colonne `resend_error` de la table `email_queue` |
+| Réponse `401` | `CRON_SECRET` diffère entre Vercel et l'en-tête de cron-job.org |
+| Rien ne se déclenche seul | La tâche cron-job.org est en pause, ou son compte a expiré |
+| Appel vert mais rien n'arrive | Regardez la colonne `resend_error` de la table `email_queue` |
+| Un courriel reste bloqué | Sa colonne `claimed_at` est ancienne : il est repris automatiquement au bout de 10 minutes |
 
 **Voir les modèles sans rien envoyer :**
 
