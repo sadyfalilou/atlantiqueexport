@@ -24,7 +24,7 @@
     "cartCount": "{count, plural, =0 {Panier vide} one {# article} other {# articles}}"
   },
   "announcement": {
-    "text": "Ramassage à Montréal et livraison locale · Arrivage du Sénégal en septembre"
+    "text": "Ramassage et livraison locale · Arrivage du Sénégal en septembre"
   },
   "home": {
     "hero": {
@@ -37,7 +37,7 @@
     "trust": {
       "sourcing": "Sélection directe auprès des producteurs",
       "coldChain": "Chaîne du froid respectée du départ à la livraison",
-      "pickup": "Ramassage à Montréal ou livraison locale"
+      "pickup": "Ramassage ou livraison locale"
     },
     "categories": {
       "title": "Catégories populaires",
@@ -246,9 +246,9 @@
     "fulfillmentTitle": "Modes de réception possibles",
     "methodBlocked": "Impossible : votre panier contient un produit {temperature}.",
     "methods": {
-      "pickup": "Ramassage à Montréal",
+      "pickup": "Ramassage",
       "local_delivery": "Livraison locale",
-      "shipping": "Expédition au Canada"
+      "shipping": "Expédition postale"
     },
     "invalidQuantity": "Quantité invalide.",
     "reordered": "{count} article(s) remis au panier.",
@@ -262,9 +262,9 @@
     "title": "Commander",
     "methodTitle": "Comment souhaitez-vous recevoir votre commande ?",
     "methodHelp": {
-      "pickup": "Vous venez chercher votre commande à Montréal.",
-      "local_delivery": "Nous livrons chez vous, à Montréal et dans les environs.",
-      "shipping": "Envoi postal partout au Canada, réservé aux produits secs."
+      "pickup": "Vous venez chercher votre commande : {places}.",
+      "local_delivery": "Nous livrons chez vous : {areas}.",
+      "shipping": "Envoi postal vers {countries}, réservé aux produits secs."
     },
     "pickupTitle": "Point de ramassage",
     "addressTitle": "Adresse de livraison",
@@ -301,8 +301,7 @@
     "state": "État",
     "chooseRegion": "— Choisissez —",
     "shippingTo": "Expédition vers {zone} : {fee}",
-    "outsideShipping": "Nous n’expédions pas encore à cette destination.",
-    "servedAreas": "Secteurs desservis : {areas}."
+    "outsideShipping": "Nous n’expédions pas encore à cette destination."
   },
   "orderConfirmation": {
     "title": "Merci, votre commande est enregistrée",

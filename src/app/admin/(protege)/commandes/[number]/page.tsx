@@ -24,9 +24,9 @@ export async function generateMetadata({
 }
 
 const METHOD_LABELS: Record<string, string> = {
-  pickup: "Ramassage à Montréal",
+  pickup: "Ramassage",
   local_delivery: "Livraison locale",
-  shipping: "Expédition au Canada",
+  shipping: "Expédition postale",
 };
 
 const NEXT_STATUSES: Array<{ value: string; label: string }> = [

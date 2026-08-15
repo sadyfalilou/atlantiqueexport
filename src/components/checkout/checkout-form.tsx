@@ -95,6 +95,33 @@ export function CheckoutForm({
     [shippingZones],
   );
 
+  /*
+   * Les intitulés des modes de réception décrivent ce que la boutique dessert
+   * VRAIMENT, au lieu de l'annoncer en dur.
+   *
+   * « Ramassage à Montréal » et « Expédition au Canada » étaient écrits dans
+   * les traductions : ouvrir un point à Québec ou une destination américaine
+   * ne changeait rien à l'écran, et le client lisait le contraire de ce que la
+   * boutique proposait — au point de croire que les États-Unis n'existaient
+   * pas, alors que le sélecteur de pays les offrait deux champs plus bas.
+   */
+  const methodHelp = useMemo(
+    () => ({
+      pickup: t("methodHelp.pickup", {
+        places: [...new Set(pickupLocations.map((p) => p.city).filter(Boolean))].join(
+          ", ",
+        ),
+      }),
+      local_delivery: t("methodHelp.local_delivery", {
+        areas: zones.map((z) => z.name).join(", "),
+      }),
+      shipping: t("methodHelp.shipping", {
+        countries: countries.map((code) => COUNTRY_NAMES[code] ?? code).join(", "),
+      }),
+    }),
+    [t, pickupLocations, zones, countries],
+  );
+
   const shippingZone = useMemo(
     () =>
       province === "" ? null : findShippingZone(shippingZones, country, province),
@@ -157,7 +184,7 @@ export function CheckoutForm({
                   {tCart(`methods.${option}`)}
                 </span>
                 <span className="block text-sm text-muted">
-                  {t(`methodHelp.${option}`)}
+                  {methodHelp[option]}
                 </span>
               </span>
             </label>
@@ -358,17 +385,6 @@ export function CheckoutForm({
                   {t("outsideShipping")}
                 </span>
               )}
-            </p>
-          ) : null}
-
-          {/*
-            Les secteurs desservis, annoncés AVANT la saisie : sans cela, le
-            client tape son code postal pour découvrir qu'on ne va pas chez
-            lui, et rien ne lui dit où l'on va.
-          */}
-          {method === "local_delivery" && postalCode.replace(/\s/g, "").length < 3 ? (
-            <p className="text-sm text-muted">
-              {t("servedAreas", { areas: zones.map((z) => z.name).join(" · ") })}
             </p>
           ) : null}
 

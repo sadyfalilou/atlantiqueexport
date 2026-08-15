@@ -22,6 +22,8 @@ export interface PickupLocation {
   name: string;
   /** Adresse en une ligne, telle qu'affichée au client. */
   address: string;
+  /** Ville seule, pour annoncer les endroits desservis. */
+  city: string;
   hours: string;
   instructions: string | null;
 }
@@ -97,6 +99,7 @@ export async function getLogistics(): Promise<{
         address: [address.line1, address.city, address.postalCode]
           .filter(Boolean)
           .join(", "),
+        city: (address.city as string | undefined) ?? "",
         hours: (hours.note as string | null) ?? "",
         instructions: (row.instructions_fr as string | null) ?? null,
       };
