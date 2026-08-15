@@ -146,7 +146,10 @@ export interface Shipment {
   status: ShipmentStatus;
   etaDate: string;
   reservationDeadline: string;
+  notes: LocalizedText;
   items: Array<{
+    /** Identifiant de la ligne d'arrivage : ce qu'on réserve. */
+    itemId: string;
     variantId: string;
     productSlug: string;
     /** Nom et format déjà traduits : la ligne se lit sans requête de plus. */
@@ -154,6 +157,7 @@ export interface Shipment {
     label: LocalizedText;
     plannedQuantity: number;
     reservedQuantity: number;
+    remainingQuantity: number;
     depositCents: number;
   }>;
 }

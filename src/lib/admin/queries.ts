@@ -663,6 +663,94 @@ export async function getDeliveryZones(): Promise<AdminDeliveryZone[]> {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Ramassage et créneaux                                                       */
+/* -------------------------------------------------------------------------- */
+
+export interface AdminPickupLocation {
+  id: string;
+  name: string;
+  line1: string;
+  line2: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  hoursNote: string;
+  instructionsFr: string;
+  instructionsEn: string;
+  isActive: boolean;
+}
+
+export async function getPickupLocations(): Promise<AdminPickupLocation[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("pickup_locations").select("*").order("name");
+
+  return ((data ?? []) as Row[]).map((row) => {
+    const address = (row.address ?? {}) as Record<string, unknown>;
+    const hours = (row.opening_hours ?? {}) as Record<string, unknown>;
+    return {
+      id: row.id as string,
+      name: (row.name as string) ?? "",
+      line1: (address.line1 as string) ?? "",
+      line2: (address.line2 as string) ?? "",
+      city: (address.city as string) ?? "",
+      province: (address.province as string) ?? "QC",
+      postalCode: (address.postalCode as string) ?? "",
+      hoursNote: (hours.note as string) ?? "",
+      instructionsFr: (row.instructions_fr as string | null) ?? "",
+      instructionsEn: (row.instructions_en as string | null) ?? "",
+      isActive: row.is_active !== false,
+    };
+  });
+}
+
+export interface AdminSlot {
+  id: string;
+  method: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  capacity: number;
+  booked: number;
+  isActive: boolean;
+  targetName: string;
+}
+
+/**
+ * Les créneaux à venir. Le passé n'est pas montré : on ne rouvre pas hier, et
+ * la liste resterait illisible au bout de quelques semaines.
+ */
+export async function getUpcomingSlots(): Promise<AdminSlot[]> {
+  const supabase = createAdminClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data } = await supabase
+    .from("delivery_slots")
+    .select(
+      `id, method, slot_date, start_time, end_time, capacity, booked_count, is_active,
+       zone:delivery_zones(name), pickup:pickup_locations(name)`,
+    )
+    .gte("slot_date", today)
+    .order("slot_date")
+    .order("start_time")
+    .limit(400);
+
+  return ((data ?? []) as Row[]).map((row) => ({
+    id: row.id as string,
+    method: row.method as string,
+    date: row.slot_date as string,
+    startTime: String(row.start_time).slice(0, 5),
+    endTime: String(row.end_time).slice(0, 5),
+    capacity: row.capacity as number,
+    booked: (row.booked_count as number) ?? 0,
+    isActive: row.is_active !== false,
+    targetName:
+      (((row.zone as Row | null)?.name as string | undefined) ??
+        ((row.pickup as Row | null)?.name as string | undefined)) ??
+      "",
+  }));
+}
+
+/* -------------------------------------------------------------------------- */
 /* Arrivages                                                                   */
 /* -------------------------------------------------------------------------- */
 
@@ -756,6 +844,57 @@ export async function getAdminShipment(code: string): Promise<AdminShipment | nu
 
   const row = ((data ?? []) as Row[])[0];
   return row ? toAdminShipment(row) : null;
+}
+
+export interface AdminReservation {
+  id: string;
+  email: string;
+  phone: string | null;
+  quantity: number;
+  status: string;
+  createdAt: string;
+  productName: string;
+  label: string;
+}
+
+/**
+ * Le carnet de réservations d'un arrivage.
+ *
+ * Sans lui, la colonne « Réservé » donnerait un nombre sans savoir à qui
+ * écrire quand la marchandise arrive.
+ */
+export async function getShipmentReservations(
+  shipmentId: string,
+): Promise<AdminReservation[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("reservations")
+    .select(
+      `id, email, phone, quantity, status, created_at,
+       item:shipment_items!inner(
+         shipment_id,
+         variant:product_variants(label_fr, product:products(name_fr))
+       )`,
+    )
+    .eq("shipment_items.shipment_id", shipmentId)
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  return ((data ?? []) as Row[]).map((row) => {
+    const item = row.item as Row | null;
+    const variant = item?.variant as Row | null;
+    const product = variant?.product as Row | null;
+    return {
+      id: row.id as string,
+      email: (row.email as string) ?? "",
+      phone: (row.phone as string | null) ?? null,
+      quantity: row.quantity as number,
+      status: row.status as string,
+      createdAt: row.created_at as string,
+      productName: (product?.name_fr as string) ?? "",
+      label: (variant?.label_fr as string) ?? "",
+    };
+  });
 }
 
 /** Tous les formats actifs, pour le sélecteur d'ajout à un arrivage. */

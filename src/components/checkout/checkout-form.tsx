@@ -8,7 +8,12 @@ import { Button } from "@/components/ui/button";
 import { placeOrderAction, type CheckoutState } from "@/app/actions/checkout";
 import { formatPrice } from "@/lib/utils";
 import type { FulfillmentMethod } from "@/lib/types";
-import type { DeliveryZone, PickupLocation, Slot } from "@/lib/checkout/checkout";
+import type {
+  DeliveryZone,
+  PickupLocation,
+  ShippingRate,
+  Slot,
+} from "@/lib/checkout/checkout";
 
 function Submit({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -38,12 +43,14 @@ export function CheckoutForm({
   pickupLocations,
   zones,
   slots,
+  shipping,
   subtotalCents,
 }: {
   methods: FulfillmentMethod[];
   pickupLocations: PickupLocation[];
   zones: DeliveryZone[];
   slots: Slot[];
+  shipping: ShippingRate;
   subtotalCents: number;
 }) {
   const t = useTranslations("checkout");
@@ -77,13 +84,25 @@ export function CheckoutForm({
     return [];
   }, [method, slots, zone]);
 
+  // Les mêmes règles que `place_order`, pour que le montant annoncé soit celui
+  // qui sera facturé. L'expédition ne dépend d'aucune zone : son tarif est
+  // unique, donc connu avant même que l'adresse soit saisie.
   const deliveryFee = useMemo(() => {
+    if (method === "shipping") {
+      if (
+        shipping.freeThresholdCents != null &&
+        subtotalCents >= shipping.freeThresholdCents
+      ) {
+        return 0;
+      }
+      return shipping.feeCents;
+    }
     if (method !== "local_delivery" || !zone) return null;
     if (zone.freeThresholdCents != null && subtotalCents >= zone.freeThresholdCents) {
       return 0;
     }
     return zone.feeCents;
-  }, [method, zone, subtotalCents]);
+  }, [method, zone, subtotalCents, shipping]);
 
   const belowMinimum =
     method === "local_delivery" && zone != null && subtotalCents < zone.minOrderCents;

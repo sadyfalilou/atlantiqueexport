@@ -170,16 +170,21 @@ tables n'aient pas à y penser.
   désigner la zone la moins chère pour payer moins
 - ✅ Frais, seuil de gratuité et montant minimum appliqués dans la transaction
 - ✅ Capacité des créneaux garantie par contrainte : un créneau complet n'est plus proposé
-- ✅ **Administration des zones** (`/admin/livraison`, détaillée au lot 9)
-- ⬜ Administration des créneaux et des points de ramassage
+- ✅ **Administration des zones, des points de ramassage et des créneaux**
+  (`/admin/livraison`, détaillée au lot 9)
+- ✅ **Frais d'expédition postale** : montant fixe pour tout le Canada, avec seuil de
+  gratuité optionnel, rangé dans `site_settings` et appliqué par `place_order`. Le tarif
+  ne vit pas dans une zone : les zones décrivent des secteurs de livraison locale avec
+  leurs codes postaux, ce que l'expédition ne connaît pas. Le montant minimum de commande
+  ne s'y applique pas non plus — il existe pour qu'une tournée vaille le déplacement, ce
+  qui n'a pas de sens pour un colis remis à un transporteur.
 - ⬜ Jours bloqués
-- ⚠️ **L'expédition postale est facturée zéro.** Les frais des zones ne s'appliquent
-  qu'à la livraison locale : `place_order` n'ajoute rien pour `shipping`. Or l'expédition
-  est proposée dès qu'un panier ne contient que de l'ambiant. Une commande partie par la
-  poste ne rapporte donc aucun frais de port. Ni la table des zones ni la transaction
-  n'en prévoient un — c'est une décision commerciale à prendre (montant fixe, palier au
-  poids, gratuité au-delà d'un seuil) avant d'écrire quoi que ce soit. Signalé sur
-  `/admin/livraison` pour que ce ne soit pas découvert sur une facture.
+
+**Le défaut qui a motivé ce lot.** L'expédition était facturée **zéro** : les frais des
+zones ne s'appliquaient qu'à la livraison locale, alors que l'expédition est proposée dès
+qu'un panier ne contient que de l'ambiant. Chaque colis partait sans frais de port, et
+aucun écran ne permettait même d'en saisir un. Signalé plutôt que corrigé d'office —
+mettre un prix sur un envoi est une décision commerciale — puis tranché : montant fixe.
 
 ⚠️ **Adresse, horaires, tarifs et seuils sont PROVISOIRES.** Ce que le script pose est marqué
 comme tel — le point de ramassage s'intitule « adresse à confirmer ». Les préfixes de codes
@@ -476,7 +481,15 @@ une adresse d'exemple vers laquelle quelqu'un enverrait de l'argent.
 - ✅ **Les tuiles « aujourd'hui » du tableau de bord mènent aux commandes concernées.**
   « Ramassages aujourd'hui » et « Livraisons aujourd'hui » affichaient un nombre sans
   moyen de savoir lequel. La date est recalculée côté serveur, jamais reçue du lien.
-- ⬜ Promotions, rapports, points de ramassage, créneaux
+- ✅ **Points de ramassage** : nom, adresse, horaires en texte libre, consignes bilingues.
+  Une pastille « adresse à renseigner » s'allume tant que l'adresse posée par le script de
+  semis n'a pas été remplacée — sans quoi le client reçoit une promesse creuse à la
+  confirmation de sa commande.
+- ✅ **Créneaux** : ouverture par plage de dates, un créneau par jour, deux mois au
+  maximum. Les créneaux déjà ouverts au même horaire sont **laissés intacts** : en changer
+  la capacité ou l'heure déplacerait les rendez-vous des clients qui les ont pris. Un
+  créneau se ferme sans se supprimer, pour la même raison.
+- ⬜ Promotions, rapports
 
 ### ⚠️ Deux défauts trouvés et corrigés (15 août 2026)
 
@@ -559,12 +572,25 @@ npm run grant:admin -- votre@courriel.ca
 ## Lot 11 — Arrivages et précommandes 🚧
 
 - ✅ **Administration des arrivages** — détaillée au lot 9
-- ⬜ **Page publique `/arrivages`** : elle n'existe pas. L'en-tête, le pied de page et le
-  bouton de la section d'accueil y mènent tous les trois et tombent sur le 404 « section en
-  construction ».
-- ⬜ Réservation avec acompte optionnel, alertes d'arrivage. Tant que ce parcours n'existe
-  pas, la colonne « Réservé » de l'administration reste à zéro : rien n'écrit dans
-  `reservations`.
+- ✅ **Page publique `/arrivages`** : les arrivages publiés, leurs dates, leurs formats
+  annoncés et ce qu'il reste à réserver. Rendue **dynamiquement** et non mise en cache —
+  les quantités bougent à chaque réservation, une page en cache annoncerait des places
+  déjà prises. Les trois liens qui y menaient depuis l'en-tête, le pied de page et
+  l'accueil aboutissent enfin.
+- ✅ **Réservation sans acompte.** Le client réserve sa quantité, reçoit la confirmation
+  `preorder_confirmation` — écrite au lot 12 et sans appelant depuis — et vous le prévenez
+  à l'arrivée. Rien à encaisser, donc rien à rembourser si l'arrivage tombe à l'eau. Le
+  champ `deposit_payment_id` reste en base pour le jour où un acompte sera exigé.
+- ✅ **`place_reservation`, en une seule transaction.** `reserve_shipment_quantity`
+  existait et faisait le plus dur — verrou de ligne, refus après la date limite, refus de
+  dépassement — mais elle ne fait QUE décrémenter. Appelée seule, suivie d'une insertion
+  séparée, un échec de l'insertion aurait laissé de la marchandise réservée pour une
+  réservation inexistante, et personne pour la réclamer. La fonction refuse par ailleurs
+  de réserver sur un arrivage non publié : sans quoi l'identifiant d'une ligne encore en
+  préparation suffirait à réserver sur un arrivage que personne n'est censé voir.
+- ✅ **Carnet de réservations dans l'administration** : qui a réservé quoi, avec l'adresse
+  cliquable. Sans lui, la colonne « Réservé » donnait un nombre sans savoir à qui écrire.
+- ⬜ Alertes d'arrivage (`arrival_available` est écrit, toujours sans appelant)
 - ⬜ Conversion en stock à réception
 - **Vérification** : end-to-end de réservation, notification à la mise à disposition
 

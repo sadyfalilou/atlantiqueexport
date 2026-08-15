@@ -395,5 +395,25 @@
     "completed": "Terminée",
     "cancelled": "Annulée",
     "refunded": "Remboursée"
+  },
+  "shipments": {
+    "title": "Arrivages",
+    "subtitle": "Le madd et les mangues arrivent par vagues. Réservez votre quantité avant le départ du conteneur.",
+    "empty": "Aucun arrivage ouvert aux réservations pour le moment.",
+    "emptyBody": "Inscrivez-vous à l’infolettre pour être prévenu du prochain départ.",
+    "eta": "Arrivée estimée",
+    "deadline": "Réservation jusqu’au",
+    "origin": "Provenance",
+    "remaining": "{remaining} encore disponibles sur {planned}",
+    "soldOut": "Complet",
+    "closed": "Réservations closes",
+    "reserve": "Réserver",
+    "quantity": "Quantité",
+    "email": "Votre courriel",
+    "phone": "Téléphone (facultatif)",
+    "submit": "Réserver ma quantité",
+    "submitting": "Un instant…",
+    "deposit": "Acompte indicatif : {amount}",
+    "noDeposit": "Aucun paiement maintenant : nous vous écrirons à l’arrivée pour finaliser."
   }
 }

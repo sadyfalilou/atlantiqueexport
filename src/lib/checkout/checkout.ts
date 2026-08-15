@@ -45,15 +45,22 @@ export interface Slot {
 
 type Row = Record<string, unknown>;
 
+/** Tarif d'expédition postale : unique pour tout le Canada. */
+export interface ShippingRate {
+  feeCents: number;
+  freeThresholdCents: number | null;
+}
+
 export async function getLogistics(): Promise<{
   pickupLocations: PickupLocation[];
   zones: DeliveryZone[];
   slots: Slot[];
+  shipping: ShippingRate;
 }> {
   const supabase = createAdminClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  const [pickup, zones, slots] = await Promise.all([
+  const [pickup, zones, slots, settings] = await Promise.all([
     supabase.from("pickup_locations").select("*").eq("is_active", true).order("name"),
     supabase.from("delivery_zones").select("*").eq("is_active", true).order("position"),
     supabase
@@ -63,9 +70,22 @@ export async function getLogistics(): Promise<{
       .gte("slot_date", today)
       .order("slot_date")
       .order("start_time"),
+    supabase
+      .from("site_settings")
+      .select("shipping_fee_cents, shipping_free_threshold_cents")
+      .limit(1),
   ]);
 
+  const rate = (settings.data ?? [])[0] as Row | undefined;
+
   return {
+    // Le même tarif est relu par `place_order` au moment de la commande : ce
+    // qui est affiché ici n'engage rien, c'est la base qui facture.
+    shipping: {
+      feeCents: (rate?.shipping_fee_cents as number | undefined) ?? 0,
+      freeThresholdCents:
+        (rate?.shipping_free_threshold_cents as number | null | undefined) ?? null,
+    },
     pickupLocations: ((pickup.data ?? []) as Row[]).map((row) => ({
       id: row.id as string,
       name: row.name as string,

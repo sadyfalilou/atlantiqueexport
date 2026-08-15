@@ -280,6 +280,84 @@ check(
   `${rejected.json?.[0]?.total_cents} cents`,
 );
 
+/* --- 6. Frais d'expédition postale ------------------------------------------ */
+
+// Le produit de test est surgelé, donc inexpédiable : on le passe en ambiant
+// pour cette section. Inutile de le remettre, il est supprimé au nettoyage.
+await api(`/rest/v1/products?slug=eq.__test-order-prod`, {
+  method: "PATCH",
+  body: JSON.stringify({ temperature_class: "ambient" }),
+});
+
+// Les sections précédentes ont consommé du stock ; on remonte le détenu pour
+// que ces épreuves échouent sur le prix, jamais sur la disponibilité.
+await api(`/rest/v1/stock_levels?variant_id=eq.${variantId}`, {
+  method: "PATCH",
+  body: JSON.stringify({ quantity_on_hand: 60 }),
+});
+
+const settingsBefore = await api(
+  "/rest/v1/site_settings?select=shipping_fee_cents,shipping_free_threshold_cents&limit=1",
+);
+const previousRate = settingsBefore.json?.[0] ?? {};
+
+const setRate = (fee, free) =>
+  api("/rest/v1/site_settings?id=eq.true", {
+    method: "PATCH",
+    body: JSON.stringify({
+      shipping_fee_cents: fee,
+      shipping_free_threshold_cents: free,
+    }),
+  });
+
+await setRate(1500, null);
+const cartShip = await makeCart(2);
+const shipped = await order(cartShip, {
+  p_method: "shipping",
+  p_pickup_location_id: null,
+});
+check(
+  shipped.json?.[0]?.total_cents === 3500,
+  "frais d'expédition ajoutés — 2 × 1000 + 1500",
+  `${shipped.json?.[0]?.total_cents} cents`,
+);
+
+// Le seuil de gratuité : 2 × 1000 dépasse 1500, l'envoi est offert.
+await setRate(1500, 1500);
+const cartFree = await makeCart(2);
+const shippedFree = await order(cartFree, {
+  p_method: "shipping",
+  p_pickup_location_id: null,
+});
+check(
+  shippedFree.json?.[0]?.total_cents === 2000,
+  "expédition offerte au-delà du seuil — 2 × 1000",
+  `${shippedFree.json?.[0]?.total_cents} cents`,
+);
+
+// Le ramassage reste gratuit : les frais d'expédition ne doivent pas fuir
+// sur les autres modes.
+const cartPickup = await makeCart(2);
+const pickedUp = await order(cartPickup);
+check(
+  pickedUp.json?.[0]?.total_cents === 2000,
+  "le ramassage reste sans frais — 2 × 1000",
+  `${pickedUp.json?.[0]?.total_cents} cents`,
+);
+
+await setRate(
+  previousRate.shipping_fee_cents ?? 0,
+  previousRate.shipping_free_threshold_cents ?? null,
+);
+const restored = await api(
+  "/rest/v1/site_settings?select=shipping_fee_cents,shipping_free_threshold_cents&limit=1",
+);
+check(
+  restored.json?.[0]?.shipping_fee_cents === (previousRate.shipping_fee_cents ?? 0),
+  "tarif d'expédition remis comme il était",
+  `${restored.json?.[0]?.shipping_fee_cents} cents`,
+);
+
 /* --- Nettoyage ------------------------------------------------------------- */
 
 await del(`/rest/v1/orders?email=eq.test@example.ca`);

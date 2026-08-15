@@ -395,5 +395,25 @@
     "completed": "Completed",
     "cancelled": "Cancelled",
     "refunded": "Refunded"
+  },
+  "shipments": {
+    "title": "Arrivals",
+    "subtitle": "Madd and mangoes arrive in waves. Reserve your quantity before the container leaves.",
+    "empty": "No arrival is open for reservations right now.",
+    "emptyBody": "Sign up for the newsletter to hear about the next departure.",
+    "eta": "Estimated arrival",
+    "deadline": "Reserve until",
+    "origin": "Origin",
+    "remaining": "{remaining} still available out of {planned}",
+    "soldOut": "Fully booked",
+    "closed": "Reservations closed",
+    "reserve": "Reserve",
+    "quantity": "Quantity",
+    "email": "Your email",
+    "phone": "Phone (optional)",
+    "submit": "Reserve my quantity",
+    "submitting": "One moment…",
+    "deposit": "Indicative deposit: {amount}",
+    "noDeposit": "No payment now: we will write to you on arrival to finalise."
   }
 }

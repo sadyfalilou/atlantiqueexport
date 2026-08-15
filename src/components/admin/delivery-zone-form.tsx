@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import {
   createDeliveryZoneAction,
   saveDeliveryZoneAction,
+  saveShippingRateAction,
   type TaxonomyState,
 } from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
@@ -305,6 +306,78 @@ export function NewDeliveryZoneForm() {
         les codes postaux, puis cochez « Zone desservie » pour l&apos;ouvrir. Un préfixe
         déjà couvert par une autre zone est refusé — le client paierait sinon un tarif au
         hasard entre les deux.
+      </p>
+    </form>
+  );
+}
+
+export function ShippingRateForm({
+  feeCents,
+  freeThresholdCents,
+}: {
+  feeCents: number;
+  freeThresholdCents: number | null;
+}) {
+  const [state, action] = useActionState<TaxonomyState, FormData>(
+    saveShippingRateAction,
+    { status: "idle" },
+  );
+
+  return (
+    <form
+      action={action}
+      className="flex max-w-3xl flex-col gap-4 rounded-lg border border-line bg-surface p-5"
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass} htmlFor="ship-fee">
+            Frais d&apos;expédition ($)
+          </label>
+          <input
+            id="ship-fee"
+            name="fee"
+            inputMode="decimal"
+            required
+            defaultValue={toDollars(feeCents)}
+            className={input}
+          />
+          <p className={hint}>Zéro signifie « offerte », pas « non réglée ».</p>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass} htmlFor="ship-free">
+            Offerte à partir de ($)
+          </label>
+          <input
+            id="ship-free"
+            name="freeThreshold"
+            inputMode="decimal"
+            defaultValue={toDollars(freeThresholdCents)}
+            className={input}
+          />
+          <p className={hint}>Laissez vide pour ne jamais l&apos;offrir.</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4">
+        <Submit />
+        {state.status === "error" ? (
+          <p role="alert" className="text-sm text-danger">
+            {state.message}
+          </p>
+        ) : null}
+        {state.status === "saved" ? (
+          <p role="status" className="text-sm text-success">
+            Enregistré.
+          </p>
+        ) : null}
+      </div>
+
+      <p className={hint}>
+        Un tarif unique pour tout le Canada. Aucun montant minimum ne s&apos;y applique :
+        le minimum de commande existe pour qu&apos;une tournée de livraison vaille le
+        déplacement, ce qui n&apos;a pas de sens pour un colis remis à un transporteur.
+        L&apos;expédition n&apos;est de toute façon proposée que pour les paniers sans
+        produit à conserver au froid.
       </p>
     </form>
   );

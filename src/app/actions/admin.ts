@@ -525,6 +525,300 @@ export async function createDeliveryZoneAction(
   return { status: "saved" };
 }
 
+/**
+ * Règle le tarif d'expédition postale.
+ *
+ * Unique pour tout le Canada, il vit dans `site_settings` et non dans une
+ * zone : les zones décrivent des secteurs de livraison locale avec leurs codes
+ * postaux, ce que l'expédition ne connaît pas.
+ *
+ * Aucun montant minimum ne s'y applique : le minimum de commande existe pour
+ * qu'une tournée vaille le déplacement, ce qui n'a pas de sens pour un colis
+ * remis à un transporteur.
+ */
+export async function saveShippingRateAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const fee = parseAmount(formData.get("fee"));
+  const freeThreshold = parseAmount(formData.get("freeThreshold"));
+
+  if (fee === undefined || fee === null) {
+    return { status: "error", message: "Frais d'expédition invalides." };
+  }
+  if (freeThreshold === undefined) {
+    return { status: "error", message: "Seuil de gratuité invalide." };
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("site_settings")
+    .update({
+      shipping_fee_cents: fee,
+      shipping_free_threshold_cents: freeThreshold,
+      updated_at: new Date().toISOString(),
+    })
+    // Table à ligne unique : la clé primaire booléenne vaut toujours `true`.
+    .eq("id", true);
+
+  if (error) {
+    console.error("Modification du tarif d'expédition refusée :", error);
+    return { status: "error", message: "L'enregistrement a échoué." };
+  }
+
+  await logAdminAction(member.userId, "shipping_rate.update", "site_settings", null, {
+    feeCents: fee,
+    freeThresholdCents: freeThreshold,
+  });
+
+  revalidatePath("/admin/livraison");
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ramassage et créneaux                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Enregistre un point de ramassage.
+ *
+ * L'adresse et les horaires sont rangés en JSON, comme les pose le script de
+ * semis. Les horaires restent une note libre : les jours d'ouverture d'une
+ * épicerie changent au gré des arrivages, et une grille rigide obligerait à
+ * mentir la moitié du temps.
+ */
+export async function savePickupLocationAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = z
+    .object({
+      id: z.uuid(),
+      name: z.string().trim().min(2).max(120),
+      line1: z.string().trim().min(2).max(200),
+      line2: z.string().trim().max(200).optional(),
+      city: z.string().trim().min(2).max(120),
+      province: z.string().trim().min(2).max(2),
+      postalCode: z.string().trim().max(10).optional(),
+      hoursNote: z.string().trim().max(500).optional(),
+      instructionsFr: z.string().trim().max(1000).optional(),
+      instructionsEn: z.string().trim().max(1000).optional(),
+    })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    const field = String(parsed.error.issues[0]?.path?.[0] ?? "");
+    return { status: "error", message: `Champ incomplet ou invalide : ${field}.` };
+  }
+  const data = parsed.data;
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("pickup_locations")
+    .update({
+      name: data.name,
+      address: {
+        line1: data.line1,
+        line2: data.line2 || null,
+        city: data.city,
+        province: data.province.toUpperCase(),
+        postalCode: (data.postalCode ?? "").toUpperCase().replace(/\s+/g, "") || null,
+        country: "CA",
+      },
+      opening_hours: { note: data.hoursNote || null },
+      instructions_fr: data.instructionsFr || null,
+      instructions_en: data.instructionsEn || null,
+      is_active: formData.get("isActive") === "on",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", data.id);
+
+  if (error) {
+    console.error("Modification du point de ramassage refusée :", error);
+    return { status: "error", message: "L'enregistrement a échoué." };
+  }
+
+  await logAdminAction(member.userId, "pickup.update", "pickup_locations", data.id);
+
+  revalidatePath("/admin/livraison");
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/**
+ * Ouvre des créneaux sur une plage de dates, un par jour.
+ *
+ * Les créneaux existants ne sont jamais écrasés : un créneau déjà réservé
+ * verrait sinon sa capacité ou son horaire changer sous les pieds des clients
+ * qui l'ont pris. Les doublons sont comptés et signalés, pas appliqués.
+ */
+export async function generateSlotsAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = z
+    .object({
+      target: z.string().trim().min(1),
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      startTime: z.string().regex(/^\d{2}:\d{2}$/),
+      endTime: z.string().regex(/^\d{2}:\d{2}$/),
+      capacity: z.string().trim(),
+    })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { status: "error", message: "Dates, horaires ou capacité invalides." };
+  }
+  const data = parsed.data;
+
+  if (data.endTime <= data.startTime) {
+    return { status: "error", message: "L'heure de fin doit suivre l'heure de début." };
+  }
+  if (data.to < data.from) {
+    return { status: "error", message: "La date de fin doit suivre la date de début." };
+  }
+
+  const capacity = Number.parseInt(data.capacity, 10);
+  if (!Number.isInteger(capacity) || capacity <= 0) {
+    return { status: "error", message: "La capacité doit être un entier positif." };
+  }
+
+  // 62 jours : deux mois d'un coup suffisent, et une plage ouverte par erreur
+  // — une année entière — remplirait la table de milliers de lignes.
+  const days: string[] = [];
+  for (
+    let day = new Date(`${data.from}T00:00:00Z`);
+    day <= new Date(`${data.to}T00:00:00Z`) && days.length <= 62;
+    day.setUTCDate(day.getUTCDate() + 1)
+  ) {
+    days.push(day.toISOString().slice(0, 10));
+  }
+
+  if (days.length > 62) {
+    return { status: "error", message: "Plage trop longue : deux mois au maximum." };
+  }
+
+  // « pickup:<id> » ou « zone:<id> » : un créneau appartient à l'un ou à
+  // l'autre, jamais aux deux, et la base le fait respecter par contrainte.
+  const [kind, targetId] = data.target.split(":");
+  if ((kind !== "pickup" && kind !== "zone") || !targetId) {
+    return { status: "error", message: "Choisissez un point de ramassage ou une zone." };
+  }
+
+  const supabase = createAdminClient();
+
+  const { data: existing } = await supabase
+    .from("delivery_slots")
+    .select("slot_date, start_time")
+    .in("slot_date", days)
+    .eq(kind === "pickup" ? "pickup_location_id" : "zone_id", targetId);
+
+  const taken = new Set(
+    ((existing ?? []) as Array<Record<string, unknown>>).map(
+      (row) => `${row.slot_date}T${String(row.start_time).slice(0, 5)}`,
+    ),
+  );
+
+  const rows = days
+    .filter((date) => !taken.has(`${date}T${data.startTime}`))
+    .map((date) => ({
+      method: kind === "pickup" ? "pickup" : "local_delivery",
+      pickup_location_id: kind === "pickup" ? targetId : null,
+      zone_id: kind === "zone" ? targetId : null,
+      slot_date: date,
+      start_time: `${data.startTime}:00`,
+      end_time: `${data.endTime}:00`,
+      capacity,
+      is_active: true,
+    }));
+
+  if (rows.length === 0) {
+    return {
+      status: "error",
+      message: "Ces créneaux existent déjà : rien n'a été modifié.",
+    };
+  }
+
+  const { error } = await supabase.from("delivery_slots").insert(rows);
+  if (error) {
+    console.error("Ouverture des créneaux refusée :", error);
+    return { status: "error", message: "L'ouverture a échoué." };
+  }
+
+  await logAdminAction(member.userId, "slots.generate", "delivery_slots", null, {
+    count: rows.length,
+    from: data.from,
+    to: data.to,
+  });
+
+  revalidatePath("/admin/livraison");
+  revalidatePath("/", "layout");
+
+  const skipped = days.length - rows.length;
+  return {
+    status: "saved",
+    message: `${rows.length} créneau${rows.length > 1 ? "x" : ""} ouvert${
+      rows.length > 1 ? "s" : ""
+    }${skipped > 0 ? `, ${skipped} déjà existant${skipped > 1 ? "s" : ""} laissé${skipped > 1 ? "s" : ""} intact${skipped > 1 ? "s" : ""}` : ""}.`,
+  };
+}
+
+/**
+ * Ferme un créneau, ou le rouvre.
+ *
+ * Un créneau déjà réservé n'est jamais supprimé — seulement retiré de la
+ * proposition. Les clients qui l'ont pris gardent leur rendez-vous, et c'est à
+ * vous de les prévenir si vous ne pouvez pas l'honorer.
+ */
+export async function toggleSlotAction(formData: FormData): Promise<void> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) return;
+
+  // Le champ s'appelle `publish` : la bascule est le composant partagé des
+  // listes, et lui donner un nom par appelant n'apporterait rien.
+  const slotId = formData.get("slotId");
+  const open = formData.get("publish") === "1";
+  if (typeof slotId !== "string") return;
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("delivery_slots")
+    .update({ is_active: open })
+    .eq("id", slotId);
+
+  if (error) {
+    console.error("Modification du créneau refusée :", error);
+    return;
+  }
+
+  await logAdminAction(
+    member.userId,
+    open ? "slot.open" : "slot.close",
+    "delivery_slots",
+    slotId,
+  );
+
+  revalidatePath("/admin/livraison");
+  revalidatePath("/", "layout");
+}
+
 /* -------------------------------------------------------------------------- */
 /* Seuils de stock                                                             */
 /* -------------------------------------------------------------------------- */

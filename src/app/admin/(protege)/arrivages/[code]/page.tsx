@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Trash2 } from "lucide-react";
-import { getAdminShipment, getVariantOptions } from "@/lib/admin/queries";
+import {
+  getAdminShipment,
+  getShipmentReservations,
+  getVariantOptions,
+} from "@/lib/admin/queries";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
 import {
   removeShipmentItemAction,
@@ -12,7 +16,7 @@ import { ShipmentEditor } from "@/components/admin/shipment-editor";
 import { ShipmentItemForm } from "@/components/admin/shipment-item-form";
 import { PublishToggle } from "@/components/admin/publish-toggle";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/lib/utils";
+import { formatDate, formatPrice } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +39,11 @@ export default async function AdminShipmentPage({
   const shipment = await getAdminShipment(code);
   if (!shipment) notFound();
 
-  const [member, variants] = await Promise.all([getStaffMember(), getVariantOptions()]);
+  const [member, variants, reservations] = await Promise.all([
+    getStaffMember(),
+    getVariantOptions(),
+    getShipmentReservations(shipment.id),
+  ]);
   const canEdit = member != null && hasRole(member, "super_admin", "manager");
 
   const datesMissing = !shipment.etaDate || !shipment.reservationDeadline;
@@ -173,6 +181,65 @@ export default async function AdminShipmentPage({
         {canEdit ? (
           <ShipmentItemForm shipmentId={shipment.id} variants={variants} />
         ) : null}
+      </section>
+
+      <section className="mt-10">
+        <h2 className="font-display text-lg font-semibold text-forest-900">
+          Qui a réservé
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          {reservations.length} réservation{reservations.length > 1 ? "s" : ""}. Aucun
+          acompte n&apos;est encaissé : écrivez à ces personnes quand la marchandise
+          arrive.
+        </p>
+
+        {reservations.length === 0 ? (
+          <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-center text-muted">
+            Personne n&apos;a encore réservé.
+          </p>
+        ) : (
+          <div className="mt-4 overflow-x-auto rounded-lg border border-line bg-surface">
+            <table className="w-full min-w-[38rem] text-sm">
+              <thead className="border-b border-line text-left text-xs tracking-wide text-muted uppercase">
+                <tr>
+                  <th scope="col" className="px-4 py-3">Client</th>
+                  <th scope="col" className="px-4 py-3">Format</th>
+                  <th scope="col" className="px-4 py-3 text-right">Quantité</th>
+                  <th scope="col" className="px-4 py-3">Reçue le</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {reservations.map((reservation) => (
+                  <tr key={reservation.id} className="hover:bg-cream-100">
+                    <td className="px-4 py-3">
+                      <a
+                        href={`mailto:${reservation.email}`}
+                        className="font-semibold text-forest-900 underline-offset-2 hover:underline"
+                      >
+                        {reservation.email}
+                      </a>
+                      {reservation.phone ? (
+                        <span className="block text-xs text-muted">
+                          {reservation.phone}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3 text-forest-900">
+                      {reservation.productName}
+                      <span className="block text-xs text-muted">{reservation.label}</span>
+                    </td>
+                    <td className="tabular px-4 py-3 text-right font-semibold">
+                      {reservation.quantity}
+                    </td>
+                    <td className="px-4 py-3 text-muted">
+                      {formatDate(reservation.createdAt.slice(0, 10), "fr")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

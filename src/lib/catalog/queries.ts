@@ -403,7 +403,7 @@ export async function getOpenShipments(): Promise<Shipment[]> {
       .from("shipments")
       .select(
         `*, items:shipment_items(
-           variant_id, planned_quantity, remaining_quantity, deposit_cents,
+           id, variant_id, planned_quantity, remaining_quantity, deposit_cents,
            variant:product_variants(
              label_fr, label_en, product:products(slug, name_fr, name_en)
            )
@@ -421,6 +421,7 @@ export async function getOpenShipments(): Promise<Shipment[]> {
     status: row.status as Shipment["status"],
     etaDate: (row.eta_date as string | null) ?? "",
     reservationDeadline: (row.reservation_deadline as string | null) ?? "",
+    notes: toLocalized(row, "notes"),
     items: ((row.items as Row[] | null) ?? []).map((item) => {
       // Le nom et le format viennent de la jointure. Les chercher ensuite par
       // slug coûtait une requête par ligne, et affichait un identifiant brut
@@ -429,6 +430,7 @@ export async function getOpenShipments(): Promise<Shipment[]> {
       const product = (variant.product ?? {}) as Row;
 
       return {
+        itemId: item.id as string,
         variantId: item.variant_id as string,
         productSlug: (product.slug as string) ?? "",
         name: toLocalized(product, "name"),
@@ -436,6 +438,7 @@ export async function getOpenShipments(): Promise<Shipment[]> {
         plannedQuantity: item.planned_quantity as number,
         reservedQuantity:
           (item.planned_quantity as number) - (item.remaining_quantity as number),
+        remainingQuantity: (item.remaining_quantity as number) ?? 0,
         depositCents: (item.deposit_cents as number) ?? 0,
       };
     }),
