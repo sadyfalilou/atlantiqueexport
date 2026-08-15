@@ -45,6 +45,7 @@ export async function Header({ locale }: { locale: Locale }) {
                 open: t("nav.openMenu"),
                 close: t("nav.close"),
                 categories: t("nav.allCategories"),
+                account: t("nav.account"),
               }}
             />
 
@@ -92,10 +93,17 @@ export async function Header({ locale }: { locale: Locale }) {
                 <Search aria-hidden="true" className="size-5" />
               </Link>
 
+              {/*
+                Masqué sous 640 px, ce lien laissait le compte inatteignable
+                sur téléphone. Il est désormais repris dans la barre
+                inférieure et dans le tiroir ; il reste caché ici, mais
+                seulement là où la barre le remplace — sous `lg`, l'en-tête
+                mobile est déjà chargé et la barre est plus près du pouce.
+              */}
               <Link
                 href="/compte"
                 aria-label={t("nav.account")}
-                className="hidden size-11 items-center justify-center rounded-md transition-colors hover:bg-forest-700 sm:inline-flex"
+                className="hidden size-11 items-center justify-center rounded-md transition-colors hover:bg-forest-700 lg:inline-flex"
               >
                 <User aria-hidden="true" className="size-5" />
               </Link>

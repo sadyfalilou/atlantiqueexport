@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, User, X } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { Logo } from "@/components/brand/logo";
 import type { Category, Locale } from "@/lib/types";
@@ -24,7 +24,7 @@ export function MobileNav({
   categories: Category[];
   locale: Locale;
   links: NavLink[];
-  labels: { open: string; close: string; categories: string };
+  labels: { open: string; close: string; categories: string; account: string };
 }) {
   const [open, setOpen] = useState(false);
 
@@ -84,6 +84,20 @@ export function MobileNav({
             </div>
 
             <nav className="px-2 py-3">
+              {/*
+                Le compte en tête du tiroir : c'est là qu'on le cherche, et il
+                n'y figurait pas. Détaché des autres liens, parce qu'il ne
+                mène pas à une page du catalogue mais à ses propres commandes.
+              */}
+              <Link
+                href="/compte"
+                onClick={() => setOpen(false)}
+                className="mb-2 flex items-center gap-2.5 rounded-md border border-line px-3 py-3 text-base font-semibold text-forest-900 hover:bg-cream-100"
+              >
+                <User aria-hidden="true" className="size-5" />
+                {labels.account}
+              </Link>
+
               <ul>
                 {links.map((link) => (
                   <li key={link.href}>
