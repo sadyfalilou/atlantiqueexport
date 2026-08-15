@@ -1,6 +1,6 @@
 # Étape 4 — Plan d'implémentation
 
-_Dernière mise à jour : 13 août 2026_
+_Dernière mise à jour : 15 août 2026_
 
 Le plan est découpé en lots courts et vérifiables. Chaque lot se termine par : `npm run lint`,
 `npm run typecheck`, les tests concernés, et une vérification du rendu à 320 px et à 1280 px.
