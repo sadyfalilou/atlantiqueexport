@@ -1,8 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { saveDeliveryZoneAction, type TaxonomyState } from "@/app/actions/admin";
+import { Plus } from "lucide-react";
+import {
+  createDeliveryZoneAction,
+  saveDeliveryZoneAction,
+  type TaxonomyState,
+} from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import type { AdminDeliveryZone } from "@/lib/admin/queries";
@@ -199,5 +204,108 @@ export function DeliveryZoneRow({ zone }: { zone: AdminDeliveryZone }) {
         </form>
       ) : null}
     </li>
+  );
+}
+
+export function NewDeliveryZoneForm() {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [state, action] = useActionState<TaxonomyState, FormData>(
+    async (previous, formData) => {
+      const result = await createDeliveryZoneAction(previous, formData);
+      if (result.status === "saved") formRef.current?.reset();
+      return result;
+    },
+    { status: "idle" },
+  );
+
+  return (
+    <form
+      ref={formRef}
+      action={action}
+      className="flex max-w-3xl flex-col gap-4 rounded-lg border border-line bg-surface p-5"
+    >
+      <h2 className="font-display text-base font-semibold text-forest-900">
+        Nouvelle zone
+      </h2>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass} htmlFor="new-zone-name">
+            Nom de la zone
+          </label>
+          <input
+            id="new-zone-name"
+            name="name"
+            required
+            maxLength={120}
+            placeholder="Longueuil"
+            className={input}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass} htmlFor="new-zone-prefixes">
+            Codes postaux desservis
+          </label>
+          <input
+            id="new-zone-prefixes"
+            name="prefixes"
+            required
+            placeholder="J4G, J4H"
+            className={input}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass} htmlFor="new-zone-fee">
+            Frais de livraison ($)
+          </label>
+          <input
+            id="new-zone-fee"
+            name="fee"
+            inputMode="decimal"
+            required
+            className={input}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass} htmlFor="new-zone-min">
+            Commande minimum ($)
+          </label>
+          <input
+            id="new-zone-min"
+            name="minOrder"
+            inputMode="decimal"
+            required
+            className={input}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4">
+        <Button type="submit" variant="secondary">
+          <Plus aria-hidden="true" className="size-4" />
+          Créer la zone
+        </Button>
+        {state.status === "error" ? (
+          <p role="alert" className="text-sm text-danger">
+            {state.message}
+          </p>
+        ) : null}
+        {state.status === "saved" ? (
+          <p role="status" className="text-sm text-success">
+            Zone créée, encore inactive.
+          </p>
+        ) : null}
+      </div>
+
+      <p className={hint}>
+        La zone naît <strong>inactive</strong> : réglez le seuil de gratuité et vérifiez
+        les codes postaux, puis cochez « Zone desservie » pour l&apos;ouvrir. Un préfixe
+        déjà couvert par une autre zone est refusé — le client paierait sinon un tarif au
+        hasard entre les deux.
+      </p>
+    </form>
   );
 }

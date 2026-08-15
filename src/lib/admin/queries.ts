@@ -47,6 +47,16 @@ const ORDER_SELECT = `
                     quantity, unit_price_cents, line_total_cents)
 `;
 
+const ORDER_SELECT_INNER_SLOT = `
+  id, order_number, email, phone, status, payment_status, fulfillment_method,
+  subtotal_cents, delivery_fee_cents, total_cents, placed_at, delivery_notes,
+  delivery_address,
+  slot:delivery_slots!inner(slot_date, start_time, end_time),
+  zone:delivery_zones(name),
+  items:order_items(product_name_snapshot, sku_snapshot, unit_label_snapshot,
+                    quantity, unit_price_cents, line_total_cents)
+`;
+
 function toOrder(row: Row): AdminOrder {
   const slot = row.slot as Row | null;
   const zone = row.zone as Row | null;
@@ -97,15 +107,28 @@ export const TO_PREPARE_STATUSES = ["confirmed", "preparing"];
 export async function getOrders(filter?: {
   status?: string | string[];
   paymentStatus?: string;
+  method?: string;
+  /** Restreint aux commandes dont le créneau tombe ce jour-là. */
+  slotDate?: string;
 }): Promise<AdminOrder[]> {
   const supabase = createAdminClient();
-  let request = supabase.from("orders").select(ORDER_SELECT);
+
+  // Filtrer sur une colonne de la table jointe exige `!inner` : sans lui,
+  // PostgREST renvoie toutes les commandes, y compris celles sans créneau,
+  // au lieu de les écarter. Les deux formes sont écrites en toutes lettres —
+  // une chaîne construite à la volée ferait perdre le typage du résultat.
+  let request = supabase
+    .from("orders")
+    .select(filter?.slotDate ? ORDER_SELECT_INNER_SLOT : ORDER_SELECT);
 
   if (Array.isArray(filter?.status)) {
     request = request.in("status", filter.status);
   } else if (filter?.status) {
     request = request.eq("status", filter.status);
   }
+
+  if (filter?.method) request = request.eq("fulfillment_method", filter.method);
+  if (filter?.slotDate) request = request.eq("delivery_slots.slot_date", filter.slotDate);
   if (filter?.paymentStatus) request = request.eq("payment_status", filter.paymentStatus);
 
   const { data } = await request.order("placed_at", { ascending: false }).limit(200);

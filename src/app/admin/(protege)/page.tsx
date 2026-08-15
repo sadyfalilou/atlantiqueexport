@@ -48,11 +48,13 @@ export default async function AdminDashboardPage() {
         <Stat
           label="Ramassages aujourd'hui"
           value={figures.todayPickups}
+          href="/admin/commandes?reception=ramassage"
           icon={<PackageCheck className="size-5" />}
         />
         <Stat
           label="Livraisons aujourd'hui"
           value={figures.todayDeliveries}
+          href="/admin/commandes?reception=livraison"
           icon={<Truck className="size-5" />}
         />
       </div>

@@ -25,9 +25,25 @@ export default async function AdminOrdersPage({
   // « À préparer » couvre deux statuts, exactement comme le compteur du
   // tableau de bord. Les autres valeurs restent des statuts exacts.
   const toPrepare = status === "a-preparer";
+
+  // Les tuiles « aujourd'hui » du tableau de bord mènent ici. La date est
+  // recalculée côté serveur et non reçue du lien : un paramètre trafiqué ne
+  // ferait qu'afficher d'autres commandes, mais autant que la page dise
+  // vraiment ce qu'elle annonce.
+  const reception = typeof params.reception === "string" ? params.reception : undefined;
+  const todayMethod =
+    reception === "ramassage"
+      ? "pickup"
+      : reception === "livraison"
+        ? "local_delivery"
+        : undefined;
+  const today = new Date().toISOString().slice(0, 10);
+
   const orders = await getOrders({
     status: toPrepare ? TO_PREPARE_STATUSES : status,
     paymentStatus,
+    method: todayMethod,
+    slotDate: todayMethod ? today : undefined,
   });
 
   return (
@@ -41,6 +57,8 @@ export default async function AdminOrdersPage({
             {orders.length} commande{orders.length > 1 ? "s" : ""}
             {paymentStatus === "pending" ? " en attente de virement" : ""}
             {toPrepare ? " à préparer" : ""}
+            {todayMethod === "pickup" ? " à ramasser aujourd'hui" : ""}
+            {todayMethod === "local_delivery" ? " à livrer aujourd'hui" : ""}
           </p>
         </div>
 

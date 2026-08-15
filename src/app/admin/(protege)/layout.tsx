@@ -1,21 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import {
-  Briefcase,
-  ClipboardList,
-  FolderTree,
-  LayoutDashboard,
-  LogOut,
-  Package,
-  Ship,
-  Truck,
-  BookOpen,
-  FileText,
-  Store,
-  Tag,
-} from "lucide-react";
+import { LogOut } from "lucide-react";
 import { getStaffMember } from "@/lib/supabase/auth";
 import { signOutAction } from "@/app/actions/admin";
+import { AdminNav } from "@/components/admin/admin-nav";
 
 /**
  * Garde d'accès de l'administration.
@@ -41,41 +29,7 @@ export default async function ProtectedAdminLayout({
             Administration
           </Link>
 
-          <nav aria-label="Administration" className="flex flex-wrap items-center gap-1">
-            <AdminLink href="/admin" icon={<LayoutDashboard className="size-4" />}>
-              Tableau de bord
-            </AdminLink>
-            <AdminLink href="/admin/commandes" icon={<ClipboardList className="size-4" />}>
-              Commandes
-            </AdminLink>
-            <AdminLink href="/admin/demandes-pro" icon={<Briefcase className="size-4" />}>
-              Demandes pro
-            </AdminLink>
-            <AdminLink href="/admin/produits" icon={<Tag className="size-4" />}>
-              Produits
-            </AdminLink>
-            <AdminLink href="/admin/categories" icon={<FolderTree className="size-4" />}>
-              Catégories
-            </AdminLink>
-            <AdminLink href="/admin/marques" icon={<Store className="size-4" />}>
-              Marques
-            </AdminLink>
-            <AdminLink href="/admin/stocks" icon={<Package className="size-4" />}>
-              Stocks
-            </AdminLink>
-            <AdminLink href="/admin/arrivages" icon={<Ship className="size-4" />}>
-              Arrivages
-            </AdminLink>
-            <AdminLink href="/admin/livraison" icon={<Truck className="size-4" />}>
-              Livraison
-            </AdminLink>
-            <AdminLink href="/admin/pages" icon={<FileText className="size-4" />}>
-              Pages
-            </AdminLink>
-            <AdminLink href="/admin/recettes" icon={<BookOpen className="size-4" />}>
-              Recettes
-            </AdminLink>
-          </nav>
+          <AdminNav />
 
           <div className="ml-auto flex items-center gap-3 text-sm">
             <span className="hidden text-cream-200 sm:inline">{member.email}</span>
@@ -96,25 +50,5 @@ export default async function ProtectedAdminLayout({
         {children}
       </main>
     </>
-  );
-}
-
-function AdminLink({
-  href,
-  icon,
-  children,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex h-11 items-center gap-1.5 rounded-md px-3 text-sm font-semibold transition-colors hover:bg-forest-800"
-    >
-      {icon}
-      {children}
-    </Link>
   );
 }

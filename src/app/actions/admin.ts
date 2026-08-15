@@ -421,6 +421,168 @@ export async function saveDeliveryZoneAction(
   return { status: "saved" };
 }
 
+/**
+ * Crée une zone de livraison.
+ *
+ * Elle naît **inactive** : une zone dont les codes postaux se chevauchent avec
+ * une autre changerait les frais de clients existants dès sa création. On la
+ * règle d'abord, on la dessert ensuite.
+ */
+export async function createDeliveryZoneAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = z
+    .object({
+      name: z.string().trim().min(2).max(120),
+      prefixes: z.string().trim().max(500).optional(),
+    })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { status: "error", message: "Le nom de la zone est requis." };
+  }
+
+  const fee = parseAmount(formData.get("fee"));
+  const minOrder = parseAmount(formData.get("minOrder"));
+
+  if (fee === undefined || fee === null) {
+    return { status: "error", message: "Frais de livraison invalides." };
+  }
+  if (minOrder === undefined || minOrder === null) {
+    return { status: "error", message: "Montant minimum invalide." };
+  }
+
+  const prefixes = (parsed.data.prefixes ?? "")
+    .split(",")
+    .map((value) => value.trim().toUpperCase().replace(/\s+/g, ""))
+    .filter(Boolean);
+
+  if (prefixes.length === 0) {
+    return {
+      status: "error",
+      message: "Indiquez au moins un préfixe de code postal, sinon la zone ne sera jamais retenue.",
+    };
+  }
+
+  const supabase = createAdminClient();
+
+  // Un préfixe déjà couvert ailleurs rendrait le choix de la zone ambigu : la
+  // correspondance retient la première trouvée, et le client paierait un
+  // tarif au hasard entre les deux.
+  const { data: existing } = await supabase
+    .from("delivery_zones")
+    .select("name, postal_prefixes");
+
+  const taken = new Map<string, string>();
+  for (const row of (existing ?? []) as Array<Record<string, unknown>>) {
+    for (const prefix of (row.postal_prefixes as string[] | null) ?? []) {
+      taken.set(prefix, row.name as string);
+    }
+  }
+
+  const clash = prefixes.find((prefix) => taken.has(prefix));
+  if (clash) {
+    return {
+      status: "error",
+      message: `Le préfixe ${clash} est déjà desservi par « ${taken.get(clash)} ».`,
+    };
+  }
+
+  const { data: last } = await supabase
+    .from("delivery_zones")
+    .select("position")
+    .order("position", { ascending: false })
+    .limit(1);
+
+  const position = ((last?.[0]?.position as number | undefined) ?? 0) + 1;
+
+  const { error } = await supabase.from("delivery_zones").insert({
+    name: parsed.data.name,
+    postal_prefixes: prefixes,
+    fee_cents: fee,
+    min_order_cents: minOrder,
+    position,
+    is_active: false,
+  });
+
+  if (error) {
+    console.error("Création de la zone refusée :", error);
+    return { status: "error", message: "La création a échoué." };
+  }
+
+  await logAdminAction(member.userId, "delivery_zone.create", "delivery_zones", null, {
+    name: parsed.data.name,
+    prefixes,
+  });
+
+  revalidatePath("/admin/livraison");
+  return { status: "saved" };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Seuils de stock                                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Règle le seuil d'alerte d'un format.
+ *
+ * Le seuil n'est pas une quantité de stock : il ne bouge rien à l'inventaire,
+ * il dit seulement à partir de quand le tableau de bord doit s'inquiéter.
+ * C'est pourquoi il s'écrit directement, là où toute quantité doit passer par
+ * un mouvement daté et motivé.
+ */
+export async function saveStockThresholdAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = z
+    .object({ variantId: z.uuid(), threshold: z.string().trim() })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { status: "error", message: "Format inconnu." };
+  }
+
+  const threshold = Number.parseInt(parsed.data.threshold, 10);
+  if (!Number.isInteger(threshold) || threshold < 0) {
+    return { status: "error", message: "Le seuil doit être un nombre entier positif." };
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("stock_levels")
+    .update({ low_stock_threshold: threshold })
+    .eq("variant_id", parsed.data.variantId);
+
+  if (error) {
+    console.error("Modification du seuil refusée :", error);
+    return { status: "error", message: "L'enregistrement a échoué." };
+  }
+
+  await logAdminAction(
+    member.userId,
+    "stock.threshold",
+    "stock_levels",
+    parsed.data.variantId,
+    { threshold },
+  );
+
+  revalidatePath("/admin/stocks");
+  revalidatePath("/admin");
+  return { status: "saved" };
+}
+
 /* -------------------------------------------------------------------------- */
 /* Arrivages                                                                   */
 /* -------------------------------------------------------------------------- */

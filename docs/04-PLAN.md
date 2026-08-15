@@ -267,8 +267,44 @@ oublié. Mesuré :
 - personne ne peut s'insérer un compte professionnel « approuvé » — refus 42501
 
 **Les commandes sont lues avec la session du client, pas avec la clé de service.** La
-politique `orders_select_own` fait le tri en base : le serveur n'a aucun filtre à écrire,
-donc aucun moyen de se tromper. Vérifié — un compte neuf voit zéro commande.
+politique `orders_select_own` fait le tri en base.
+
+### ⚠️ Défaut trouvé et corrigé (15 août 2026) — deux fuites entre comptes
+
+Le paragraphe ci-dessus disait, jusqu'à aujourd'hui : « le serveur n'a aucun filtre à
+écrire, donc aucun moyen de se tromper ». **C'était faux, et c'est ce raisonnement qui a
+produit le défaut.**
+
+Deux politiques ne se contentent pas d'isoler les clients : elles ouvrent aussi la table
+au personnel.
+
+```sql
+orders_select_own          using (user_id    = auth.uid() or public.is_staff())
+business_accounts_own      using (profile_id = auth.uid() or public.is_staff())
+```
+
+Les deux lectures correspondantes s'en remettaient à RLS sans écrire de filtre. Pour un
+client ordinaire, l'isolation tenait. Pour un membre du personnel, la politique s'ouvrait
+et la requête rendait **la ligne de quelqu'un d'autre** :
+
+- `/compte/professionnel` affichait la demande d'un autre client — nom de
+  l'établissement, numéro d'entreprise, téléphone, produits et volumes ;
+- `/compte` affichait **toutes les commandes de la boutique** comme si elles étaient les
+  siennes.
+
+Constaté à l'usage : « la page compte professionnel applique les mêmes infos pour deux
+comptes différents ». Confirmé en base — une seule demande existe, un seul compte du
+personnel existe, et il n'a pas de demande à lui.
+
+Les deux lectures filtrent désormais explicitement sur l'identifiant de la personne
+connectée. La règle à retenir, écrite dans les deux fichiers :
+
+> Ne se reposer sur RLS pour désigner « la ligne de la personne connectée » que si la
+> politique ne fait **que** cela. Ici, seule `addresses_own` remplit cette condition.
+
+**Pourquoi la vérification précédente n'a rien vu.** « Un compte neuf voit zéro commande »
+était vrai, et le restera : le compte de test n'était pas membre du personnel. La
+condition qui déclenche le défaut était absente de l'épreuve.
 
 ⚠️ **La confirmation d'inscription passe encore par Supabase.** Son service intégré est
 limité à quelques envois par heure et n'utilise pas le domaine d'Atlantique Export. À
@@ -424,6 +460,22 @@ une adresse d'exemple vers laquelle quelqu'un enverrait de l'argent.
   gratuité inférieur au minimum de commande est refusé : il serait inatteignable, et
   l'affichage mentirait au client. Les températures acceptées ne s'y modifient pas —
   retirer le surgelé d'une zone retire des produits de la vente et mérite son propre écran.
+- ✅ **Création de zones de livraison.** Une zone naît **inactive** : ses codes postaux
+  pourraient chevaucher ceux d'une autre et changer les frais de clients existants dès la
+  création. Un préfixe déjà desservi ailleurs est d'ailleurs refusé, en nommant la zone
+  qui le porte — sinon la correspondance retiendrait la première trouvée et le client
+  paierait un tarif au hasard entre les deux.
+- ✅ **Seuil d'alerte de stock modifiable**, dans la ligne du tableau. Le seuil n'est pas
+  une quantité : le régler ne bouge rien à l'inventaire, il dit seulement à partir de quand
+  le tableau de bord s'inquiète. D'où un champ direct, là où toute vraie quantité passe par
+  un mouvement daté et motivé.
+- ✅ **Navigation regroupée** : onze destinations à plat débordaient sur deux lignes et ne
+  disaient jamais où l'on se trouve. Elles sont réparties en Catalogue, Logistique et
+  Contenu, la section courante est marquée, et les deux gestes du quotidien — commandes et
+  demandes en attente — restent au premier niveau.
+- ✅ **Les tuiles « aujourd'hui » du tableau de bord mènent aux commandes concernées.**
+  « Ramassages aujourd'hui » et « Livraisons aujourd'hui » affichaient un nombre sans
+  moyen de savoir lequel. La date est recalculée côté serveur, jamais reçue du lien.
 - ⬜ Promotions, rapports, points de ramassage, créneaux
 
 ### ⚠️ Deux défauts trouvés et corrigés (15 août 2026)

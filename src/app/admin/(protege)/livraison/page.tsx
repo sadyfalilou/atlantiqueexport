@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { AlertTriangle } from "lucide-react";
 import { getDeliveryZones } from "@/lib/admin/queries";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
-import { DeliveryZoneRow } from "@/components/admin/delivery-zone-form";
+import {
+  DeliveryZoneRow,
+  NewDeliveryZoneForm,
+} from "@/components/admin/delivery-zone-form";
 import { formatPrice } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Livraison" };
@@ -42,6 +45,12 @@ export default async function AdminDeliveryPage() {
           ))}
         </ul>
       )}
+
+      {canEdit ? (
+        <div className="mt-8">
+          <NewDeliveryZoneForm />
+        </div>
+      ) : null}
 
       {/*
         Signalé ici plutôt que corrigé en douce : mettre un prix sur

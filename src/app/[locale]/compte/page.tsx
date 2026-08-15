@@ -45,13 +45,23 @@ export default async function AccountPage({
 
   /**
    * Les commandes sont lues avec la SESSION du client, pas avec la clé de
-   * service : la politique `orders_select_own` fait le tri en base. Le serveur
-   * n'a donc aucun filtre à écrire, et aucun moyen de se tromper.
+   * service : la politique `orders_select_own` fait le tri en base.
+   *
+   * ⚠️ Elle ne suffit pourtant pas, parce qu'elle dit
+   * `user_id = auth.uid() or public.is_staff()` : elle isole les clients entre
+   * eux, mais elle ouvre la table au personnel. Sans le filtre explicite
+   * ci-dessous, un administrateur voyait TOUTES les commandes de la boutique
+   * dans son propre espace client, comme si elles étaient les siennes.
+   *
+   * Se reposer sur RLS pour « la ligne de la personne connectée » ne vaut que
+   * si la politique ne fait que cela — ce qui n'est le cas ici que pour les
+   * adresses.
    */
   const supabase = await createSessionClient();
   const { data } = await supabase
     .from("orders")
     .select("order_number, status, payment_status, total_cents, placed_at")
+    .eq("user_id", customer.id)
     .order("placed_at", { ascending: false })
     .limit(50);
 

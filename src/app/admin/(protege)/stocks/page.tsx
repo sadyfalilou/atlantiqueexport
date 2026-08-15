@@ -3,6 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
 import { StockMovementForm } from "@/components/admin/stock-movement-form";
+import { StockThresholdForm } from "@/components/admin/stock-threshold-form";
 
 export const metadata: Metadata = { title: "Stocks" };
 export const dynamic = "force-dynamic";
@@ -132,8 +133,16 @@ export default async function AdminStockPage() {
                       row.available
                     )}
                   </td>
-                  <td className="tabular px-4 py-3 text-right text-muted">
-                    {row.threshold}
+                  <td className="px-4 py-3 text-right">
+                    {canEdit ? (
+                      <StockThresholdForm
+                        variantId={row.variantId}
+                        threshold={row.threshold}
+                        name={`${row.name} ${row.label}`}
+                      />
+                    ) : (
+                      <span className="tabular text-muted">{row.threshold}</span>
+                    )}
                   </td>
                 </tr>
               );

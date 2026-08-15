@@ -97,9 +97,32 @@ export interface BusinessAccount {
   status: "pending" | "approved" | "rejected";
 }
 
+/**
+ * La demande de compte professionnel du client connecté.
+ *
+ * ⚠️ Le filtre `profile_id` est INDISPENSABLE, contrairement aux adresses.
+ * La politique `business_accounts_own` dit
+ * `profile_id = auth.uid() or public.is_staff()` : elle isole les clients,
+ * mais elle OUVRE la table au personnel. Sans ce filtre, un membre du
+ * personnel voyait sur sa propre page la demande d'un autre — celle que la
+ * base renvoyait en premier.
+ *
+ * La règle qui s'en dégage : ne se reposer sur RLS pour désigner « la ligne
+ * de la personne connectée » que si la politique ne fait QUE cela.
+ */
 export async function getBusinessAccount(): Promise<BusinessAccount | null> {
   const supabase = await createSessionClient();
-  const { data } = await supabase.from("business_accounts").select("*").limit(1);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("business_accounts")
+    .select("*")
+    .eq("profile_id", user.id)
+    .limit(1);
+
   const row = (data ?? [])[0] as Record<string, unknown> | undefined;
   if (!row) return null;
 
