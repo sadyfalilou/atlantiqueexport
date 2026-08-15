@@ -20,8 +20,11 @@ Trois arbitrages demandés par Atlantique Export, qui réduisent le périmètre 
    Le champ `tax_class` reste dans le schéma mais n'est pas exploité. ⚠️ À revoir impérativement
    avant de vendre réellement : dès que l'entreprise est inscrite aux fichiers de la TPS et de la
    TVQ, la taxe doit figurer sur la facture. C'est une obligation légale, pas une option.
-3. **Livraison au Canada uniquement.** Aucune expédition internationale. Les zones, les adresses
-   et les provinces se limitent au Canada.
+3. ~~**Livraison au Canada uniquement.**~~ **Révisé le 15 août 2026 :** l'expédition
+   postale peut désormais desservir plusieurs pays, le Canada et les États-Unis étant
+   proposés. La **livraison locale**, elle, reste montréalaise — c'est une tournée, pas un
+   colis. ⚠️ Ouvrir une destination américaine engage des obligations douanières et
+   sanitaires qui n'ont pas encore été vérifiées : voir le lot 6.
 
 ---
 
@@ -172,12 +175,27 @@ tables n'aient pas à y penser.
 - ✅ Capacité des créneaux garantie par contrainte : un créneau complet n'est plus proposé
 - ✅ **Administration des zones, des points de ramassage et des créneaux**
   (`/admin/livraison`, détaillée au lot 9)
-- ✅ **Frais d'expédition postale** : montant fixe pour tout le Canada, avec seuil de
-  gratuité optionnel, rangé dans `site_settings` et appliqué par `place_order`. Le tarif
-  ne vit pas dans une zone : les zones décrivent des secteurs de livraison locale avec
-  leurs codes postaux, ce que l'expédition ne connaît pas. Le montant minimum de commande
-  ne s'y applique pas non plus — il existe pour qu'une tournée vaille le déplacement, ce
-  qui n'a pas de sens pour un colis remis à un transporteur.
+- ✅ **Zones d'expédition postale** (`shipping_zones`) : une destination — un pays,
+  parfois quelques provinces ou États — avec son tarif et son seuil de gratuité. Une table
+  distincte de `delivery_zones`, parce que les deux notions ne se recouvrent pas : une zone
+  de LIVRAISON décrit un secteur de tournée reconnu au préfixe du code postal, avec un
+  minimum de commande qui existe pour que le déplacement vaille la peine ; une zone
+  d'EXPÉDITION désigne une destination et ne connaît ni tournée ni minimum.
+- ✅ **La zone régionale l'emporte sur la nationale.** Sans cette priorité, une zone
+  « Canada » capterait les provinces éloignées auxquelles on voulait justement appliquer un
+  tarif plus élevé. Règle écrite deux fois — `find_shipping_zone` en SQL pour la
+  facturation, `findShippingZone` en TypeScript pour l'affichage — chacune renvoyant à
+  l'autre, et couverte par cinq tests unitaires. Dont celui-ci, qui n'est pas théorique :
+  « CA » désigne à la fois le Canada et la Californie, et la comparaison porte sur le pays
+  d'abord.
+- ✅ **Une destination non desservie est refusée**, et non facturée zéro. C'est le point
+  qui compte : à défaut, une adresse hors des pays desservis passerait sans frais de port,
+  et le colis serait à expédier à perte.
+- ⚠️ **Expédier de l'alimentaire aux États-Unis n'est pas qu'une question de tarif.** La
+  FDA exige un *prior notice* pour toute denrée importée, certaines catégories sont
+  restreintes, et la douane demande une déclaration d'exportation. La mécanique de prix est
+  en place ; **la conformité reste entièrement à vérifier avant le premier colis.** Un
+  encadré le rappelle sur `/admin/livraison` dès qu'une destination américaine est active.
 - ⬜ Jours bloqués
 
 **Le défaut qui a motivé ce lot.** L'expédition était facturée **zéro** : les frais des

@@ -296,25 +296,30 @@ await api(`/rest/v1/stock_levels?variant_id=eq.${variantId}`, {
   body: JSON.stringify({ quantity_on_hand: 60 }),
 });
 
-const settingsBefore = await api(
-  "/rest/v1/site_settings?select=shipping_fee_cents,shipping_free_threshold_cents&limit=1",
-);
-const previousRate = settingsBefore.json?.[0] ?? {};
+// Des destinations de test, préfixées « __test » et supprimées au nettoyage :
+// on ne touche pas à celles de la boutique.
+const [zoneCa] = (
+  await post("/rest/v1/shipping_zones", {
+    name: "__test Canada",
+    country_code: "CA",
+    fee_cents: 1500,
+    position: 900,
+  })
+).json;
+await post("/rest/v1/shipping_zones", {
+  name: "__test Nord canadien",
+  country_code: "CA",
+  region_codes: ["YT", "NT", "NU"],
+  fee_cents: 4000,
+  position: 901,
+});
 
-const setRate = (fee, free) =>
-  api("/rest/v1/site_settings?id=eq.true", {
-    method: "PATCH",
-    body: JSON.stringify({
-      shipping_fee_cents: fee,
-      shipping_free_threshold_cents: free,
-    }),
-  });
-
-await setRate(1500, null);
+// La zone nationale s'applique aux provinces ordinaires.
 const cartShip = await makeCart(2);
 const shipped = await order(cartShip, {
   p_method: "shipping",
   p_pickup_location_id: null,
+  p_address: { line1: "1 rue de test", city: "Montréal", province: "QC", country: "CA" },
 });
 check(
   shipped.json?.[0]?.total_cents === 3500,
@@ -322,12 +327,43 @@ check(
   `${shipped.json?.[0]?.total_cents} cents`,
 );
 
+// La zone RÉGIONALE l'emporte sur la nationale : sans cette priorité, le
+// Yukon serait facturé au tarif du reste du pays.
+const cartRemote = await makeCart(2);
+const remote = await order(cartRemote, {
+  p_method: "shipping",
+  p_pickup_location_id: null,
+  p_address: { line1: "1 rue de test", city: "Whitehorse", province: "YT", country: "CA" },
+});
+check(
+  remote.json?.[0]?.total_cents === 6000,
+  "la zone régionale l'emporte sur la nationale — 2 × 1000 + 4000",
+  `${remote.json?.[0]?.total_cents} cents`,
+);
+
+// Une destination non desservie est refusée, et non facturée zéro.
+const cartUs = await makeCart(2);
+const refused = await order(cartUs, {
+  p_method: "shipping",
+  p_pickup_location_id: null,
+  p_address: { line1: "1 Main St", city: "Burlington", province: "VT", country: "US" },
+});
+check(
+  refused.status !== 200 && /expédions pas/i.test(refused.json?.message ?? ""),
+  "destination non desservie refusée",
+  refused.json?.message ?? "",
+);
+
 // Le seuil de gratuité : 2 × 1000 dépasse 1500, l'envoi est offert.
-await setRate(1500, 1500);
+await api(`/rest/v1/shipping_zones?id=eq.${zoneCa.id}`, {
+  method: "PATCH",
+  body: JSON.stringify({ free_threshold_cents: 1500 }),
+});
 const cartFree = await makeCart(2);
 const shippedFree = await order(cartFree, {
   p_method: "shipping",
   p_pickup_location_id: null,
+  p_address: { line1: "1 rue de test", city: "Montréal", province: "QC", country: "CA" },
 });
 check(
   shippedFree.json?.[0]?.total_cents === 2000,
@@ -345,19 +381,6 @@ check(
   `${pickedUp.json?.[0]?.total_cents} cents`,
 );
 
-await setRate(
-  previousRate.shipping_fee_cents ?? 0,
-  previousRate.shipping_free_threshold_cents ?? null,
-);
-const restored = await api(
-  "/rest/v1/site_settings?select=shipping_fee_cents,shipping_free_threshold_cents&limit=1",
-);
-check(
-  restored.json?.[0]?.shipping_fee_cents === (previousRate.shipping_fee_cents ?? 0),
-  "tarif d'expédition remis comme il était",
-  `${restored.json?.[0]?.shipping_fee_cents} cents`,
-);
-
 /* --- Nettoyage ------------------------------------------------------------- */
 
 await del(`/rest/v1/orders?email=eq.test@example.ca`);
@@ -365,6 +388,7 @@ await del(`/rest/v1/orders?email=eq.${encodeURIComponent(proEmail)}`);
 await del(`/rest/v1/business_accounts?profile_id=eq.${proUserId}`);
 if (proUserId) await del(`/auth/v1/admin/users/${proUserId}`);
 await del(`/rest/v1/carts?token=like.__test*`);
+await del(`/rest/v1/shipping_zones?name=like.__test*`);
 await del(`/rest/v1/products?slug=eq.__test-order-prod`);
 await del(`/rest/v1/categories?slug=eq.__test-order-cat`);
 
@@ -372,6 +396,9 @@ const proLeft = await api(
   `/rest/v1/business_accounts?company_name=like.__test*&select=id`,
 );
 check(proLeft.json.length === 0, "compte professionnel de test supprimé");
+
+const zonesLeft = await api(`/rest/v1/shipping_zones?name=like.__test*&select=id`);
+check(zonesLeft.json.length === 0, "destinations de test supprimées");
 
 const leftovers = await api("/rest/v1/products?slug=like.__test*&select=id");
 check(leftovers.json.length === 0, "données de test supprimées");

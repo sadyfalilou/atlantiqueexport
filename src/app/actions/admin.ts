@@ -16,6 +16,7 @@ import {
   queueOrderStatusEmail,
   queuePaymentConfirmedEmail,
 } from "@/lib/resend/order-emails";
+import { isKnownRegion } from "@/lib/regions";
 
 /**
  * Actions de l'administration.
@@ -526,17 +527,38 @@ export async function createDeliveryZoneAction(
 }
 
 /**
- * Règle le tarif d'expédition postale.
+ * Zones d'expédition : une destination et son tarif.
  *
- * Unique pour tout le Canada, il vit dans `site_settings` et non dans une
- * zone : les zones décrivent des secteurs de livraison locale avec leurs codes
- * postaux, ce que l'expédition ne connaît pas.
+ * Distinctes des zones de livraison, qui décrivent un secteur de tournée
+ * reconnu au code postal. Une zone d'expédition désigne un pays, parfois
+ * quelques provinces ou États, et ne connaît pas de montant minimum : celui-ci
+ * existe pour qu'une tournée vaille le déplacement, ce qui n'a pas de sens
+ * pour un colis remis à un transporteur.
  *
- * Aucun montant minimum ne s'y applique : le minimum de commande existe pour
- * qu'une tournée vaille le déplacement, ce qui n'a pas de sens pour un colis
- * remis à un transporteur.
+ * Les codes de région sont validés contre les listes officielles : une faute
+ * de frappe ne serait jamais retenue au moment de choisir le tarif, et la
+ * commande partirait à un prix inattendu.
  */
-export async function saveShippingRateAction(
+function parseRegionCodes(
+  raw: string | undefined,
+  country: string,
+): { codes: string[] } | { error: string } {
+  const codes = (raw ?? "")
+    .split(",")
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean);
+
+  const unknown = codes.find((code) => !isKnownRegion(country, code));
+  if (unknown) {
+    return {
+      error: `« ${unknown} » n'est pas une province ou un État de ce pays.`,
+    };
+  }
+
+  return { codes };
+}
+
+export async function saveShippingZoneAction(
   _previous: TaxonomyState,
   formData: FormData,
 ): Promise<TaxonomyState> {
@@ -544,6 +566,21 @@ export async function saveShippingRateAction(
   if (!member || !hasRole(member, "super_admin", "manager")) {
     return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
   }
+
+  const parsed = z
+    .object({
+      id: z.uuid().optional().or(z.literal("")),
+      name: z.string().trim().min(2).max(120),
+      countryCode: z.enum(["CA", "US"]),
+      regionCodes: z.string().trim().max(300).optional(),
+      position: z.string().trim().optional(),
+    })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { status: "error", message: "Nom ou pays manquant." };
+  }
+  const data = parsed.data;
 
   const fee = parseAmount(formData.get("fee"));
   const freeThreshold = parseAmount(formData.get("freeThreshold"));
@@ -555,26 +592,44 @@ export async function saveShippingRateAction(
     return { status: "error", message: "Seuil de gratuité invalide." };
   }
 
+  const regions = parseRegionCodes(data.regionCodes, data.countryCode);
+  if ("error" in regions) return { status: "error", message: regions.error };
+
+  const position = Number.parseInt(data.position || "0", 10);
+  const values = {
+    name: data.name,
+    country_code: data.countryCode,
+    region_codes: regions.codes,
+    fee_cents: fee,
+    free_threshold_cents: freeThreshold,
+    position: Number.isFinite(position) ? position : 0,
+    is_active: formData.get("isActive") === "on",
+    updated_at: new Date().toISOString(),
+  };
+
   const supabase = createAdminClient();
-  const { error } = await supabase
-    .from("site_settings")
-    .update({
-      shipping_fee_cents: fee,
-      shipping_free_threshold_cents: freeThreshold,
-      updated_at: new Date().toISOString(),
-    })
-    // Table à ligne unique : la clé primaire booléenne vaut toujours `true`.
-    .eq("id", true);
 
-  if (error) {
-    console.error("Modification du tarif d'expédition refusée :", error);
-    return { status: "error", message: "L'enregistrement a échoué." };
+  if (data.id) {
+    const { error } = await supabase
+      .from("shipping_zones")
+      .update(values)
+      .eq("id", data.id);
+    if (error) {
+      console.error("Modification de la zone d'expédition refusée :", error);
+      return { status: "error", message: "L'enregistrement a échoué." };
+    }
+    await logAdminAction(member.userId, "shipping_zone.update", "shipping_zones", data.id);
+  } else {
+    const { error } = await supabase.from("shipping_zones").insert(values);
+    if (error) {
+      console.error("Création de la zone d'expédition refusée :", error);
+      return { status: "error", message: "La création a échoué." };
+    }
+    await logAdminAction(member.userId, "shipping_zone.create", "shipping_zones", null, {
+      name: data.name,
+      country: data.countryCode,
+    });
   }
-
-  await logAdminAction(member.userId, "shipping_rate.update", "site_settings", null, {
-    feeCents: fee,
-    freeThresholdCents: freeThreshold,
-  });
 
   revalidatePath("/admin/livraison");
   revalidatePath("/", "layout");

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentCustomer } from "@/lib/supabase/account";
 import type { FulfillmentMethod, TemperatureClass } from "@/lib/types";
+import type { ShippingZone } from "@/lib/checkout/shipping";
 
 /**
  * Tunnel de commande.
@@ -45,17 +46,13 @@ export interface Slot {
 
 type Row = Record<string, unknown>;
 
-/** Tarif d'expédition postale : unique pour tout le Canada. */
-export interface ShippingRate {
-  feeCents: number;
-  freeThresholdCents: number | null;
-}
+export { findShippingZone, type ShippingZone } from "@/lib/checkout/shipping";
 
 export async function getLogistics(): Promise<{
   pickupLocations: PickupLocation[];
   zones: DeliveryZone[];
   slots: Slot[];
-  shipping: ShippingRate;
+  shippingZones: ShippingZone[];
 }> {
   const supabase = createAdminClient();
   const today = new Date().toISOString().slice(0, 10);
@@ -71,21 +68,23 @@ export async function getLogistics(): Promise<{
       .order("slot_date")
       .order("start_time"),
     supabase
-      .from("site_settings")
-      .select("shipping_fee_cents, shipping_free_threshold_cents")
-      .limit(1),
+      .from("shipping_zones")
+      .select("*")
+      .eq("is_active", true)
+      .order("position"),
   ]);
 
-  const rate = (settings.data ?? [])[0] as Row | undefined;
-
   return {
-    // Le même tarif est relu par `place_order` au moment de la commande : ce
-    // qui est affiché ici n'engage rien, c'est la base qui facture.
-    shipping: {
-      feeCents: (rate?.shipping_fee_cents as number | undefined) ?? 0,
-      freeThresholdCents:
-        (rate?.shipping_free_threshold_cents as number | null | undefined) ?? null,
-    },
+    // Les mêmes zones sont relues par `place_order` au moment de la commande :
+    // ce qui est affiché ici n'engage rien, c'est la base qui facture.
+    shippingZones: ((settings.data ?? []) as Row[]).map((row) => ({
+      id: row.id as string,
+      name: (row.name as string) ?? "",
+      countryCode: (row.country_code as string) ?? "",
+      regionCodes: (row.region_codes as string[] | null) ?? [],
+      feeCents: (row.fee_cents as number) ?? 0,
+      freeThresholdCents: (row.free_threshold_cents as number | null) ?? null,
+    })),
     pickupLocations: ((pickup.data ?? []) as Row[]).map((row) => ({
       id: row.id as string,
       name: row.name as string,

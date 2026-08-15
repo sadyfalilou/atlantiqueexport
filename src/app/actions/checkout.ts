@@ -3,7 +3,13 @@
 import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
 import { getCartId } from "@/lib/cart/cart";
-import { findZone, getLogistics, placeOrder } from "@/lib/checkout/checkout";
+import {
+  findShippingZone,
+  findZone,
+  getLogistics,
+  placeOrder,
+} from "@/lib/checkout/checkout";
+import { isKnownRegion } from "@/lib/regions";
 import { queueOrderPlacedEmails } from "@/lib/resend/order-emails";
 import { getCurrentCustomer } from "@/lib/supabase/account";
 
@@ -27,6 +33,10 @@ const schema = z.object({
   line2: z.string().trim().max(160).optional(),
   city: z.string().trim().max(80).optional(),
   postalCode: z.string().trim().max(10).optional(),
+  // Destination d'expédition. Absentes pour un ramassage ou une livraison
+  // locale, qui sont toujours au Québec.
+  country: z.string().trim().length(2).optional(),
+  province: z.string().trim().length(2).optional(),
   notes: z.string().trim().max(500).optional(),
 });
 
@@ -51,7 +61,7 @@ export async function placeOrderAction(
   if (!cartId) return { status: "error", message: "empty_cart" };
 
   const locale = (formData.get("locale") as string) === "en" ? "en" : "fr";
-  const { zones } = await getLogistics();
+  const { zones, shippingZones } = await getLogistics();
 
   let zoneId: string | null = null;
   let address: Record<string, string> | null = null;
@@ -82,13 +92,28 @@ export async function placeOrderAction(
     if (!input.line1 || !input.city || !input.postalCode) {
       return { status: "error", message: "address_required" };
     }
+
+    const country = (input.country ?? "CA").toUpperCase();
+    const province = (input.province ?? "").toUpperCase();
+
+    // La destination est vérifiée ici ET en base. Le refus de `place_order`
+    // fait autorité ; celui-ci n'existe que pour rendre un message clair sur
+    // le bon champ plutôt qu'une exception SQL traduite à la louche.
+    if (!isKnownRegion(country, province)) {
+      return { status: "error", message: "invalid", field: "province" };
+    }
+    if (!findShippingZone(shippingZones, country, province)) {
+      return { status: "error", message: "outside_shipping", field: "country" };
+    }
+
     address = {
       fullName: input.fullName,
       line1: input.line1,
       ...(input.line2 ? { line2: input.line2 } : {}),
       city: input.city,
       postalCode: input.postalCode.toUpperCase(),
-      country: "CA",
+      province,
+      country,
     };
   }
 

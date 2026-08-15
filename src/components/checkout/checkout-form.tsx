@@ -8,12 +8,9 @@ import { Button } from "@/components/ui/button";
 import { placeOrderAction, type CheckoutState } from "@/app/actions/checkout";
 import { formatPrice } from "@/lib/utils";
 import type { FulfillmentMethod } from "@/lib/types";
-import type {
-  DeliveryZone,
-  PickupLocation,
-  ShippingRate,
-  Slot,
-} from "@/lib/checkout/checkout";
+import type { DeliveryZone, PickupLocation, Slot } from "@/lib/checkout/checkout";
+import { findShippingZone, type ShippingZone } from "@/lib/checkout/shipping";
+import { COUNTRY_NAMES, regionsOf } from "@/lib/regions";
 
 function Submit({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -43,14 +40,14 @@ export function CheckoutForm({
   pickupLocations,
   zones,
   slots,
-  shipping,
+  shippingZones,
   subtotalCents,
 }: {
   methods: FulfillmentMethod[];
   pickupLocations: PickupLocation[];
   zones: DeliveryZone[];
   slots: Slot[];
-  shipping: ShippingRate;
+  shippingZones: ShippingZone[];
   subtotalCents: number;
 }) {
   const t = useTranslations("checkout");
@@ -59,6 +56,8 @@ export function CheckoutForm({
 
   const [method, setMethod] = useState<FulfillmentMethod>(methods[0] ?? "pickup");
   const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("CA");
+  const [province, setProvince] = useState("");
   const [state, formAction] = useActionState<CheckoutState, FormData>(
     placeOrderAction,
     { status: "idle" },
@@ -84,25 +83,38 @@ export function CheckoutForm({
     return [];
   }, [method, slots, zone]);
 
+  /** Les pays desservis, déduits des zones : aucune liste codée en dur. */
+  const countries = useMemo(
+    () => [...new Set(shippingZones.map((z) => z.countryCode))].sort(),
+    [shippingZones],
+  );
+
+  const shippingZone = useMemo(
+    () =>
+      province === "" ? null : findShippingZone(shippingZones, country, province),
+    [shippingZones, country, province],
+  );
+
   // Les mêmes règles que `place_order`, pour que le montant annoncé soit celui
-  // qui sera facturé. L'expédition ne dépend d'aucune zone : son tarif est
-  // unique, donc connu avant même que l'adresse soit saisie.
+  // qui sera facturé. Tant que la destination n'est pas choisie, aucun montant
+  // n'est annoncé — mieux vaut ne rien dire qu'annoncer un tarif qui changera.
   const deliveryFee = useMemo(() => {
     if (method === "shipping") {
+      if (!shippingZone) return null;
       if (
-        shipping.freeThresholdCents != null &&
-        subtotalCents >= shipping.freeThresholdCents
+        shippingZone.freeThresholdCents != null &&
+        subtotalCents >= shippingZone.freeThresholdCents
       ) {
         return 0;
       }
-      return shipping.feeCents;
+      return shippingZone.feeCents;
     }
     if (method !== "local_delivery" || !zone) return null;
     if (zone.freeThresholdCents != null && subtotalCents >= zone.freeThresholdCents) {
       return 0;
     }
     return zone.feeCents;
-  }, [method, zone, subtotalCents, shipping]);
+  }, [method, zone, subtotalCents, shippingZone]);
 
   const belowMinimum =
     method === "local_delivery" && zone != null && subtotalCents < zone.minOrderCents;
@@ -212,6 +224,83 @@ export function CheckoutForm({
               />
             </label>
           </div>
+
+          {/*
+            La destination n'apparaît que pour un envoi postal : une livraison
+            locale est toujours au Québec, et demander le pays donnerait à
+            croire le contraire.
+          */}
+          {method === "shipping" ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-sm font-semibold text-forest-900">
+                  {t("country")}
+                </span>
+                <select
+                  name="country"
+                  value={country}
+                  onChange={(event) => {
+                    setCountry(event.target.value);
+                    // Le code d'État ne veut rien dire dans l'autre pays :
+                    // « QC » resterait sélectionné pour une adresse au Texas.
+                    setProvince("");
+                  }}
+                  className={field}
+                  autoComplete="country"
+                >
+                  {countries.map((code) => (
+                    <option key={code} value={code}>
+                      {COUNTRY_NAMES[code] ?? code}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-semibold text-forest-900">
+                  {country === "US" ? t("state") : t("province")}
+                </span>
+                <select
+                  name="province"
+                  required
+                  value={province}
+                  onChange={(event) => setProvince(event.target.value)}
+                  className={field}
+                  autoComplete="address-level1"
+                >
+                  <option value="" disabled>
+                    {t("chooseRegion")}
+                  </option>
+                  {regionsOf(country).map((region) => (
+                    <option key={region.code} value={region.code}>
+                      {region.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : null}
+
+          {method === "shipping" && province !== "" ? (
+            <p className="text-sm" aria-live="polite">
+              {shippingZone ? (
+                <span className="text-success">
+                  {t("shippingTo", {
+                    zone: shippingZone.name,
+                    fee:
+                      deliveryFee === 0
+                        ? t("freeDelivery")
+                        : formatPrice(deliveryFee ?? 0, locale),
+                  })}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-warning">
+                  <AlertCircle aria-hidden="true" className="size-4" />
+                  {t("outsideShipping")}
+                </span>
+              )}
+            </p>
+          ) : null}
 
           <p id="zone-feedback" className="text-sm" aria-live="polite">
             {method === "local_delivery" && postalCode.replace(/\s/g, "").length >= 3 ? (

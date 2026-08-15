@@ -663,6 +663,38 @@ export async function getDeliveryZones(): Promise<AdminDeliveryZone[]> {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Zones d'expédition                                                          */
+/* -------------------------------------------------------------------------- */
+
+export interface AdminShippingZone {
+  id: string;
+  name: string;
+  countryCode: string;
+  regionCodes: string[];
+  feeCents: number;
+  freeThresholdCents: number | null;
+  position: number;
+  isActive: boolean;
+}
+
+/** Les destinations, inactives comprises — l'administration les voit toutes. */
+export async function getShippingZones(): Promise<AdminShippingZone[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("shipping_zones").select("*").order("position");
+
+  return ((data ?? []) as Row[]).map((row) => ({
+    id: row.id as string,
+    name: (row.name as string) ?? "",
+    countryCode: (row.country_code as string) ?? "",
+    regionCodes: (row.region_codes as string[] | null) ?? [],
+    feeCents: (row.fee_cents as number) ?? 0,
+    freeThresholdCents: (row.free_threshold_cents as number | null) ?? null,
+    position: (row.position as number) ?? 0,
+    isActive: row.is_active !== false,
+  }));
+}
+
+/* -------------------------------------------------------------------------- */
 /* Ramassage et créneaux                                                       */
 /* -------------------------------------------------------------------------- */
 

@@ -295,7 +295,13 @@
       "invalid": "Certains champs sont incomplets ou mal remplis.",
       "emptyCart": "Votre panier est vide.",
       "addressRequired": "L'adresse de livraison est nécessaire."
-    }
+    },
+    "country": "Pays",
+    "province": "Province",
+    "state": "État",
+    "chooseRegion": "— Choisissez —",
+    "shippingTo": "Expédition vers {zone} : {fee}",
+    "outsideShipping": "Nous n’expédions pas encore à cette destination."
   },
   "orderConfirmation": {
     "title": "Merci, votre commande est enregistrée",

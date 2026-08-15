@@ -3,6 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import {
   getDeliveryZones,
   getPickupLocations,
+  getShippingZones,
   getUpcomingSlots,
 } from "@/lib/admin/queries";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
@@ -16,24 +17,25 @@ import { formatDate } from "@/lib/utils";
 import {
   DeliveryZoneRow,
   NewDeliveryZoneForm,
-  ShippingRateForm,
 } from "@/components/admin/delivery-zone-form";
-import { getLogistics } from "@/lib/checkout/checkout";
+import {
+  NewShippingZoneForm,
+  ShippingZoneRow,
+} from "@/components/admin/shipping-zone-form";
 import { formatPrice } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Livraison" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminDeliveryPage() {
-  const [zones, member, logistics, pickups, slots] = await Promise.all([
+  const [zones, member, shippingZones, pickups, slots] = await Promise.all([
     getDeliveryZones(),
     getStaffMember(),
-    getLogistics(),
+    getShippingZones(),
     getPickupLocations(),
     getUpcomingSlots(),
   ]);
   const canEdit = member != null && hasRole(member, "super_admin", "manager");
-  const { shipping } = logistics;
 
   // Un créneau appartient à un point de ramassage OU à une zone, jamais aux
   // deux : le préfixe porte le choix jusqu'à l'action.
@@ -85,32 +87,51 @@ export default async function AdminDeliveryPage() {
         </h2>
         <p className="mt-1 text-sm text-muted">
           Les frais des zones ci-dessus ne concernent que la livraison locale. L&apos;envoi
-          par la poste a son propre tarif, unique pour tout le Canada.
+          par la poste a ses propres destinations, chacune avec son tarif. Une adresse
+          sans destination correspondante n&apos;est pas expédiable : la commande est
+          refusée plutôt que de partir sans frais de port.
         </p>
 
-        <div className="mt-4">
-          {canEdit ? (
-            <ShippingRateForm
-              feeCents={shipping.feeCents}
-              freeThresholdCents={shipping.freeThresholdCents}
-            />
-          ) : (
-            <p className="rounded-lg border border-line bg-surface p-5 text-sm text-muted">
-              {formatPrice(shipping.feeCents, "fr")}
-              {shipping.freeThresholdCents != null
-                ? `, offerte dès ${formatPrice(shipping.freeThresholdCents, "fr")}`
-                : ""}
-            </p>
+        <ul className="mt-4 space-y-3">
+          {shippingZones.map((zone) =>
+            canEdit ? (
+              <ShippingZoneRow key={zone.id} zone={zone} />
+            ) : (
+              <li key={zone.id} className="rounded-lg border border-line bg-surface p-4">
+                <p className="font-semibold text-forest-900">{zone.name}</p>
+                <p className="text-xs text-muted">{formatPrice(zone.feeCents, "fr")}</p>
+              </li>
+            ),
           )}
-        </div>
+        </ul>
 
-        {shipping.feeCents === 0 && shipping.freeThresholdCents == null ? (
+        {canEdit ? (
+          <div className="mt-4">
+            <NewShippingZoneForm />
+          </div>
+        ) : null}
+
+        {shippingZones.some(
+          (zone) => zone.isActive && zone.feeCents === 0 && zone.freeThresholdCents == null,
+        ) ? (
           <p className="mt-4 flex items-start gap-2 rounded-lg border-2 border-mango-700 bg-mango-50 p-4 text-sm text-forest-900">
             <AlertTriangle aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
             <span>
-              Le tarif est à zéro : chaque commande partie par la poste ne rapporte aucun
-              frais de port. Si c&apos;est voulu, il n&apos;y a rien à faire — sinon,
-              saisissez un montant ci-dessus.
+              Une destination desservie est à zéro : les colis qui y partent ne rapportent
+              aucun frais de port. Si c&apos;est voulu, il n&apos;y a rien à faire.
+            </span>
+          </p>
+        ) : null}
+
+        {shippingZones.some((zone) => zone.countryCode === "US" && zone.isActive) ? (
+          <p className="mt-4 flex items-start gap-2 rounded-lg border-2 border-mango-700 bg-mango-50 p-4 text-sm text-forest-900">
+            <AlertTriangle aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+            <span>
+              <strong>Expédier de l&apos;alimentaire aux États-Unis n&apos;est pas
+              qu&apos;une question de tarif.</strong> La FDA exige un <em>prior notice</em>{" "}
+              pour toute denrée importée, certaines catégories sont restreintes, et la
+              douane demande une déclaration d&apos;exportation. La mécanique de prix est
+              en place ; la conformité reste à vérifier avant le premier colis.
             </span>
           </p>
         ) : null}

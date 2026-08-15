@@ -295,7 +295,13 @@
       "invalid": "Some fields are incomplete or incorrect.",
       "emptyCart": "Your cart is empty.",
       "addressRequired": "A delivery address is required."
-    }
+    },
+    "country": "Country",
+    "province": "Province",
+    "state": "State",
+    "chooseRegion": "— Choose —",
+    "shippingTo": "Shipping to {zone}: {fee}",
+    "outsideShipping": "We do not ship to this destination yet."
   },
   "orderConfirmation": {
     "title": "Thank you, your order is recorded",

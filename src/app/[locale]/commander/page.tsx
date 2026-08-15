@@ -81,7 +81,7 @@ export default async function CheckoutPage({
             pickupLocations={logistics.pickupLocations}
             zones={logistics.zones}
             slots={logistics.slots}
-            shipping={logistics.shipping}
+            shippingZones={logistics.shippingZones}
             subtotalCents={cart.totals.subtotalCents}
           />
 

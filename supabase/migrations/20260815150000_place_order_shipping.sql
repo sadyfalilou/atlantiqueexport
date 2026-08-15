@@ -1,12 +1,22 @@
--- Facture l'expédition postale.
+-- Facture l'expédition postale, selon la destination.
 --
 -- Jusqu'ici, seule la livraison locale portait des frais : une commande partie
--- par la poste ne rapportait rien. Le tarif est unique pour tout le Canada et
--- vit dans `site_settings` (migration précédente).
+-- par la poste ne rapportait rien. Le tarif vient désormais de
+-- `shipping_zones` (migration précédente), choisi d'après le pays et la
+-- province ou l'État de l'adresse.
+--
+-- **Une destination sans zone est refusée.** C'est le point important : à
+-- défaut, une adresse hors des pays desservis passerait avec zéro franc de
+-- frais, et le colis serait à expédier à perte — ou pas expédiable du tout.
+-- Mieux vaut un refus lisible au moment de la commande.
+--
+-- La destination est lue dans l'adresse déjà validée par l'application, pas
+-- reçue en paramètre : un champ « zone » venu du formulaire permettrait de
+-- désigner la destination la moins chère pour payer moins.
 --
 -- Le montant minimum de commande ne s'applique PAS à l'expédition : il existe
--- pour qu'une tournée de livraison locale vaille le déplacement, ce qui n'a
--- aucun sens pour un colis remis à un transporteur.
+-- pour qu'une tournée de livraison vaille le déplacement, ce qui n'a aucun
+-- sens pour un colis remis à un transporteur.
 --
 -- Générée depuis la version précédente par remplacement de chaînes, comme les
 -- deux précédentes. Signature inchangée.
@@ -33,8 +43,7 @@ as $$
 declare
   v_order_id       uuid;
   v_wholesale      boolean := false;
-  v_ship_fee       integer;
-  v_ship_free      integer;
+  v_ship_zone      public.shipping_zones%rowtype;
   v_unit           integer;
   v_order_number   text;
   v_subtotal       integer := 0;
@@ -180,15 +189,22 @@ begin
     end if;
 
   elsif p_method = 'shipping' then
-    select shipping_fee_cents, shipping_free_threshold_cents
-      into v_ship_fee, v_ship_free
-    from public.site_settings
-    limit 1;
+    select * into v_ship_zone
+    from public.find_shipping_zone(
+      p_address->>'country',
+      p_address->>'province'
+    );
 
-    if v_ship_free is not null and v_subtotal >= v_ship_free then
+    if v_ship_zone.id is null then
+      raise exception 'Nous n''expédions pas encore à cette destination'
+        using errcode = 'P0001';
+    end if;
+
+    if v_ship_zone.free_threshold_cents is not null
+       and v_subtotal >= v_ship_zone.free_threshold_cents then
       v_delivery := 0;
     else
-      v_delivery := coalesce(v_ship_fee, 0);
+      v_delivery := v_ship_zone.fee_cents;
     end if;
   end if;
 
