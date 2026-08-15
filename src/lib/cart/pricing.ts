@@ -23,7 +23,10 @@ export interface CartLine {
   variantLabel: LocalizedText;
   temperatureClass: TemperatureClass;
   imageUrl?: string | null;
+  /** Le prix réellement facturé : de gros si le compte y donne droit. */
   unitPriceCents: number;
+  /** Le prix public, conservé pour montrer l'écart au professionnel. */
+  retailPriceCents: number;
   compareAtPriceCents: number | null;
   quantity: number;
   netWeightG: number | null;
@@ -32,11 +35,40 @@ export interface CartLine {
   priceIsProvisional: boolean;
 }
 
+/**
+ * Le prix facturé pour un format, selon le compte qui achète.
+ *
+ * ⚠️ **Cette règle est écrite deux fois** : ici, pour l'affichage, et dans
+ * `place_order` (migration `20260815120000_wholesale_pricing.sql`), pour le
+ * montant réellement facturé. C'est la seconde qui fait foi — l'application
+ * peut afficher ce qu'elle veut, la base établit le montant. Les deux doivent
+ * dire la même chose, sans quoi le client verrait un prix au panier et en
+ * paierait un autre.
+ *
+ * Deux règles, toutes deux protectrices du client :
+ *
+ * 1. Un format sans tarif de gros se vend au prix de détail. Un oubli de
+ *    saisie ne doit ni retirer un produit de la vente ni bloquer une commande.
+ * 2. Le professionnel ne paie jamais plus qu'un client de détail. Si une
+ *    promotion descend le prix public sous le tarif négocié, c'est le prix
+ *    public qui s'applique.
+ */
+export function effectiveUnitPrice(
+  retailCents: number,
+  wholesaleCents: number | null,
+  isWholesale: boolean,
+): number {
+  if (!isWholesale || wholesaleCents == null) return retailCents;
+  return Math.min(wholesaleCents, retailCents);
+}
+
 export interface CartTotals {
   lineCount: number;
   itemCount: number;
   subtotalCents: number;
   savingsCents: number;
+  /** Écart entre le prix public et le tarif de gros, sur tout le panier. */
+  wholesaleSavingsCents: number;
   totalWeightG: number;
   taxGstCents: number;
   taxQstCents: number;
@@ -50,6 +82,7 @@ export function lineTotal(line: CartLine): number {
 export function computeTotals(lines: CartLine[]): CartTotals {
   let subtotalCents = 0;
   let savingsCents = 0;
+  let wholesaleSavingsCents = 0;
   let itemCount = 0;
   let totalWeightG = 0;
   let hasProvisionalPrices = false;
@@ -61,6 +94,10 @@ export function computeTotals(lines: CartLine[]): CartTotals {
     if (line.compareAtPriceCents && line.compareAtPriceCents > line.unitPriceCents) {
       savingsCents += (line.compareAtPriceCents - line.unitPriceCents) * line.quantity;
     }
+    if (line.retailPriceCents > line.unitPriceCents) {
+      wholesaleSavingsCents +=
+        (line.retailPriceCents - line.unitPriceCents) * line.quantity;
+    }
     if (line.priceIsProvisional) hasProvisionalPrices = true;
   }
 
@@ -69,6 +106,7 @@ export function computeTotals(lines: CartLine[]): CartTotals {
     itemCount,
     subtotalCents,
     savingsCents,
+    wholesaleSavingsCents,
     totalWeightG,
     // Reportées : l'entreprise n'est pas encore inscrite aux fichiers de la
     // TPS et de la TVQ. Les champs restent pour ne pas avoir à retoucher la

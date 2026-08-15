@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ShoppingBag } from "lucide-react";
+import { BadgeCheck, ShoppingBag } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Container, Section } from "@/components/ui/layout-primitives";
@@ -90,6 +90,18 @@ export default async function CheckoutPage({
                 {tCart("summary")}
               </h2>
 
+              {/*
+                Rappelé ici et pas seulement au panier : c'est l'écran où le
+                client valide un montant, et c'est là qu'il doit pouvoir
+                vérifier que le tarif convenu est bien celui qu'on lui applique.
+              */}
+              {cart.isWholesale ? (
+                <p className="mt-3 flex items-center gap-2 rounded-md border border-forest-600 bg-forest-50 p-3 text-sm font-semibold text-forest-900">
+                  <BadgeCheck aria-hidden="true" className="size-4 shrink-0" />
+                  {tCart("wholesaleBanner")}
+                </p>
+              ) : null}
+
               <ul className="mt-4 space-y-3 text-sm">
                 {cart.lines.map((line) => (
                   <li key={line.itemId} className="flex justify-between gap-3">
@@ -115,6 +127,14 @@ export default async function CheckoutPage({
                     {formatPrice(cart.totals.subtotalCents, typedLocale)}
                   </dd>
                 </div>
+                {cart.totals.wholesaleSavingsCents > 0 ? (
+                  <div className="mt-2 flex justify-between">
+                    <dt className="text-muted">{tCart("wholesaleSavings")}</dt>
+                    <dd className="tabular font-semibold text-success">
+                      −{formatPrice(cart.totals.wholesaleSavingsCents, typedLocale)}
+                    </dd>
+                  </div>
+                ) : null}
                 <div className="mt-2 flex justify-between">
                   <dt className="text-muted">{tCart("delivery")}</dt>
                   <dd className="text-muted">{t("feeAfterAddress")}</dd>

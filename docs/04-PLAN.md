@@ -1,6 +1,6 @@
 # Étape 4 — Plan d'implémentation
 
-_Dernière mise à jour : 15 août 2026_
+_Dernière mise à jour : 15 août 2026 (soir)_
 
 Le plan est découpé en lots courts et vérifiables. Chaque lot se termine par : `npm run lint`,
 `npm run typecheck`, les tests concernés, et une vérification du rendu à 320 px et à 1280 px.
@@ -267,6 +267,17 @@ limité à quelques envois par heure et n'utilise pas le domaine d'Atlantique Ex
 faire avant l'ouverture : configurer Resend comme serveur SMTP de Supabase, dans
 Authentication → Emails. La réinitialisation, elle, passe déjà par Resend.
 
+### ⚠️ Défaut trouvé et corrigé (15 août 2026)
+
+**Le lien de confirmation d'inscription renvoyait sur `localhost`.** `signUp` était appelé
+sans `emailRedirectTo` : faute de destination, Supabase fabrique le lien à partir du
+« Site URL » de son tableau de bord, resté sur l'adresse de développement. La
+réinitialisation passait déjà `redirectTo` ; l'inscription fait désormais pareil.
+
+Le correctif de code ne suffisait pas : Supabase **valide** la destination contre sa liste
+blanche et retombe silencieusement sur le Site URL si elle n'y figure pas. Les deux
+réglages du tableau de bord — Site URL et Redirect URLs — ont été faits en même temps.
+
 **Écueil rencontré.** `/auth/callback` était réécrit en `/fr/auth/callback` par le
 middleware de langue : chaque lien de réinitialisation aurait fini sur une page
 introuvable. Le chemin `auth` est désormais exclu du `matcher`. La destination de retour
@@ -382,7 +393,40 @@ une adresse d'exemple vers laquelle quelqu'un enverrait de l'argent.
 - ✅ **Mouvements de stock** (`/admin/stocks`) : réception avec lot et date de péremption,
   ajustement de comptage dans les deux sens, perte, retour. Le registre des quarante
   derniers mouvements est affiché en dessous, ventes comprises.
-- ⬜ Arrivages, comptes professionnels, promotions, rapports
+- ✅ **Arrivages** (`/admin/arrivages`) : création, dates d'arrivée et de fin de
+  réservation, étape de la marchandise, notes bilingues, manifeste des formats annoncés
+  avec quantité et acompte, mise en ligne. Publier sans les deux dates est refusé — la
+  page d'accueil les annonce. Retirer un format déjà réservé est refusé aussi : la
+  suppression en cascade effacerait les réservations des clients, acompte compris.
+- ✅ **Demandes de compte professionnel** (`/admin/demandes-pro`) : la demande écrite par
+  le client — dont les produits et volumes qui l'intéressent — avec approbation, refus et
+  retour en attente. Approuver applique le tarif de gros — voir le lot 16.
+- ✅ **Ce qui se vend le mieux** : classement des formats les plus commandés sur trente
+  jours, commandes payées seulement. Agrégé **par SKU et non par produit** — le rapport
+  entre le 1 kg et le 250 g est ce qui décide des réapprovisionnements, un total par
+  produit ne dirait rien d'utile.
+- ✅ **Publication depuis les listes** : une bascule partagée pour les produits, les
+  recettes et les arrivages, avec les garde-fous déjà posés côté serveur. Retirer un
+  produit du site est un geste urgent — une rupture de stock — qui ne doit pas coûter deux
+  écrans.
+- ⬜ Promotions, rapports
+
+### ⚠️ Deux défauts trouvés et corrigés (15 août 2026)
+
+1. **« Commandes à préparer » comptait ce que la liste ne montrait pas.** Le compteur du
+   tableau de bord couvrait `confirmed` **et** `preparing`, le lien ne filtrait que
+   `confirmed`. Dès qu'une commande était prise en charge, elle restait comptée et
+   devenait introuvable — signalé à l'usage, sur une vraie commande.
+2. **Les deux cases d'une catégorie faisaient la même chose.** « Visible sur le site » et
+   « Dans le méga-menu » avaient un effet identique, parce qu'aucune page n'appelait
+   `getCategories` : les huit surfaces passaient toutes par la liste du menu. La boutique,
+   l'accueil et les filtres reviennent à la liste générale ; le drapeau du menu ne commande
+   plus que l'en-tête et le pied de page, et la case s'appelle « Dans les menus ».
+
+Le second est le plus instructif : les deux fonctions existaient et faisaient chacune ce
+qu'il fallait. Le défaut n'était pas dans une fonction mais dans le **choix de l'appelant**,
+répété huit fois. C'est invisible à la relecture d'un fichier, et visible en une seconde à
+l'usage.
 
 **Aucune quantité ne s'écrit à la main.** Tout passe par `record_stock_movement`, une
 fonction SQL qui, dans une seule transaction :
@@ -445,12 +489,25 @@ npm run grant:admin -- votre@courriel.ca
 - Historique complet et traçable
 - **Vérification** : test de concurrence sur la survente, cohérence du registre de mouvements
 
-## Lot 11 — Arrivages et précommandes ⬜
+## Lot 11 — Arrivages et précommandes 🚧
 
-- Page publique des arrivages, détail, statuts, quantités réservables
-- Réservation avec acompte optionnel, alertes d'arrivage
-- Administration des arrivages et conversion en stock à réception
+- ✅ **Administration des arrivages** — détaillée au lot 9
+- ⬜ **Page publique `/arrivages`** : elle n'existe pas. L'en-tête, le pied de page et le
+  bouton de la section d'accueil y mènent tous les trois et tombent sur le 404 « section en
+  construction ».
+- ⬜ Réservation avec acompte optionnel, alertes d'arrivage. Tant que ce parcours n'existe
+  pas, la colonne « Réservé » de l'administration reste à zéro : rien n'écrit dans
+  `reservations`.
+- ⬜ Conversion en stock à réception
 - **Vérification** : end-to-end de réservation, notification à la mise à disposition
+
+### ⚠️ Défaut trouvé et corrigé (15 août 2026)
+
+`getOpenShipments` passait `variant_id` là où un **slug de produit** était attendu, et la
+section d'accueil cherchait ensuite le produit par ce slug. Le premier arrivage créé aurait
+donc affiché des UUID à la place des noms de produits. La jointure corrige l'affichage et
+supprime au passage une requête par ligne. Le défaut était invisible : la table étant vide,
+la boucle ne s'exécutait jamais.
 
 ## Lot 12 — Courriels transactionnels 🚧
 
@@ -596,6 +653,37 @@ sont filtrés pour écarter `javascript:`.
 - Vérification d'accessibilité automatisée sur les pages clés
 - Déploiement Vercel, variables d'environnement, domaine, webhooks de production
 - Documentation d'exploitation pour l'équipe
+
+## Lot 16 — Tarif professionnel 🚧
+
+- ✅ **Le tarif de gros s'applique au panier et à la commande.** Un compte professionnel
+  approuvé voit ses prix dans le panier et au paiement, avec le prix public barré et le
+  montant de la remise. La commande, le reçu et les courriels suivent d'eux-mêmes : ils
+  lisent les montants figés dans `order_items`.
+- ✅ **Le montant facturé est établi par `place_order`**, pas par l'application. Le panier
+  affiche, la base facture. Les deux partagent la même règle, écrite une fois en TypeScript
+  (`effectiveUnitPrice`) et une fois en SQL, et l'une renvoie explicitement à l'autre.
+- ✅ **Deux règles protectrices, testées** : un format sans tarif de gros se vend au prix
+  public — un oubli de saisie ne retire rien de la vente ; et le professionnel ne paie
+  **jamais** plus qu'un client de détail, même si une promotion descend le prix public sous
+  le tarif négocié.
+- ⬜ **Le catalogue affiche les prix publics à tout le monde**, y compris au professionnel
+  connecté. C'est un choix, pas un oubli : la boutique, la fiche produit et l'accueil sont
+  mis en cache cinq minutes et **partagés entre tous les visiteurs**. Y afficher un prix
+  par personne demande de rendre ces pages dynamiques — plus lentes pour tous — et fait
+  peser le risque de servir un prix de gros à un client de détail depuis le cache. À
+  reprendre avec un encart dynamique le jour où cela vaut le coût.
+- ⬜ `is_wholesale_only` ne filtre toujours rien : un produit réservé au gros serait visible
+  de tous. Aucun n'est marqué ainsi aujourd'hui.
+- ⬜ Minimum de commande professionnel, conditions de paiement, prix négociés par client
+- **Vérification** : ⚠️ **la migration n'est pas encore appliquée à la base.** Tant que
+  `npm run db:push` n'a pas tourné, `place_order` facture le prix public — le panier
+  afficherait alors un tarif de gros que la commande ne retiendrait pas. À faire suivre
+  d'un `npm run smoke:order`.
+
+⚠️ **Les prix de gros en base sont des données de démonstration**, comme les prix publics :
+la boutique porte encore le bandeau « mode démonstration ». Les 86 formats ont un tarif à
+environ −22 %, qui n'a été négocié avec personne. À revoir avant d'approuver un client.
 
 ---
 

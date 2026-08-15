@@ -633,15 +633,14 @@ export async function removeShipmentItemAction(formData: FormData): Promise<void
 /**
  * Tranche une demande de compte professionnel.
  *
- * Approuver ne change aucun prix aujourd'hui : le panier et `place_order`
- * facturent `retail_price_cents` à tout le monde, et `wholesale_price_cents`
- * n'est même pas accordé en lecture au niveau de PostgreSQL. La fonction
- * `has_approved_business_account()` attend le lot consacré aux clients
- * professionnels pour servir de garde.
+ * Approuver engage un prix : `place_order` lit ce statut pour choisir entre le
+ * tarif de gros et le prix public, et le panier fait de même à l'affichage.
+ * D'où la réserve aux rôles qui engagent les prix, et la journalisation —
+ * savoir qui a accordé quel tarif, et quand, se révèle indispensable le jour
+ * où on le conteste.
  *
- * La décision est malgré tout réservée aux rôles qui engagent les prix, et
- * journalisée : le jour où ce garde sera branché, il s'appuiera sur ces
- * statuts, et savoir qui a accordé quoi, et quand, sera indispensable.
+ * `wholesale_price_cents` reste inaccessible aux rôles publics au niveau de
+ * PostgreSQL : il n'est lu que par la clé de service, côté serveur.
  *
  * Aucun courriel n'est envoyé au client : la file d'attente ne connaît pas ce
  * type de message. C'est à vous de le contacter, comme le formulaire le

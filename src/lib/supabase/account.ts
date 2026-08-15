@@ -112,3 +112,19 @@ export async function getBusinessAccount(): Promise<BusinessAccount | null> {
     status: (row.status as BusinessAccount["status"]) ?? "pending",
   };
 }
+
+/**
+ * Le compte connecté a-t-il droit au tarif de gros ?
+ *
+ * Lu avec la session du client, donc soumis à RLS : `business_accounts` ne lui
+ * accorde qu'un droit de lecture sur sa propre ligne, et le statut ne peut
+ * être écrit que par l'administration. Personne ne peut donc s'octroyer le
+ * tarif — la réponse d'ici ne fait qu'AFFICHER ce que la base sait déjà.
+ *
+ * Elle ne fait pas foi pour le montant facturé : c'est `place_order` qui
+ * l'établit, à partir du même statut, dans la transaction de commande.
+ */
+export async function hasApprovedBusinessAccount(): Promise<boolean> {
+  const account = await getBusinessAccount();
+  return account?.status === "approved";
+}

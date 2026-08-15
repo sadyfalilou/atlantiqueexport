@@ -31,16 +31,15 @@ export default async function AdminBusinessRequestsPage() {
       </p>
 
       {/*
-        Dire exactement ce que le bouton fait, et surtout ce qu'il ne fait pas.
-        Croire qu'approuver applique le tarif de gros mènerait à promettre un
-        prix au téléphone que la boutique ne facturerait jamais.
+        Dire exactement ce que le bouton fait, et où l'effet se voit. Approuver
+        engage désormais un prix : la personne qui clique doit savoir que le
+        tarif saisi par format devient celui que ce client paiera.
       */}
       <p className="mt-4 rounded-lg border border-line bg-cream-50 p-4 text-sm text-forest-900">
-        Approuver marque le compte comme actif : le client le voit sur sa page « Compte
-        professionnel ». <strong>Les prix affichés ne changent pas encore</strong> — le
-        tarif de gros est saisi par format, mais aucun parcours ne le sert pour
-        l&apos;instant. Aucun courriel ne part non plus : écrivez au client pour convenir
-        de ses prix.
+        <strong>Approuver applique le tarif de gros à ce client.</strong> Ses prix
+        changent dans le panier et au paiement ; la boutique continue d&apos;afficher les
+        prix publics pour tout le monde. Un format sans tarif de gros saisi reste vendu au
+        prix public. Aucun courriel ne part automatiquement : écrivez-lui.
       </p>
 
       {requests.length === 0 ? (

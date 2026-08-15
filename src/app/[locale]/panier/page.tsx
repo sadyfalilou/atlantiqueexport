@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AlertTriangle, Info, ShoppingBag, Trash2 } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Info, ShoppingBag, Trash2 } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Container, Section } from "@/components/ui/layout-primitives";
@@ -87,6 +87,16 @@ export default async function CartPage({
           {t("title")}
         </h1>
 
+        {cart.isWholesale ? (
+          <div className="mb-6 rounded-lg border border-forest-600 bg-forest-50 p-4">
+            <p className="flex items-center gap-2 font-semibold text-forest-900">
+              <BadgeCheck aria-hidden="true" className="size-5 shrink-0" />
+              {t("wholesaleBanner")}
+            </p>
+            <p className="mt-1 text-sm text-forest-900">{t("wholesaleBannerBody")}</p>
+          </div>
+        ) : null}
+
         {Number.isFinite(repris) && repris > 0 ? (
           <p role="status" className="mb-6 rounded-lg border border-line bg-cream-50 p-4 text-sm text-forest-900">
             {t("reordered", { count: repris })}
@@ -133,8 +143,22 @@ export default async function CartPage({
                           {line.variantLabel[typedLocale]}
                         </p>
                       </div>
-                      <p className="tabular font-bold text-forest-900">
+                      <p className="tabular text-right font-bold text-forest-900">
                         {formatPrice(lineTotal(line), typedLocale)}
+                        {/*
+                          Le prix public barré à côté du tarif de gros : sans
+                          lui, le professionnel n'a aucun moyen de constater
+                          l'écart qu'on lui a accordé.
+                        */}
+                        {line.retailPriceCents > line.unitPriceCents ? (
+                          <span className="block text-sm font-normal text-muted line-through">
+                            <span className="sr-only">{t("retailPrice")} </span>
+                            {formatPrice(
+                              line.retailPriceCents * line.quantity,
+                              typedLocale,
+                            )}
+                          </span>
+                        ) : null}
                       </p>
                     </div>
 
@@ -218,6 +242,14 @@ export default async function CartPage({
                     {formatPrice(cart.totals.subtotalCents, typedLocale)}
                   </dd>
                 </div>
+                {cart.totals.wholesaleSavingsCents > 0 ? (
+                  <div className="flex justify-between">
+                    <dt className="text-muted">{t("wholesaleSavings")}</dt>
+                    <dd className="tabular font-semibold text-success">
+                      −{formatPrice(cart.totals.wholesaleSavingsCents, typedLocale)}
+                    </dd>
+                  </div>
+                ) : null}
                 {cart.totals.savingsCents > 0 ? (
                   <div className="flex justify-between">
                     <dt className="text-muted">{t("savings")}</dt>

@@ -2,7 +2,13 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { computeTotals, type CartLine, type CartTotals } from "@/lib/cart/pricing";
+import {
+  computeTotals,
+  effectiveUnitPrice,
+  type CartLine,
+  type CartTotals,
+} from "@/lib/cart/pricing";
+import { hasApprovedBusinessAccount } from "@/lib/supabase/account";
 import { productImageUrl } from "@/lib/catalog/queries";
 import type { TemperatureClass } from "@/lib/types";
 
@@ -29,12 +35,15 @@ export interface Cart {
   id: string | null;
   lines: CartLine[];
   totals: CartTotals;
+  /** Vrai quand le compte connecté est un professionnel approuvé. */
+  isWholesale: boolean;
 }
 
 export const emptyCart: Cart = {
   id: null,
   lines: [],
   totals: computeTotals([]),
+  isWholesale: false,
 };
 
 async function readToken(): Promise<string | undefined> {
@@ -106,13 +115,19 @@ export async function getCart(): Promise<Cart> {
   const cartId = await getCartId();
   if (!cartId) return emptyCart;
 
+  // Lu avant les lignes : le tarif applicable décide du prix de chacune.
+  // `wholesale_price_cents` n'est pas accordé aux rôles publics ; il n'est
+  // lisible ici que parce que le panier passe par la clé de service.
+  const isWholesale = await hasApprovedBusinessAccount();
+
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("cart_items")
     .select(
       `id, quantity, variant_id,
        variant:product_variants(
-         id, label_fr, label_en, retail_price_cents, compare_at_price_cents,
+         id, label_fr, label_en, retail_price_cents, wholesale_price_cents,
+         compare_at_price_cents,
          price_is_provisional, net_weight_g, is_active,
          product:products(
            slug, name_fr, name_en, temperature_class, published_at,
@@ -152,6 +167,13 @@ export async function getCart(): Promise<Cart> {
     const stock = variant.stock as Row | Row[] | null;
     const stockRow = Array.isArray(stock) ? stock[0] : stock;
 
+    const retailPriceCents = variant.retail_price_cents as number;
+    const unitPriceCents = effectiveUnitPrice(
+      retailPriceCents,
+      (variant.wholesale_price_cents as number | null) ?? null,
+      isWholesale,
+    );
+
     lines.push({
       itemId: row.id as string,
       variantId: variant.id as string,
@@ -166,8 +188,14 @@ export async function getCart(): Promise<Cart> {
       },
       temperatureClass: product.temperature_class as TemperatureClass,
       imageUrl: coverUrl(product),
-      unitPriceCents: variant.retail_price_cents as number,
-      compareAtPriceCents: (variant.compare_at_price_cents as number | null) ?? null,
+      unitPriceCents,
+      retailPriceCents,
+      // Le prix barré d'une promotion n'a pas de sens face au tarif de gros :
+      // l'écart montré au professionnel est celui avec le prix public, pas
+      // avec un prix de référence auquel il n'achète de toute façon pas.
+      compareAtPriceCents: isWholesale
+        ? null
+        : ((variant.compare_at_price_cents as number | null) ?? null),
       quantity: row.quantity as number,
       netWeightG: (variant.net_weight_g as number | null) ?? null,
       availableQuantity: (stockRow?.quantity_available as number | undefined) ?? 0,
@@ -175,7 +203,7 @@ export async function getCart(): Promise<Cart> {
     });
   }
 
-  return { id: cartId, lines, totals: computeTotals(lines) };
+  return { id: cartId, lines, totals: computeTotals(lines), isWholesale };
 }
 
 /** Nombre d'articles, pour la pastille de l'en-tête. */

@@ -306,9 +306,12 @@ export function BusinessForm({ account }: { account: BusinessAccount | null }) {
 
   const badge =
     account?.status === "approved" ? (
-      <p className="inline-flex items-center gap-2 rounded-lg border border-line bg-cream-50 p-4 text-sm text-success">
-        <CheckCircle2 aria-hidden="true" className="size-5" />
-        Votre compte professionnel est actif.
+      <p className="inline-flex items-start gap-2 rounded-lg border border-line bg-cream-50 p-4 text-sm text-success">
+        <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+        <span>
+          Votre compte professionnel est actif. Vos tarifs de gros s&apos;appliquent
+          automatiquement dans le panier — la boutique, elle, affiche les prix publics.
+        </span>
       </p>
     ) : account?.status === "rejected" ? (
       <p className="inline-flex items-center gap-2 rounded-lg border border-line bg-cream-50 p-4 text-sm text-muted">

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeTotals,
+  effectiveUnitPrice,
   fulfillmentOptions,
   lineTotal,
   overstockedLines,
@@ -22,11 +23,48 @@ function line(
     netWeightG: 500,
     availableQuantity: 99,
     priceIsProvisional: false,
+    // Sans tarif de gros, le prix public est celui qu'on paie : les cas qui
+    // ne parlent pas du gros gardent ainsi un écart nul.
+    retailPriceCents: overrides.unitPriceCents,
     ...overrides,
   };
 }
 
+describe("effectiveUnitPrice", () => {
+  it("laisse le prix public à un client ordinaire", () => {
+    expect(effectiveUnitPrice(1499, 1169, false)).toBe(1499);
+  });
+
+  it("applique le tarif de gros à un professionnel approuvé", () => {
+    expect(effectiveUnitPrice(1499, 1169, true)).toBe(1169);
+  });
+
+  it("retombe sur le prix public quand aucun tarif n'est saisi", () => {
+    expect(effectiveUnitPrice(1499, null, true)).toBe(1499);
+  });
+
+  it("ne fait jamais payer le professionnel plus cher que le public", () => {
+    // Une promotion descend le prix public sous le tarif négocié : sans le
+    // garde-fou, le grossiste paierait 1169 quand le particulier paie 999.
+    expect(effectiveUnitPrice(999, 1169, true)).toBe(999);
+  });
+});
+
 describe("computeTotals", () => {
+  it("mesure l'écart avec le prix public sur tout le panier", () => {
+    const totals = computeTotals([
+      line({ unitPriceCents: 1169, retailPriceCents: 1499, quantity: 2 }),
+      line({ unitPriceCents: 779, retailPriceCents: 999, quantity: 1 }),
+    ]);
+    expect(totals.subtotalCents).toBe(3117);
+    expect(totals.wholesaleSavingsCents).toBe(880);
+  });
+
+  it("laisse l'écart à zéro sans tarif de gros", () => {
+    const totals = computeTotals([line({ unitPriceCents: 1499, quantity: 2 })]);
+    expect(totals.wholesaleSavingsCents).toBe(0);
+  });
+
   it("additionne les lignes en cents entiers", () => {
     const totals = computeTotals([
       line({ unitPriceCents: 1499, quantity: 2 }),
