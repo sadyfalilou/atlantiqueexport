@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { queueOrderExpiredEmail } from "@/lib/resend/order-emails";
 
 /**
  * Libère les commandes impayées passé le délai annoncé au client.
@@ -38,9 +39,16 @@ export async function GET(req: NextRequest) {
     if (error) throw new Error(error.message);
 
     const expirees = (data ?? []) as Array<{
+      order_id: string;
       order_number: string;
       released_units: number;
     }>;
+
+    // Prévenir le client, une fois le stock déjà rendu. Une commande annulée
+    // en silence laisse quelqu'un attendre une livraison qui ne viendra pas.
+    for (const commande of expirees) {
+      await queueOrderExpiredEmail(commande.order_id, DELAI_HEURES);
+    }
 
     // Journalisé même quand rien n'expire : lire « 0 commande » dans les
     // journaux prouve que la tâche tourne, là où le silence ne prouve rien.

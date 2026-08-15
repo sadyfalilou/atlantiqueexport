@@ -228,6 +228,71 @@ export function OrderDeliveredEmail({
   );
 }
 
+/**
+ * Commande annulée faute de virement reçu dans le délai.
+ *
+ * Trois choses doivent y figurer, et rien de plus :
+ *
+ * 1. **Aucun montant n'a été prélevé.** C'est la première inquiétude de qui
+ *    lit « annulée » : le message doit y répondre avant d'être posée.
+ * 2. **Une porte de sortie si le virement a bien été envoyé.** Un virement
+ *    parti tard, ou avec un mauvais message, existe ; laisser cette personne
+ *    sans recours serait lui faire perdre son argent.
+ * 3. **De quoi recommencer**, sans reproche ni relance commerciale.
+ */
+export function OrderExpiredEmail({
+  recipientName,
+  orderNumber,
+  hours,
+  locale,
+}: SimpleEmailProps & { orderNumber: string; hours: number }) {
+  const t =
+    locale === "fr"
+      ? {
+          title: "Votre commande a été annulée",
+          preview: `Commande ${orderNumber} — virement non reçu`,
+          message: `${greet(recipientName, "fr")}, nous n'avons pas reçu le virement pour la commande ${orderNumber} dans le délai de ${hours} heures.`,
+          released:
+            "Les articles qui vous étaient réservés sont remis en vente, et la commande est annulée.",
+          noCharge: "Aucun montant ne vous a été prélevé.",
+          alreadySentTitle: "Vous avez pourtant envoyé le virement ?",
+          alreadySent:
+            "Cela arrive : un virement parti tardivement, ou dont le message ne portait pas le numéro de commande, peut nous échapper. Écrivez-nous en indiquant le numéro et la date de votre envoi — nous retrouverons votre paiement.",
+          cta: "Repasser ma commande",
+        }
+      : {
+          title: "Your order has been cancelled",
+          preview: `Order ${orderNumber} — transfer not received`,
+          message: `${greet(recipientName, "en")}, we did not receive the transfer for order ${orderNumber} within the ${hours}-hour window.`,
+          released:
+            "The items held for you are back on sale, and the order is cancelled.",
+          noCharge: "No amount has been charged to you.",
+          alreadySentTitle: "Did you send the transfer after all?",
+          alreadySent:
+            "It happens: a transfer sent late, or whose message did not carry the order number, can escape us. Write to us with the number and the date you sent it — we will find your payment.",
+          cta: "Place my order again",
+        };
+
+  return (
+    <EmailLayout title={t.title} preview={t.preview} locale={locale}>
+      <Text>{t.message}</Text>
+      <Text>{t.released}</Text>
+      <Text bold bottom={0}>
+        {t.noCharge}
+      </Text>
+
+      <Button href={`${site()}/${locale}/boutique`}>{t.cta}</Button>
+
+      <Heading top={8}>{t.alreadySentTitle}</Heading>
+      <Panel accent={C.mango}>
+        <Text size={14} bottom={0}>
+          {t.alreadySent}
+        </Text>
+      </Panel>
+    </EmailLayout>
+  );
+}
+
 /* -------------------------------------------------------------------------- */
 /* Arrivages et stock                                                          */
 /* -------------------------------------------------------------------------- */

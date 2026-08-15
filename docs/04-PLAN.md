@@ -501,6 +501,11 @@ npm run grant:admin -- votre@courriel.ca
   modèles dans les deux langues : `npm run emails:preview`.
 - ✅ **Courriel de confirmation complet** : les articles, le sous-total et les frais sont
   relus depuis `order_items`. Ils étaient auparavant vides et remplacés par « À confirmer ».
+- ✅ **Treizième modèle : commande annulée faute de virement.** Mis en file par la tâche
+  d'expiration, une fois le stock déjà rendu. Il dit trois choses et rien de plus :
+  **aucun montant n'a été prélevé** — c'est la première inquiétude de qui lit « annulée » ;
+  **une porte de sortie si le virement a bien été envoyé**, tardivement ou sans le numéro
+  de commande dans le message ; et de quoi recommencer, sans reproche.
 - ⬜ Intégration des événements de stock et d'arrivage (lots 10 et 11)
 
 **Vérifié — la chaîne complète a envoyé de vrais courriels** (14 août 2026, 01 h 50 UTC)

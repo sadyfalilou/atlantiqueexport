@@ -49,6 +49,7 @@ const samples: Record<string, Record<string, unknown>> = {
   },
   in_delivery: { recipientName: "Awa Diop", orderNumber: "AE-2026-00042" },
   order_delivered: { recipientName: "Awa Diop", orderNumber: "AE-2026-00042" },
+  order_expired: { recipientName: "Awa Diop", orderNumber: "AE-2026-00042", hours: 24 },
   preorder_confirmation: { recipientName: "Awa Diop" },
   arrival_available: { recipientName: "Awa Diop", productName: "Le thiof frais" },
   back_in_stock: { recipientName: "Awa Diop", productName: "Le café Touba moulu" },

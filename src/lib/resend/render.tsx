@@ -10,6 +10,7 @@ import {
   ReadyForPickupEmail,
   InDeliveryEmail,
   OrderDeliveredEmail,
+  OrderExpiredEmail,
   PreorderConfirmationEmail,
   ArrivalAvailableEmail,
   BackInStockEmail,
@@ -25,6 +26,7 @@ export type EmailType =
   | "ready_for_pickup"
   | "in_delivery"
   | "order_delivered"
+  | "order_expired"
   | "preorder_confirmation"
   | "arrival_available"
   | "back_in_stock"
@@ -193,6 +195,24 @@ export async function generateEmailContent(
         <OrderDeliveredEmail
           recipientName={d.recipientName}
           orderNumber={d.orderNumber}
+          locale={locale}
+        />
+      );
+      subject = t.subject;
+      break;
+    }
+
+    case "order_expired": {
+      const t =
+        locale === "fr"
+          ? { subject: "Votre commande a été annulée" }
+          : { subject: "Your order has been cancelled" };
+      const d = data as { recipientName: string; orderNumber: string; hours: number };
+      component = (
+        <OrderExpiredEmail
+          recipientName={d.recipientName}
+          orderNumber={d.orderNumber}
+          hours={d.hours}
           locale={locale}
         />
       );

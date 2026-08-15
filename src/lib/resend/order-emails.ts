@@ -23,10 +23,14 @@ import { queueEmail, type EmailType } from "./index";
 /**
  * Statuts de commande qui méritent un courriel, et lequel.
  *
- * `confirmed`, `completed` et `cancelled` n'y figurent pas : le premier est
- * déjà couvert par le courriel de paiement, le deuxième est une écriture
- * interne, et le troisième n'a pas de modèle — annoncer une annulation sans
- * en donner le motif ni le remboursement ferait plus de mal que de bien.
+ * `confirmed` et `completed` n'y figurent pas : le premier est déjà couvert
+ * par le courriel de paiement, le second est une écriture interne.
+ *
+ * `cancelled` non plus, mais pour une autre raison : une annulation n'a de
+ * sens à annoncer que si l'on peut en donner le motif. Celle qui suit un
+ * virement non reçu l'a — c'est `queueOrderExpiredEmail`. Une annulation
+ * décidée à la main dans l'administration ne l'a pas, et un courriel qui dirait
+ * seulement « annulée » inquiéterait sans rien expliquer.
  */
 const STATUS_EMAILS = {
   preparing: "order_preparing",
@@ -304,6 +308,37 @@ export async function queueOrderPlacedEmails(
     });
   } catch (err) {
     console.error("Mise en queue des courriels de commande échouée :", err);
+  }
+}
+
+/**
+ * Met en queue le courriel d'une commande annulée faute de virement.
+ *
+ * Appelé après l'expiration, une fois le stock déjà rendu : si la mise en
+ * queue échoue, la commande reste correctement annulée. L'inverse — annuler
+ * sans prévenir — serait bien pire.
+ */
+export async function queueOrderExpiredEmail(
+  orderId: string,
+  hours: number,
+): Promise<void> {
+  try {
+    const order = await loadOrder(orderId);
+    if (!order) return;
+
+    await queueEmail({
+      type: "order_expired",
+      recipientEmail: order.email,
+      recipientName: order.recipientName ?? undefined,
+      locale: order.locale,
+      data: {
+        recipientName: order.recipientName,
+        orderNumber: order.orderNumber,
+        hours,
+      },
+    });
+  } catch (err) {
+    console.error("Mise en queue du courriel d'annulation échouée :", err);
   }
 }
 
