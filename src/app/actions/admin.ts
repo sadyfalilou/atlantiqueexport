@@ -319,6 +319,109 @@ export async function togglePublishAction(formData: FormData): Promise<void> {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Zones de livraison                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Enregistre les tarifs d'une zone de livraison.
+ *
+ * Ces trois montants gouvernent ce que le client paie et ce qu'il doit
+ * atteindre pour commander. Ils sont relus par `place_order` au moment de la
+ * commande : modifier une zone n'affecte donc jamais une commande déjà passée,
+ * dont les montants sont figés.
+ *
+ * Les préfixes de codes postaux se saisissent en clair, séparés par des
+ * virgules. Ils sont rangés en majuscules et sans espace, parce que c'est
+ * ainsi que la zone est retrouvée à partir de l'adresse du client — « h2x »
+ * saisi tel quel ne correspondrait à rien.
+ */
+export async function saveDeliveryZoneAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = z
+    .object({
+      id: z.uuid(),
+      name: z.string().trim().min(2).max(120),
+      prefixes: z.string().trim().max(500).optional(),
+      position: z.string().trim().optional(),
+    })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { status: "error", message: "Le nom de la zone est requis." };
+  }
+
+  const fee = parseAmount(formData.get("fee"));
+  const minOrder = parseAmount(formData.get("minOrder"));
+  const freeThreshold = parseAmount(formData.get("freeThreshold"));
+
+  if (fee === undefined || fee === null) {
+    return { status: "error", message: "Frais de livraison invalides." };
+  }
+  if (minOrder === undefined || minOrder === null) {
+    return { status: "error", message: "Montant minimum invalide." };
+  }
+  // Celui-ci accepte le vide : pas de seuil signifie « jamais gratuit ».
+  if (freeThreshold === undefined) {
+    return { status: "error", message: "Seuil de gratuité invalide." };
+  }
+
+  // Un seuil de gratuité sous le minimum de commande serait inatteignable
+  // autrement dit : la livraison gratuite ne serait jamais accordée, ou
+  // toujours. Dans les deux cas, l'affichage mentirait au client.
+  if (freeThreshold !== null && freeThreshold < minOrder) {
+    return {
+      status: "error",
+      message:
+        "Le seuil de livraison gratuite ne peut pas être inférieur au montant minimum de commande.",
+    };
+  }
+
+  const prefixes = (parsed.data.prefixes ?? "")
+    .split(",")
+    .map((value) => value.trim().toUpperCase().replace(/\s+/g, ""))
+    .filter(Boolean);
+
+  const position = Number.parseInt(parsed.data.position || "0", 10);
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("delivery_zones")
+    .update({
+      name: parsed.data.name,
+      postal_prefixes: prefixes,
+      fee_cents: fee,
+      min_order_cents: minOrder,
+      free_shipping_threshold_cents: freeThreshold,
+      position: Number.isFinite(position) ? position : 0,
+      is_active: formData.get("isActive") === "on",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", parsed.data.id);
+
+  if (error) {
+    console.error("Modification de la zone refusée :", error);
+    return { status: "error", message: "L'enregistrement a échoué." };
+  }
+
+  await logAdminAction(member.userId, "delivery_zone.update", "delivery_zones", parsed.data.id, {
+    feeCents: fee,
+    minOrderCents: minOrder,
+    freeThresholdCents: freeThreshold,
+  });
+
+  revalidatePath("/admin/livraison");
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/* -------------------------------------------------------------------------- */
 /* Arrivages                                                                   */
 /* -------------------------------------------------------------------------- */
 

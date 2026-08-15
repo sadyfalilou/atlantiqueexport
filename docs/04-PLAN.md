@@ -170,8 +170,16 @@ tables n'aient pas à y penser.
   désigner la zone la moins chère pour payer moins
 - ✅ Frais, seuil de gratuité et montant minimum appliqués dans la transaction
 - ✅ Capacité des créneaux garantie par contrainte : un créneau complet n'est plus proposé
-- ⬜ Administration des zones et créneaux (lot 9)
+- ✅ **Administration des zones** (`/admin/livraison`, détaillée au lot 9)
+- ⬜ Administration des créneaux et des points de ramassage
 - ⬜ Jours bloqués
+- ⚠️ **L'expédition postale est facturée zéro.** Les frais des zones ne s'appliquent
+  qu'à la livraison locale : `place_order` n'ajoute rien pour `shipping`. Or l'expédition
+  est proposée dès qu'un panier ne contient que de l'ambiant. Une commande partie par la
+  poste ne rapporte donc aucun frais de port. Ni la table des zones ni la transaction
+  n'en prévoient un — c'est une décision commerciale à prendre (montant fixe, palier au
+  poids, gratuité au-delà d'un seuil) avant d'écrire quoi que ce soit. Signalé sur
+  `/admin/livraison` pour que ce ne soit pas découvert sur une facture.
 
 ⚠️ **Adresse, horaires, tarifs et seuils sont PROVISOIRES.** Ce que le script pose est marqué
 comme tel — le point de ramassage s'intitule « adresse à confirmer ». Les préfixes de codes
@@ -409,7 +417,14 @@ une adresse d'exemple vers laquelle quelqu'un enverrait de l'argent.
   recettes et les arrivages, avec les garde-fous déjà posés côté serveur. Retirer un
   produit du site est un geste urgent — une rupture de stock — qui ne doit pas coûter deux
   écrans.
-- ⬜ Promotions, rapports
+- ✅ **Livraison** (`/admin/livraison`) : frais, seuil de gratuité, montant minimum et
+  codes postaux desservis, zone par zone. Les montants sont relus par `place_order` à
+  chaque commande, si bien qu'une modification ne touche jamais une commande déjà passée —
+  la page le dit, avec le nombre de commandes déjà livrées dans la zone. Un seuil de
+  gratuité inférieur au minimum de commande est refusé : il serait inatteignable, et
+  l'affichage mentirait au client. Les températures acceptées ne s'y modifient pas —
+  retirer le surgelé d'une zone retire des produits de la vente et mérite son propre écran.
+- ⬜ Promotions, rapports, points de ramassage, créneaux
 
 ### ⚠️ Deux défauts trouvés et corrigés (15 août 2026)
 

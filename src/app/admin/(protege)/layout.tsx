@@ -8,6 +8,7 @@ import {
   LogOut,
   Package,
   Ship,
+  Truck,
   BookOpen,
   FileText,
   Store,
@@ -64,6 +65,9 @@ export default async function ProtectedAdminLayout({
             </AdminLink>
             <AdminLink href="/admin/arrivages" icon={<Ship className="size-4" />}>
               Arrivages
+            </AdminLink>
+            <AdminLink href="/admin/livraison" icon={<Truck className="size-4" />}>
+              Livraison
             </AdminLink>
             <AdminLink href="/admin/pages" icon={<FileText className="size-4" />}>
               Pages

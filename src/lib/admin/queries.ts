@@ -594,6 +594,52 @@ export async function getAdminPage(slug: string): Promise<AdminPage | null> {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Zones de livraison                                                          */
+/* -------------------------------------------------------------------------- */
+
+export interface AdminDeliveryZone {
+  id: string;
+  name: string;
+  /** Préfixes de codes postaux, ex. « H1, H2 ». */
+  postalPrefixes: string[];
+  feeCents: number;
+  freeThresholdCents: number | null;
+  minOrderCents: number;
+  allowedTemperatures: string[];
+  position: number;
+  isActive: boolean;
+  /** Commandes livrées dans cette zone, pour mesurer ce qu'on modifie. */
+  orderCount: number;
+}
+
+export async function getDeliveryZones(): Promise<AdminDeliveryZone[]> {
+  const supabase = createAdminClient();
+  const [zones, orders] = await Promise.all([
+    supabase.from("delivery_zones").select("*").order("position"),
+    supabase.from("orders").select("delivery_zone_id"),
+  ]);
+
+  const counts = new Map<string, number>();
+  for (const row of (orders.data ?? []) as Row[]) {
+    const id = row.delivery_zone_id as string | null;
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+
+  return ((zones.data ?? []) as Row[]).map((row) => ({
+    id: row.id as string,
+    name: (row.name as string) ?? "",
+    postalPrefixes: (row.postal_prefixes as string[] | null) ?? [],
+    feeCents: (row.fee_cents as number) ?? 0,
+    freeThresholdCents: (row.free_shipping_threshold_cents as number | null) ?? null,
+    minOrderCents: (row.min_order_cents as number) ?? 0,
+    allowedTemperatures: (row.allowed_temperature_classes as string[] | null) ?? [],
+    position: (row.position as number) ?? 0,
+    isActive: row.is_active !== false,
+    orderCount: counts.get(row.id as string) ?? 0,
+  }));
+}
+
+/* -------------------------------------------------------------------------- */
 /* Arrivages                                                                   */
 /* -------------------------------------------------------------------------- */
 
