@@ -10,6 +10,7 @@ import { getStaffMember, hasRole } from "@/lib/supabase/auth";
 import { toggleSlotAction } from "@/app/actions/admin";
 import { PublishToggle } from "@/components/admin/publish-toggle";
 import {
+  NewPickupLocationForm,
   PickupLocationRow,
   SlotGeneratorForm,
 } from "@/components/admin/pickup-forms";
@@ -143,7 +144,8 @@ export default async function AdminDeliveryPage() {
         </h2>
         <p className="mt-1 text-sm text-muted">
           L&apos;adresse et les consignes que le client lit au paiement, puis dans son
-          courriel de confirmation.
+          courriel de confirmation. Un point n&apos;apparaît au client que s&apos;il a des
+          créneaux à venir — ce sont eux qui portent les heures de passage.
         </p>
 
         <ul className="mt-4 space-y-3">
@@ -161,6 +163,12 @@ export default async function AdminDeliveryPage() {
             ),
           )}
         </ul>
+
+        {canEdit ? (
+          <div className="mt-4">
+            <NewPickupLocationForm />
+          </div>
+        ) : null}
       </section>
 
       <section className="mt-10">

@@ -301,7 +301,8 @@
     "state": "État",
     "chooseRegion": "— Choisissez —",
     "shippingTo": "Expédition vers {zone} : {fee}",
-    "outsideShipping": "Nous n’expédions pas encore à cette destination."
+    "outsideShipping": "Nous n’expédions pas encore à cette destination.",
+    "servedAreas": "Secteurs desservis : {areas}."
   },
   "orderConfirmation": {
     "title": "Merci, votre commande est enregistrée",

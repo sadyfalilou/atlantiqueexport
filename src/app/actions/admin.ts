@@ -712,6 +712,104 @@ export async function savePickupLocationAction(
 }
 
 /**
+ * Crée un point de ramassage.
+ *
+ * Il naît **actif** — contrairement à une zone d'expédition, qui pourrait
+ * chevaucher une autre : un point de ramassage supplémentaire n'enlève rien
+ * aux existants, il s'ajoute. Mais il reste invisible du client tant qu'aucun
+ * créneau ne lui est rattaché, la page le rappelle.
+ */
+export async function createPickupLocationAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = z
+    .object({
+      name: z.string().trim().min(2).max(120),
+      line1: z.string().trim().min(2).max(200),
+      city: z.string().trim().min(2).max(120),
+      postalCode: z.string().trim().max(10).optional(),
+      hoursNote: z.string().trim().max(500).optional(),
+    })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    const field = String(parsed.error.issues[0]?.path?.[0] ?? "");
+    return { status: "error", message: `Champ incomplet ou invalide : ${field}.` };
+  }
+  const data = parsed.data;
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("pickup_locations").insert({
+    name: data.name,
+    address: {
+      line1: data.line1,
+      city: data.city,
+      province: "QC",
+      postalCode: (data.postalCode ?? "").toUpperCase().replace(/\s+/g, "") || null,
+      country: "CA",
+    },
+    opening_hours: { note: data.hoursNote || null },
+    is_active: true,
+  });
+
+  if (error) {
+    console.error("Création du point de ramassage refusée :", error);
+    return { status: "error", message: "La création a échoué." };
+  }
+
+  await logAdminAction(member.userId, "pickup.create", "pickup_locations", null, {
+    name: data.name,
+  });
+
+  revalidatePath("/admin/livraison");
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/**
+ * Retire un point de ramassage de la proposition, ou l'y remet.
+ *
+ * Jamais de suppression : les commandes passées y renvoient, et les créneaux
+ * qui lui sont rattachés disparaîtraient en cascade — avec les rendez-vous
+ * qu'ils portent.
+ */
+export async function togglePickupLocationAction(formData: FormData): Promise<void> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) return;
+
+  const locationId = formData.get("locationId");
+  const open = formData.get("publish") === "1";
+  if (typeof locationId !== "string") return;
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("pickup_locations")
+    .update({ is_active: open, updated_at: new Date().toISOString() })
+    .eq("id", locationId);
+
+  if (error) {
+    console.error("Modification du point de ramassage refusée :", error);
+    return;
+  }
+
+  await logAdminAction(
+    member.userId,
+    open ? "pickup.open" : "pickup.close",
+    "pickup_locations",
+    locationId,
+  );
+
+  revalidatePath("/admin/livraison");
+  revalidatePath("/", "layout");
+}
+
+/**
  * Ouvre des créneaux sur une plage de dates, un par jour.
  *
  * Les créneaux existants ne sont jamais écrasés : un créneau déjà réservé

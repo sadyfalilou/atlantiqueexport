@@ -20,6 +20,9 @@ const GUEST_COOKIE = "ae_commandes";
 export interface PickupLocation {
   id: string;
   name: string;
+  /** Adresse en une ligne, telle qu'affichée au client. */
+  address: string;
+  hours: string;
   instructions: string | null;
 }
 
@@ -85,11 +88,19 @@ export async function getLogistics(): Promise<{
       feeCents: (row.fee_cents as number) ?? 0,
       freeThresholdCents: (row.free_threshold_cents as number | null) ?? null,
     })),
-    pickupLocations: ((pickup.data ?? []) as Row[]).map((row) => ({
-      id: row.id as string,
-      name: row.name as string,
-      instructions: (row.instructions_fr as string | null) ?? null,
-    })),
+    pickupLocations: ((pickup.data ?? []) as Row[]).map((row) => {
+      const address = (row.address ?? {}) as Record<string, unknown>;
+      const hours = (row.opening_hours ?? {}) as Record<string, unknown>;
+      return {
+        id: row.id as string,
+        name: row.name as string,
+        address: [address.line1, address.city, address.postalCode]
+          .filter(Boolean)
+          .join(", "),
+        hours: (hours.note as string | null) ?? "",
+        instructions: (row.instructions_fr as string | null) ?? null,
+      };
+    }),
     zones: ((zones.data ?? []) as Row[]).map((row) => ({
       id: row.id as string,
       name: row.name as string,

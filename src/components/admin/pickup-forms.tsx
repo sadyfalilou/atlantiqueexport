@@ -1,14 +1,17 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { CalendarPlus } from "lucide-react";
+import { CalendarPlus, Plus } from "lucide-react";
 import {
+  createPickupLocationAction,
   generateSlotsAction,
   savePickupLocationAction,
+  togglePickupLocationAction,
   type TaxonomyState,
 } from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
+import { PublishToggle } from "@/components/admin/publish-toggle";
 import type { AdminPickupLocation } from "@/lib/admin/queries";
 
 const input =
@@ -76,17 +79,36 @@ export function PickupLocationRow({ location }: { location: AdminPickupLocation 
             {[location.line1, location.city, location.postalCode]
               .filter(Boolean)
               .join(", ")}
+            {" · "}
+            {location.upcomingSlots === 0 ? (
+              <span className="text-warning">
+                aucun créneau à venir — invisible du client
+              </span>
+            ) : (
+              `${location.upcomingSlots} créneau${location.upcomingSlots > 1 ? "x" : ""} à venir`
+            )}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          aria-expanded={open}
-          className="inline-flex h-11 items-center rounded-md px-3 text-sm font-semibold text-forest-800 underline hover:bg-cream-100"
-        >
-          {open ? "Fermer" : "Modifier"}
-        </button>
+        <div className="flex items-center gap-2">
+          <PublishToggle
+            action={togglePickupLocationAction}
+            idField="locationId"
+            id={location.id}
+            isPublished={location.isActive}
+            canEdit
+            publishedLabel="Proposé"
+            hiddenLabel="Retiré"
+          />
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
+            className="inline-flex h-11 items-center rounded-md px-3 text-sm font-semibold text-forest-800 underline hover:bg-cream-100"
+          >
+            {open ? "Fermer" : "Modifier"}
+          </button>
+        </div>
       </div>
 
       {open ? (
@@ -203,15 +225,7 @@ export function PickupLocationRow({ location }: { location: AdminPickupLocation 
             </div>
           </div>
 
-          <label className="flex items-center gap-2.5 text-sm text-forest-900">
-            <input
-              type="checkbox"
-              name="isActive"
-              defaultChecked={location.isActive}
-              className="size-4"
-            />
-            Ramassage proposé au paiement
-          </label>
+          <input type="hidden" name="isActive" value={location.isActive ? "on" : ""} />
 
           <div className="flex flex-wrap items-center gap-4">
             <Submit label="Enregistrer" />
@@ -331,6 +345,98 @@ export function SlotGeneratorForm({
         Un créneau par jour sur la plage choisie, deux mois au maximum. Les créneaux déjà
         ouverts au même horaire sont laissés intacts : en changer la capacité ou l&apos;heure
         déplacerait les rendez-vous des clients qui les ont déjà pris.
+      </p>
+    </form>
+  );
+}
+
+export function NewPickupLocationForm() {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [state, action] = useActionState<TaxonomyState, FormData>(
+    async (previous, formData) => {
+      const result = await createPickupLocationAction(previous, formData);
+      if (result.status === "saved") formRef.current?.reset();
+      return result;
+    },
+    { status: "idle" },
+  );
+
+  return (
+    <form
+      ref={formRef}
+      action={action}
+      className="flex max-w-3xl flex-col gap-4 rounded-lg border border-line bg-surface p-5"
+    >
+      <h3 className="font-display text-base font-semibold text-forest-900">
+        Nouveau point de ramassage
+      </h3>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass} htmlFor="new-pl-name">
+            Nom affiché au client
+          </label>
+          <input
+            id="new-pl-name"
+            name="name"
+            required
+            maxLength={120}
+            placeholder="Ramassage à Laval"
+            className={input}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass} htmlFor="new-pl-line1">
+            Adresse
+          </label>
+          <input id="new-pl-line1" name="line1" required className={input} />
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass} htmlFor="new-pl-city">
+            Ville
+          </label>
+          <input
+            id="new-pl-city"
+            name="city"
+            required
+            defaultValue="Montréal"
+            className={input}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass} htmlFor="new-pl-postal">
+            Code postal
+          </label>
+          <input id="new-pl-postal" name="postalCode" className={input} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass} htmlFor="new-pl-hours">
+            Horaires
+          </label>
+          <input
+            id="new-pl-hours"
+            name="hoursNote"
+            placeholder="Mardi au samedi, 10 h à 18 h"
+            className={input}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4">
+        <Button type="submit" variant="secondary">
+          <Plus aria-hidden="true" className="size-4" />
+          Ajouter le point
+        </Button>
+        <Feedback state={state} />
+      </div>
+
+      <p className={hint}>
+        Le point est actif dès sa création, mais <strong>invisible du client tant
+        qu&apos;aucun créneau ne lui est rattaché</strong> : ouvrez-lui des créneaux
+        ci-dessous. Les consignes bilingues se rédigent ensuite, en le modifiant.
       </p>
     </form>
   );

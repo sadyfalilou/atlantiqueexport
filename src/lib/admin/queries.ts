@@ -710,13 +710,30 @@ export interface AdminPickupLocation {
   instructionsFr: string;
   instructionsEn: string;
   isActive: boolean;
+  /** Créneaux à venir : sans eux, le point reste invisible du client. */
+  upcomingSlots: number;
 }
 
 export async function getPickupLocations(): Promise<AdminPickupLocation[]> {
   const supabase = createAdminClient();
-  const { data } = await supabase.from("pickup_locations").select("*").order("name");
+  const today = new Date().toISOString().slice(0, 10);
 
-  return ((data ?? []) as Row[]).map((row) => {
+  const [locations, slots] = await Promise.all([
+    supabase.from("pickup_locations").select("*").order("name"),
+    supabase
+      .from("delivery_slots")
+      .select("pickup_location_id")
+      .eq("is_active", true)
+      .gte("slot_date", today),
+  ]);
+
+  const counts = new Map<string, number>();
+  for (const row of (slots.data ?? []) as Row[]) {
+    const id = row.pickup_location_id as string | null;
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+
+  return ((locations.data ?? []) as Row[]).map((row) => {
     const address = (row.address ?? {}) as Record<string, unknown>;
     const hours = (row.opening_hours ?? {}) as Record<string, unknown>;
     return {
@@ -731,6 +748,7 @@ export async function getPickupLocations(): Promise<AdminPickupLocation[]> {
       instructionsFr: (row.instructions_fr as string | null) ?? "",
       instructionsEn: (row.instructions_en as string | null) ?? "",
       isActive: row.is_active !== false,
+      upcomingSlots: counts.get(row.id as string) ?? 0,
     };
   });
 }

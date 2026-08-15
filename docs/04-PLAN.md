@@ -352,6 +352,23 @@ est par ailleurs contrainte aux chemins internes — sans quoi `?next=https://�
 de ce lien, signé par le domaine et arrivé dans un vrai courriel, un tremplin vers un site
 tiers.
 
+### ⚠️ Défaut trouvé et corrigé (15 août 2026)
+
+**Le tunnel de commande prenait le PREMIER point de ramassage en dur.** Il posait
+`pickupLocations[0]` dans un champ caché, sans jamais proposer de choix. Tant qu'un seul
+point existait, personne ne pouvait s'en apercevoir ; en ouvrir un second l'aurait rendu
+inatteignable — et les créneaux, qui sont rattachés à un point précis, se seraient
+affichés tous mélangés, laissant choisir l'heure d'ouverture d'un autre endroit.
+
+Le tunnel propose désormais les points, et **filtre les créneaux sur celui qui est
+choisi**. Avec un seul point, il est annoncé sans faire choisir — un formulaire ne doit
+pas demander d'arbitrer entre une seule option.
+
+Les secteurs de livraison locale sont par ailleurs annoncés **avant** la saisie du code
+postal : le client sait où l'on va, au lieu de taper son adresse pour découvrir qu'on ne
+vient pas chez lui. La zone reste déduite du code postal et jamais reçue du formulaire —
+la désigner soi-même reviendrait à choisir son tarif.
+
 ## Lot 8 — Paiement et commandes 🚧
 
 - Tunnel de commande en une page, quatre sections, validation Zod partagée
@@ -499,10 +516,14 @@ une adresse d'exemple vers laquelle quelqu'un enverrait de l'argent.
 - ✅ **Les tuiles « aujourd'hui » du tableau de bord mènent aux commandes concernées.**
   « Ramassages aujourd'hui » et « Livraisons aujourd'hui » affichaient un nombre sans
   moyen de savoir lequel. La date est recalculée côté serveur, jamais reçue du lien.
-- ✅ **Points de ramassage** : nom, adresse, horaires en texte libre, consignes bilingues.
-  Une pastille « adresse à renseigner » s'allume tant que l'adresse posée par le script de
-  semis n'a pas été remplacée — sans quoi le client reçoit une promesse creuse à la
-  confirmation de sa commande.
+- ✅ **Points de ramassage** : création, modification, retrait de la proposition. Nom,
+  adresse, horaires en texte libre, consignes bilingues. Une pastille « adresse à
+  renseigner » s'allume tant que l'adresse posée par le script de semis n'a pas été
+  remplacée — sans quoi le client reçoit une promesse creuse à la confirmation de sa
+  commande. Une seconde pastille signale les points **sans créneau à venir** : ils sont
+  invisibles du client, puisque ce sont les créneaux qui portent les heures de passage.
+  Un point ne se supprime jamais — les commandes passées y renvoient, et ses créneaux
+  disparaîtraient en cascade avec les rendez-vous qu'ils portent.
 - ✅ **Créneaux** : ouverture par plage de dates, un créneau par jour, deux mois au
   maximum. Les créneaux déjà ouverts au même horaire sont **laissés intacts** : en changer
   la capacité ou l'heure déplacerait les rendez-vous des clients qui les ont pris. Un

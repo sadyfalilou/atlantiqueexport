@@ -58,6 +58,7 @@ export function CheckoutForm({
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("CA");
   const [province, setProvince] = useState("");
+  const [pickupId, setPickupId] = useState(pickupLocations[0]?.id ?? "");
   const [state, formAction] = useActionState<CheckoutState, FormData>(
     placeOrderAction,
     { status: "idle" },
@@ -76,12 +77,17 @@ export function CheckoutForm({
   }, [postalCode, zones]);
 
   const visibleSlots = useMemo(() => {
-    if (method === "pickup") return slots.filter((s) => s.method === "pickup");
+    // Un créneau appartient à un point de ramassage précis : les afficher tous
+    // ferait choisir une heure d'ouverture d'un autre endroit que celui où le
+    // client compte se rendre.
+    if (method === "pickup") {
+      return slots.filter((s) => s.method === "pickup" && s.pickupLocationId === pickupId);
+    }
     if (method === "local_delivery") {
       return slots.filter((s) => s.method === "local_delivery" && s.zoneId === zone?.id);
     }
     return [];
-  }, [method, slots, zone]);
+  }, [method, slots, zone, pickupId]);
 
   /** Les pays desservis, déduits des zones : aucune liste codée en dur. */
   const countries = useMemo(
@@ -164,13 +170,66 @@ export function CheckoutForm({
           <legend className="font-display text-lg font-semibold text-forest-900">
             {t("pickupTitle")}
           </legend>
-          <input type="hidden" name="pickupLocationId" value={pickupLocations[0].id} />
-          <div className="mt-3 rounded-md border border-line bg-surface p-4">
-            <p className="font-semibold text-forest-900">{pickupLocations[0].name}</p>
-            {pickupLocations[0].instructions ? (
-              <p className="mt-1 text-sm text-muted">{pickupLocations[0].instructions}</p>
-            ) : null}
-          </div>
+
+          {/*
+            Un seul point : on l'annonce sans faire choisir. Plusieurs : chacun
+            a ses propres créneaux, et le choix doit précéder l'horaire.
+          */}
+          {pickupLocations.length === 1 ? (
+            <>
+              <input
+                type="hidden"
+                name="pickupLocationId"
+                value={pickupLocations[0].id}
+              />
+              <div className="mt-3 rounded-md border border-line bg-surface p-4">
+                <p className="font-semibold text-forest-900">
+                  {pickupLocations[0].name}
+                </p>
+                {pickupLocations[0].address ? (
+                  <p className="text-sm text-muted">{pickupLocations[0].address}</p>
+                ) : null}
+                {pickupLocations[0].instructions ? (
+                  <p className="mt-1 text-sm text-muted">
+                    {pickupLocations[0].instructions}
+                  </p>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {pickupLocations.map((location) => (
+                <label
+                  key={location.id}
+                  className={`flex cursor-pointer items-start gap-3 rounded-md border-2 p-4 transition-colors ${
+                    pickupId === location.id
+                      ? "border-forest-800 bg-forest-50"
+                      : "border-line-strong hover:border-forest-600"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="pickupLocationId"
+                    value={location.id}
+                    checked={pickupId === location.id}
+                    onChange={() => setPickupId(location.id)}
+                    className="mt-1 size-4 accent-[var(--color-forest-800)]"
+                  />
+                  <span>
+                    <span className="block font-semibold text-forest-900">
+                      {location.name}
+                    </span>
+                    {location.address ? (
+                      <span className="block text-sm text-muted">{location.address}</span>
+                    ) : null}
+                    {location.hours ? (
+                      <span className="block text-sm text-muted">{location.hours}</span>
+                    ) : null}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
         </fieldset>
       ) : null}
 
@@ -299,6 +358,17 @@ export function CheckoutForm({
                   {t("outsideShipping")}
                 </span>
               )}
+            </p>
+          ) : null}
+
+          {/*
+            Les secteurs desservis, annoncés AVANT la saisie : sans cela, le
+            client tape son code postal pour découvrir qu'on ne va pas chez
+            lui, et rien ne lui dit où l'on va.
+          */}
+          {method === "local_delivery" && postalCode.replace(/\s/g, "").length < 3 ? (
+            <p className="text-sm text-muted">
+              {t("servedAreas", { areas: zones.map((z) => z.name).join(" · ") })}
             </p>
           ) : null}
 
