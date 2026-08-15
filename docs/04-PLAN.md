@@ -676,10 +676,18 @@ sont filtrés pour écarter `javascript:`.
 - ⬜ `is_wholesale_only` ne filtre toujours rien : un produit réservé au gros serait visible
   de tous. Aucun n'est marqué ainsi aujourd'hui.
 - ⬜ Minimum de commande professionnel, conditions de paiement, prix négociés par client
-- **Vérification** : ⚠️ **la migration n'est pas encore appliquée à la base.** Tant que
-  `npm run db:push` n'a pas tourné, `place_order` facture le prix public — le panier
-  afficherait alors un tarif de gros que la commande ne retiendrait pas. À faire suivre
-  d'un `npm run smoke:order`.
+- **Vérifié contre la base réelle** — migration appliquée, `npm run smoke:order` étendu à
+  cinq cas et porté à **21 épreuves, 0 échec** :
+  - professionnel approuvé : 2 × 700 = 1400 cents, le tarif de gros est bien facturé
+  - sans compte : 2 × 1000 = 2000 cents, prix public
+  - promotion sous le tarif négocié : 2 × 500 = 1000 cents — le professionnel paie le prix
+    public, jamais davantage
+  - format sans tarif saisi : prix public, et surtout **aucun refus de commande**
+  - demande refusée : aucun tarif ouvert
+  - compte de test et données supprimés en fin d'épreuve
+
+  Ces cas restent dans `smoke-order.mjs` : la règle est écrite à deux endroits, c'est
+  l'épreuve qui garantit qu'ils continuent de dire la même chose.
 
 ⚠️ **Les prix de gros en base sont des données de démonstration**, comme les prix publics :
 la boutique porte encore le bandeau « mode démonstration ». Les 86 formats ont un tarif à

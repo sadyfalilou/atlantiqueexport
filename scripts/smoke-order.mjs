@@ -182,12 +182,118 @@ const emptyCart = await post("/rest/v1/carts", {
 const emptyOrder = await order(emptyCart.json[0].id);
 check(emptyOrder.status !== 200, "commande refusée sur panier vide", emptyOrder.json?.message ?? "");
 
+/* --- 5. Tarif professionnel ------------------------------------------------ */
+
+// Ce que cette section démontre : approuver un compte professionnel change
+// bien le MONTANT FACTURÉ, et pas seulement l'affichage. Le prix est relu en
+// base par `place_order` ; ce que le navigateur envoie n'intervient jamais.
+
+const proEmail = `__test-pro-${crypto.randomUUID()}@example.ca`;
+const created = await post("/auth/v1/admin/users", {
+  email: proEmail,
+  password: crypto.randomUUID(),
+  email_confirm: true,
+});
+const proUserId = created.json?.id;
+check(!!proUserId, "compte de test créé");
+
+// Le profil naît d'un déclencheur sur `auth.users` ; `business_accounts` s'y
+// rattache. Le statut est posé ici avec la clé de service — le client, lui,
+// n'a qu'un droit de lecture, c'est tout l'objet de la politique.
+await post("/rest/v1/business_accounts", {
+  profile_id: proUserId,
+  company_name: "__test Grossiste",
+  status: "approved",
+});
+
+await api(`/rest/v1/product_variants?id=eq.${variantId}`, {
+  method: "PATCH",
+  body: JSON.stringify({ wholesale_price_cents: 700 }),
+});
+await api(`/rest/v1/stock_levels?variant_id=eq.${variantId}`, {
+  method: "PATCH",
+  body: JSON.stringify({ quantity_on_hand: 20 }),
+});
+
+const cartPro = await makeCart(2);
+const proOrder = await order(cartPro, { p_user_id: proUserId, p_email: proEmail });
+check(
+  proOrder.json?.[0]?.total_cents === 1400,
+  "tarif de gros facturé au professionnel — 2 × 700",
+  `${proOrder.json?.[0]?.total_cents} cents`,
+);
+
+// Le même panier, sans compte : le prix public s'applique.
+const cartAnon = await makeCart(2);
+const anonOrder = await order(cartAnon);
+check(
+  anonOrder.json?.[0]?.total_cents === 2000,
+  "prix public facturé sans compte — 2 × 1000",
+  `${anonOrder.json?.[0]?.total_cents} cents`,
+);
+
+// Une promotion descend le prix public SOUS le tarif négocié. Le
+// professionnel doit payer le prix public : sans le `least`, il paierait plus
+// cher que le particulier.
+await api(`/rest/v1/product_variants?id=eq.${variantId}`, {
+  method: "PATCH",
+  body: JSON.stringify({ retail_price_cents: 500 }),
+});
+const cartPromo = await makeCart(2);
+const promoOrder = await order(cartPromo, { p_user_id: proUserId, p_email: proEmail });
+check(
+  promoOrder.json?.[0]?.total_cents === 1000,
+  "le professionnel ne paie jamais plus que le public — 2 × 500",
+  `${promoOrder.json?.[0]?.total_cents} cents`,
+);
+
+// Format sans tarif de gros : le prix public, et surtout aucun refus.
+await api(`/rest/v1/product_variants?id=eq.${variantId}`, {
+  method: "PATCH",
+  body: JSON.stringify({ retail_price_cents: 1000, wholesale_price_cents: null }),
+});
+const cartNoWholesale = await makeCart(2);
+const noWholesale = await order(cartNoWholesale, {
+  p_user_id: proUserId,
+  p_email: proEmail,
+});
+check(
+  noWholesale.json?.[0]?.total_cents === 2000,
+  "sans tarif saisi, le prix public s'applique — 2 × 1000",
+  `${noWholesale.json?.[0]?.total_cents} cents`,
+);
+
+// Un compte dont la demande est refusée n'obtient rien.
+await api(`/rest/v1/business_accounts?profile_id=eq.${proUserId}`, {
+  method: "PATCH",
+  body: JSON.stringify({ status: "rejected" }),
+});
+await api(`/rest/v1/product_variants?id=eq.${variantId}`, {
+  method: "PATCH",
+  body: JSON.stringify({ wholesale_price_cents: 700 }),
+});
+const cartRejected = await makeCart(2);
+const rejected = await order(cartRejected, { p_user_id: proUserId, p_email: proEmail });
+check(
+  rejected.json?.[0]?.total_cents === 2000,
+  "une demande refusée n'ouvre aucun tarif — 2 × 1000",
+  `${rejected.json?.[0]?.total_cents} cents`,
+);
+
 /* --- Nettoyage ------------------------------------------------------------- */
 
 await del(`/rest/v1/orders?email=eq.test@example.ca`);
+await del(`/rest/v1/orders?email=eq.${encodeURIComponent(proEmail)}`);
+await del(`/rest/v1/business_accounts?profile_id=eq.${proUserId}`);
+if (proUserId) await del(`/auth/v1/admin/users/${proUserId}`);
 await del(`/rest/v1/carts?token=like.__test*`);
 await del(`/rest/v1/products?slug=eq.__test-order-prod`);
 await del(`/rest/v1/categories?slug=eq.__test-order-cat`);
+
+const proLeft = await api(
+  `/rest/v1/business_accounts?company_name=like.__test*&select=id`,
+);
+check(proLeft.json.length === 0, "compte professionnel de test supprimé");
 
 const leftovers = await api("/rest/v1/products?slug=like.__test*&select=id");
 check(leftovers.json.length === 0, "données de test supprimées");
