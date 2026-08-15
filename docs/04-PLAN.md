@@ -290,7 +290,27 @@ tiers.
 - ✅ Instructions Interac sur la page de confirmation, avec le numéro à inscrire en message
 - ✅ Commande sans compte, consultable par un jeton en cookie `httpOnly`
 - ⬜ Validation administrateur des virements (lot 9)
-- ⬜ Expiration automatique des réservations non payées
+- ✅ **Expiration automatique des réservations non payées**, après 24 heures :
+  `expire_unpaid_orders` rend le stock, libère le créneau, passe la commande en
+  « annulée » et annote le journal du motif. Route `/api/cron/expirer-commandes`,
+  appelée une fois par heure.
+
+**Une promesse écrite que le code ne tenait pas.** Les conditions de vente annoncent au
+client : « Le stock est réservé pour vous pendant 24 heures ; passé ce délai sans virement,
+la réservation est libérée et la commande annulée. » `release_stock` et
+`release_delivery_slot` existaient depuis le lot 2 — mais **rien ne les appelait**, hors le
+script de fumée. Une commande jamais payée gardait son stock réservé indéfiniment, et ce
+stock devenait invendable sans que personne ne s'en aperçoive.
+
+**Vérifié sur une vraie commande** : une commande récente est ignorée ; vieillie de 30 h,
+elle est annulée, ses 2 unités reviennent en vente, le registre montre `reservation -2`
+puis `release +2`, et un second passage ne la retraite pas.
+
+**Écueil rencontré.** La première version insérait sa propre ligne au journal des
+commandes. Or le déclencheur `log_order_status_change`, posé au lot 2, enregistre déjà
+toute transition : chaque commande expirée se retrouvait avec **deux** entrées identiques,
+dont une sans motif. La fonction annote désormais la ligne du déclencheur au lieu d'en
+ajouter une.
 - ⬜ Courriels de confirmation (lot 12)
 
 **Pourquoi une fonction SQL plutôt que plusieurs appels**
