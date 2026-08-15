@@ -5,7 +5,7 @@ import { Container, Section, SectionHeading } from "@/components/ui/layout-primi
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { getOpenShipments, getProductBySlug } from "@/lib/catalog/queries";
+import { getOpenShipments } from "@/lib/catalog/queries";
 import { cn, formatDate } from "@/lib/utils";
 import type { Locale } from "@/lib/types";
 
@@ -40,7 +40,13 @@ export async function ShipmentHighlight({ locale }: { locale: Locale }) {
                     </dt>
                     <dd className="mt-1 flex items-center gap-1.5 font-semibold text-forest-900">
                       <CalendarClock aria-hidden="true" className="size-4" />
-                      {formatDate(shipment.etaDate, locale)}
+                      {/*
+                        `formatDate` lève sur une date vide. Un arrivage publié
+                        sans date ne devrait pas exister — l'administration le
+                        refuse — mais la page d'accueil ne doit pas tomber pour
+                        autant si une ligne est modifiée ailleurs.
+                      */}
+                      {shipment.etaDate ? formatDate(shipment.etaDate, locale) : "—"}
                     </dd>
                   </div>
                   <div>
@@ -48,49 +54,55 @@ export async function ShipmentHighlight({ locale }: { locale: Locale }) {
                       {t("deadline")}
                     </dt>
                     <dd className="mt-1 font-semibold text-forest-900">
-                      {formatDate(shipment.reservationDeadline, locale)}
+                      {shipment.reservationDeadline
+                        ? formatDate(shipment.reservationDeadline, locale)
+                        : "—"}
                     </dd>
                   </div>
                 </dl>
 
                 <ul className="mt-5 space-y-4">
-                  {await Promise.all(
-                    shipment.items.map(async (item) => {
-                      const product = await getProductBySlug(item.productSlug);
-                      const percent = Math.round(
-                        (item.reservedQuantity / item.plannedQuantity) * 100,
-                      );
+                  {shipment.items.map((item) => {
+                    // Une quantité annoncée nulle ne devrait pas exister, mais
+                    // une division par zéro donnerait une barre à `NaN%` et
+                    // casserait la mise en page pour tout le monde.
+                    const percent =
+                      item.plannedQuantity > 0
+                        ? Math.round(
+                            (item.reservedQuantity / item.plannedQuantity) * 100,
+                          )
+                        : 0;
+                    const name = [item.name[locale], item.label[locale]]
+                      .filter(Boolean)
+                      .join(" — ");
 
-                      return (
-                        <li key={item.productSlug}>
-                          <div className="flex flex-wrap items-baseline justify-between gap-2">
-                            <span className="font-semibold text-forest-900">
-                              {product?.name[locale] ?? item.productSlug}
-                            </span>
-                            <span className="tabular text-sm text-muted">
-                              {t("reserved", {
-                                reserved: item.reservedQuantity,
-                                planned: item.plannedQuantity,
-                              })}
-                            </span>
-                          </div>
+                    return (
+                      <li key={item.variantId}>
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <span className="font-semibold text-forest-900">{name}</span>
+                          <span className="tabular text-sm text-muted">
+                            {t("reserved", {
+                              reserved: item.reservedQuantity,
+                              planned: item.plannedQuantity,
+                            })}
+                          </span>
+                        </div>
+                        <div
+                          className="mt-1.5 h-2 overflow-hidden rounded-full bg-cream-200"
+                          role="progressbar"
+                          aria-valuenow={percent}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={name}
+                        >
                           <div
-                            className="mt-1.5 h-2 overflow-hidden rounded-full bg-cream-200"
-                            role="progressbar"
-                            aria-valuenow={percent}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-label={product?.name[locale] ?? item.productSlug}
-                          >
-                            <div
-                              className="h-full rounded-full bg-mango-700"
-                              style={{ width: `${percent}%` }}
-                            />
-                          </div>
-                        </li>
-                      );
-                    }),
-                  )}
+                            className="h-full rounded-full bg-mango-700"
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CatalogueView } from "@/components/catalog/catalogue-view";
 import { parseFilters, sortProducts } from "@/lib/catalog/filters";
-import { getMegaMenuCategories, getPromotedProducts } from "@/lib/catalog/queries";
+import { getCategories, getPromotedProducts } from "@/lib/catalog/queries";
 import type { Locale } from "@/lib/types";
 
 export const revalidate = 300;
@@ -34,7 +34,7 @@ export default async function PromotionsPage({
   const t = await getTranslations("home.deals");
 
   const [categories, products] = await Promise.all([
-    getMegaMenuCategories(),
+    getCategories(),
     getPromotedProducts(100),
   ]);
 

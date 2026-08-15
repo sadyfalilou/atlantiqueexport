@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CatalogueView } from "@/components/catalog/catalogue-view";
 import { applyFilters, parseFilters } from "@/lib/catalog/filters";
-import { getCatalogue, getMegaMenuCategories } from "@/lib/catalog/queries";
+import { getCatalogue, getCategories } from "@/lib/catalog/queries";
 import type { Locale } from "@/lib/types";
 
 export const revalidate = 300;
@@ -34,7 +34,7 @@ export default async function ShopPage({
   const t = await getTranslations("shop");
 
   const [categories, catalogue] = await Promise.all([
-    getMegaMenuCategories(),
+    getCategories(),
     getCatalogue({
       categorySlug: filters.category,
       brandSlug: filters.brand,

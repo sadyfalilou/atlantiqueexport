@@ -1,13 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Container, Section, SectionHeading } from "@/components/ui/layout-primitives";
-import { getMegaMenuCategories } from "@/lib/catalog/queries";
+import { getCategories } from "@/lib/catalog/queries";
 import type { Locale } from "@/lib/types";
 
 export async function CategoryGrid({ locale }: { locale: Locale }) {
   const t = await getTranslations("home.categories");
   // Les catégories virtuelles (Nouveautés, Promotions) ont leur propre section.
-  const categories = (await getMegaMenuCategories()).filter((c) => !c.isVirtual);
+  const categories = (await getCategories()).filter((c) => !c.isVirtual);
 
   return (
     <Section className="bg-cream-100">

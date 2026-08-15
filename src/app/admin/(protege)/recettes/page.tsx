@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { getAdminRecipes } from "@/lib/admin/queries";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
 import { NewRecipeForm } from "@/components/admin/new-recipe-form";
+import { PublishToggle } from "@/components/admin/publish-toggle";
+import { toggleRecipePublishAction } from "@/app/actions/admin";
 
 export const metadata: Metadata = { title: "Recettes" };
 export const dynamic = "force-dynamic";
@@ -71,17 +73,16 @@ export default async function AdminRecipesPage() {
                   {recipe.stepCount || <span className="text-warning">0</span>}
                 </td>
                 <td className="px-4 py-3">
-                  {recipe.isPublished ? (
-                    <span className="inline-flex items-center gap-1.5 text-success">
-                      <Eye aria-hidden="true" className="size-4" />
-                      En ligne
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-muted">
-                      <EyeOff aria-hidden="true" className="size-4" />
-                      Masquée
-                    </span>
-                  )}
+                  <PublishToggle
+                    action={toggleRecipePublishAction}
+                    idField="recipeId"
+                    id={recipe.id}
+                    isPublished={recipe.isPublished}
+                    // Une recette sans étape ne peut pas être publiée : le
+                    // bouton disparaît plutôt que d'échouer en silence.
+                    canEdit={canEdit && (recipe.isPublished || recipe.stepCount > 0)}
+                    hiddenLabel="Masquée"
+                  />
                 </td>
               </tr>
             ))}

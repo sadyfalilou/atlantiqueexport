@@ -319,6 +319,367 @@ export async function togglePublishAction(formData: FormData): Promise<void> {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Arrivages                                                                   */
+/* -------------------------------------------------------------------------- */
+
+const SHIPMENT_STATUSES = [
+  "announced",
+  "reservations_open",
+  "in_transit",
+  "arrived",
+  "preparing",
+  "available",
+  "completed",
+  "delayed",
+  "cancelled",
+] as const;
+
+const shipmentInput = z.object({
+  id: z.uuid(),
+  titleFr: z.string().trim().min(2).max(200),
+  titleEn: z.string().trim().min(2).max(200),
+  notesFr: z.string().trim().max(2000).optional(),
+  notesEn: z.string().trim().max(2000).optional(),
+  originCountry: z.string().trim().max(60).optional(),
+  status: z.enum(SHIPMENT_STATUSES),
+  etaDate: z.string().trim().max(10).optional(),
+  reservationDeadline: z.string().trim().max(10).optional(),
+});
+
+/** Champ date vide → `null` en base, plutôt qu'une chaîne que Postgres refuse. */
+function toDateOrNull(value: string | undefined): string | null {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+/**
+ * Crée l'arrivage, puis ouvre sa fiche.
+ *
+ * Le code est dérivé de l'année et du titre — « 2026-MADD » — parce qu'il sert
+ * d'adresse dans l'administration et se retrouve dans les échanges avec le
+ * transitaire : un identifiant aléatoire y serait illisible.
+ */
+export async function createShipmentAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = z
+    .object({
+      titleFr: z.string().trim().min(2).max(200),
+      titleEn: z.string().trim().min(2).max(200),
+      originCountry: z.string().trim().max(60).optional(),
+    })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { status: "error", message: "Les deux titres sont requis." };
+  }
+
+  const base = `${new Date().getFullYear()}-${slugify(parsed.data.titleFr).toUpperCase()}`;
+  if (base.length < 6) {
+    return { status: "error", message: "Le titre ne donne aucun code valide." };
+  }
+
+  const supabase = createAdminClient();
+
+  let code = base;
+  for (let attempt = 2; attempt <= 50; attempt += 1) {
+    const { data } = await supabase.from("shipments").select("id").eq("code", code).limit(1);
+    if (!data?.length) break;
+    code = `${base}-${attempt}`;
+  }
+
+  const { error } = await supabase.from("shipments").insert({
+    code,
+    title_fr: parsed.data.titleFr,
+    title_en: parsed.data.titleEn,
+    origin_country: parsed.data.originCountry || null,
+    status: "announced",
+    is_published: false,
+  });
+
+  if (error) {
+    console.error("Création de l'arrivage refusée :", error);
+    return { status: "error", message: "La création a échoué." };
+  }
+
+  await logAdminAction(member.userId, "shipment.create", "shipments", null, { code });
+
+  revalidatePath("/admin/arrivages");
+  redirect(`/admin/arrivages/${code}`);
+}
+
+export async function saveShipmentAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = shipmentInput.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const field = String(parsed.error.issues[0]?.path?.[0] ?? "");
+    return { status: "error", message: `Champ incomplet ou invalide : ${field}.` };
+  }
+  const input = parsed.data;
+
+  const eta = toDateOrNull(input.etaDate);
+  const deadline = toDateOrNull(input.reservationDeadline);
+
+  // Réserver après l'arrivée de la marchandise n'a pas de sens : le client
+  // réserve ce qui n'est pas encore là.
+  if (eta && deadline && deadline > eta) {
+    return {
+      status: "error",
+      message: "La fin des réservations doit précéder la date d'arrivée.",
+    };
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("shipments")
+    .update({
+      title_fr: input.titleFr,
+      title_en: input.titleEn,
+      notes_fr: input.notesFr || null,
+      notes_en: input.notesEn || null,
+      origin_country: input.originCountry || null,
+      status: input.status,
+      eta_date: eta,
+      reservation_deadline: deadline,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.id);
+
+  if (error) {
+    console.error("Modification de l'arrivage refusée :", error);
+    return { status: "error", message: "L'enregistrement a échoué." };
+  }
+
+  await logAdminAction(member.userId, "shipment.update", "shipments", input.id);
+
+  revalidatePath("/admin/arrivages");
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/**
+ * Met l'arrivage en ligne, ou le retire.
+ *
+ * Publier sans date est refusé : la page d'accueil annonce une date d'arrivée
+ * et une fin de réservation, et n'a rien à afficher sans elles.
+ */
+export async function toggleShipmentPublishAction(formData: FormData): Promise<void> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) return;
+
+  const shipmentId = formData.get("shipmentId");
+  const publish = formData.get("publish") === "1";
+  if (typeof shipmentId !== "string") return;
+
+  const supabase = createAdminClient();
+
+  if (publish) {
+    const { data } = await supabase
+      .from("shipments")
+      .select("eta_date, reservation_deadline")
+      .eq("id", shipmentId)
+      .limit(1);
+
+    const row = data?.[0];
+    if (!row?.eta_date || !row?.reservation_deadline) return;
+  }
+
+  const { error } = await supabase
+    .from("shipments")
+    .update({ is_published: publish, updated_at: new Date().toISOString() })
+    .eq("id", shipmentId);
+
+  if (error) {
+    console.error("Publication de l'arrivage refusée :", error);
+    return;
+  }
+
+  await logAdminAction(
+    member.userId,
+    publish ? "shipment.publish" : "shipment.unpublish",
+    "shipments",
+    shipmentId,
+  );
+
+  revalidatePath("/admin/arrivages");
+  revalidatePath("/", "layout");
+}
+
+export async function addShipmentItemAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = z
+    .object({
+      shipmentId: z.uuid(),
+      variantId: z.uuid(),
+      plannedQuantity: z.string().trim(),
+      deposit: z.string().trim().optional(),
+    })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { status: "error", message: "Choisissez un format et une quantité." };
+  }
+
+  const planned = Number(parsed.data.plannedQuantity);
+  if (!Number.isInteger(planned) || planned <= 0) {
+    return { status: "error", message: "La quantité annoncée doit être un entier positif." };
+  }
+
+  const depositCents = parsed.data.deposit
+    ? Math.round(Number(parsed.data.deposit.replace(",", ".")) * 100)
+    : 0;
+
+  if (!Number.isInteger(depositCents) || depositCents < 0) {
+    return { status: "error", message: "L'acompte est invalide." };
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("shipment_items").insert({
+    shipment_id: parsed.data.shipmentId,
+    variant_id: parsed.data.variantId,
+    planned_quantity: planned,
+    deposit_cents: depositCents,
+  });
+
+  if (error) {
+    console.error("Ajout au manifeste refusé :", error);
+    return {
+      status: "error",
+      // La contrainte d'unicité est le refus le plus probable, et le seul que
+      // l'utilisateur peut corriger lui-même.
+      message:
+        error.code === "23505"
+          ? "Ce format figure déjà dans cet arrivage."
+          : "L'ajout a échoué.",
+    };
+  }
+
+  await logAdminAction(
+    member.userId,
+    "shipment.item_add",
+    "shipment_items",
+    parsed.data.shipmentId,
+    { variantId: parsed.data.variantId, planned },
+  );
+
+  revalidatePath("/admin/arrivages");
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/**
+ * Retire un format du manifeste.
+ *
+ * Refusé dès qu'une réservation existe : la suppression en cascade effacerait
+ * les réservations des clients, et donc leur acompte, sans laisser de trace.
+ */
+export async function removeShipmentItemAction(formData: FormData): Promise<void> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) return;
+
+  const itemId = formData.get("itemId");
+  if (typeof itemId !== "string") return;
+
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("shipment_items")
+    .select("reserved_quantity, shipment_id")
+    .eq("id", itemId)
+    .limit(1);
+
+  const row = data?.[0];
+  if (!row || (row.reserved_quantity as number) > 0) return;
+
+  const { error } = await supabase.from("shipment_items").delete().eq("id", itemId);
+  if (error) {
+    console.error("Retrait du manifeste refusé :", error);
+    return;
+  }
+
+  await logAdminAction(
+    member.userId,
+    "shipment.item_remove",
+    "shipment_items",
+    row.shipment_id as string,
+  );
+
+  revalidatePath("/admin/arrivages");
+  revalidatePath("/", "layout");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Demandes de compte professionnel                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Tranche une demande de compte professionnel.
+ *
+ * Approuver ne change aucun prix aujourd'hui : le panier et `place_order`
+ * facturent `retail_price_cents` à tout le monde, et `wholesale_price_cents`
+ * n'est même pas accordé en lecture au niveau de PostgreSQL. La fonction
+ * `has_approved_business_account()` attend le lot consacré aux clients
+ * professionnels pour servir de garde.
+ *
+ * La décision est malgré tout réservée aux rôles qui engagent les prix, et
+ * journalisée : le jour où ce garde sera branché, il s'appuiera sur ces
+ * statuts, et savoir qui a accordé quoi, et quand, sera indispensable.
+ *
+ * Aucun courriel n'est envoyé au client : la file d'attente ne connaît pas ce
+ * type de message. C'est à vous de le contacter, comme le formulaire le
+ * promet.
+ */
+export async function decideBusinessAccountAction(formData: FormData): Promise<void> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) return;
+
+  const id = formData.get("id");
+  const decision = formData.get("decision");
+  if (typeof id !== "string") return;
+  if (decision !== "approved" && decision !== "rejected" && decision !== "pending") return;
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("business_accounts")
+    .update({
+      status: decision,
+      approved_by: decision === "approved" ? member.userId : null,
+      approved_at: decision === "approved" ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Décision sur la demande professionnelle refusée :", error);
+    return;
+  }
+
+  await logAdminAction(member.userId, `business.${decision}`, "business_accounts", id);
+
+  revalidatePath("/admin/demandes-pro");
+  revalidatePath("/admin");
+  revalidatePath("/", "layout");
+}
+
+/* -------------------------------------------------------------------------- */
 /* Création d'un produit                                                       */
 /* -------------------------------------------------------------------------- */
 
@@ -1100,6 +1461,55 @@ export async function createRecipeAction(
 
   revalidatePath("/admin/recettes");
   redirect(`/admin/recettes/${slug}`);
+}
+
+/**
+ * Met une recette en ligne ou la retire, depuis la liste.
+ *
+ * Même garde-fou qu'à l'enregistrement : une recette sans étape publierait une
+ * page qui n'apprend rien. Le refus est silencieux ici — la liste ne porte pas
+ * de zone de message — mais l'état affiché ne bouge pas, ce qui se voit.
+ */
+export async function toggleRecipePublishAction(formData: FormData): Promise<void> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) return;
+
+  const recipeId = formData.get("recipeId");
+  const publish = formData.get("publish") === "1";
+  if (typeof recipeId !== "string") return;
+
+  const supabase = createAdminClient();
+
+  if (publish) {
+    const { data } = await supabase
+      .from("recipes")
+      .select("steps")
+      .eq("id", recipeId)
+      .limit(1);
+
+    const steps = (data?.[0]?.steps as unknown[] | null) ?? [];
+    if (steps.length === 0) return;
+  }
+
+  const { error } = await supabase
+    .from("recipes")
+    .update({ is_published: publish, updated_at: new Date().toISOString() })
+    .eq("id", recipeId);
+
+  if (error) {
+    console.error("Bascule de publication refusée :", error);
+    return;
+  }
+
+  await logAdminAction(
+    member.userId,
+    publish ? "recipe.publish" : "recipe.unpublish",
+    "recipes",
+    recipeId,
+  );
+
+  revalidatePath("/admin/recettes");
+  revalidatePath("/", "layout");
 }
 
 export async function saveRecipeAction(

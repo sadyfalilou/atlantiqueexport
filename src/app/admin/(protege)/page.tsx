@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { AlertTriangle, Banknote, PackageCheck, Truck } from "lucide-react";
+import {
+  AlertTriangle,
+  Banknote,
+  Briefcase,
+  PackageCheck,
+  TrendingUp,
+  Truck,
+} from "lucide-react";
 import { getDashboard } from "@/lib/admin/queries";
 import { formatPrice } from "@/lib/utils";
 
@@ -17,7 +24,7 @@ export default async function AdminDashboardPage() {
         Ce qui demande une action aujourd&apos;hui.
       </p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Stat
           label="Virements à valider"
           value={figures.pendingPayment}
@@ -26,9 +33,16 @@ export default async function AdminDashboardPage() {
           urgent={figures.pendingPayment > 0}
         />
         <Stat
+          label="Demandes pro"
+          value={figures.pendingBusiness}
+          href="/admin/demandes-pro"
+          icon={<Briefcase className="size-5" />}
+          urgent={figures.pendingBusiness > 0}
+        />
+        <Stat
           label="Commandes à préparer"
           value={figures.toPrepare}
-          href="/admin/commandes?statut=confirmed"
+          href="/admin/commandes?statut=a-preparer"
           icon={<PackageCheck className="size-5" />}
         />
         <Stat
@@ -42,6 +56,59 @@ export default async function AdminDashboardPage() {
           icon={<Truck className="size-5" />}
         />
       </div>
+
+      <section className="mt-8 rounded-lg border border-line bg-surface p-5">
+        <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-forest-900">
+          <TrendingUp aria-hidden="true" className="size-5" />
+          Ce qui se vend le mieux
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          Formats les plus commandés sur {figures.topSellersDays} jours, commandes payées
+          seulement.
+        </p>
+
+        {figures.topSellers.length === 0 ? (
+          <p className="mt-4 text-sm text-muted">
+            Aucune vente payée sur la période. Le classement apparaîtra dès la première
+            commande encaissée.
+          </p>
+        ) : (
+          <ol className="mt-4 space-y-3">
+            {figures.topSellers.map((item) => (
+              <li key={item.sku}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 truncate font-semibold text-forest-900">
+                    {item.name}{" "}
+                    <span className="font-normal text-muted">{item.label}</span>
+                  </span>
+                  <span className="tabular shrink-0 text-sm text-forest-900">
+                    {item.quantity} vendu{item.quantity > 1 ? "s" : ""} ·{" "}
+                    {formatPrice(item.revenueCents, "fr")}
+                  </span>
+                </div>
+                {/*
+                  La barre se mesure au premier du classement : elle rend
+                  l'écart lisible d'un coup d'œil, ce qu'une colonne de nombres
+                  ne fait pas. Purement décorative, d'où l'absence de rôle.
+                */}
+                <div
+                  aria-hidden="true"
+                  className="mt-1.5 h-2 overflow-hidden rounded-full bg-cream-100"
+                >
+                  <div
+                    className="h-full rounded-full bg-forest-800"
+                    style={{
+                      width: `${Math.round(
+                        (item.quantity / figures.topSellers[0].quantity) * 100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <section className="rounded-lg border border-line bg-surface p-5">

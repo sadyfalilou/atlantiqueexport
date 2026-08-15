@@ -6,7 +6,7 @@ import { applyFilters, parseFilters } from "@/lib/catalog/filters";
 import {
   getCatalogue,
   getCategoryBySlug,
-  getMegaMenuCategories,
+  getCategories,
 } from "@/lib/catalog/queries";
 import type { Locale } from "@/lib/types";
 
@@ -15,7 +15,7 @@ export const revalidate = 300;
 type SearchParams = Record<string, string | string[] | undefined>;
 
 export async function generateStaticParams() {
-  const categories = await getMegaMenuCategories();
+  const categories = await getCategories();
   return categories.filter((c) => !c.isVirtual).map((c) => ({ category: c.slug }));
 }
 
@@ -55,7 +55,7 @@ export default async function CategoryPage({
   const filters = { ...parseFilters(query), category: slug };
 
   const [categories, catalogue] = await Promise.all([
-    getMegaMenuCategories(),
+    getCategories(),
     getCatalogue({
       categorySlug: slug,
       brandSlug: filters.brand,

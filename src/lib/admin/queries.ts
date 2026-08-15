@@ -84,14 +84,28 @@ function toOrder(row: Row): AdminOrder {
   };
 }
 
+/**
+ * Ce qui reste à préparer.
+ *
+ * Une commande passe de `confirmed` à `preparing` dès qu'on s'en occupe, mais
+ * elle n'est pas préparée pour autant. Les deux statuts forment un seul
+ * ensemble, et le compteur du tableau de bord comme la liste s'y réfèrent —
+ * sans quoi une commande comptée reste introuvable.
+ */
+export const TO_PREPARE_STATUSES = ["confirmed", "preparing"];
+
 export async function getOrders(filter?: {
-  status?: string;
+  status?: string | string[];
   paymentStatus?: string;
 }): Promise<AdminOrder[]> {
   const supabase = createAdminClient();
   let request = supabase.from("orders").select(ORDER_SELECT);
 
-  if (filter?.status) request = request.eq("status", filter.status);
+  if (Array.isArray(filter?.status)) {
+    request = request.in("status", filter.status);
+  } else if (filter?.status) {
+    request = request.eq("status", filter.status);
+  }
   if (filter?.paymentStatus) request = request.eq("payment_status", filter.paymentStatus);
 
   const { data } = await request.order("placed_at", { ascending: false }).limit(200);
@@ -110,6 +124,14 @@ export async function getOrderByNumber(orderNumber: string): Promise<AdminOrder 
   return row ? toOrder(row) : null;
 }
 
+export interface TopSeller {
+  sku: string;
+  name: string;
+  label: string;
+  quantity: number;
+  revenueCents: number;
+}
+
 export interface DashboardFigures {
   pendingPayment: number;
   toPrepare: number;
@@ -117,15 +139,26 @@ export interface DashboardFigures {
   todayDeliveries: number;
   paidRevenueCents: number;
   lowStock: Array<{ sku: string; name: string; available: number; threshold: number }>;
+  /** Formats les plus vendus sur les trente derniers jours. */
+  topSellers: TopSeller[];
+  /** Nombre de jours réellement couverts par ce classement. */
+  topSellersDays: number;
+  pendingBusiness: number;
 }
+
+/** Fenêtre du classement des ventes. Assez longue pour lisser une semaine creuse. */
+const TOP_SELLERS_DAYS = 30;
 
 export async function getDashboard(): Promise<DashboardFigures> {
   const supabase = createAdminClient();
   const today = new Date().toISOString().slice(0, 10);
+  const since = new Date(
+    Date.now() - TOP_SELLERS_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
 
-  const [pending, toPrepare, slotsToday, paid, stock] = await Promise.all([
+  const [pending, toPrepare, slotsToday, paid, stock, sold, business] = await Promise.all([
     supabase.from("orders").select("id").eq("payment_status", "pending"),
-    supabase.from("orders").select("id").in("status", ["confirmed", "preparing"]),
+    supabase.from("orders").select("id").in("status", TO_PREPARE_STATUSES),
     supabase
       .from("orders")
       .select("id, fulfillment_method, slot:delivery_slots!inner(slot_date)")
@@ -138,6 +171,18 @@ export async function getDashboard(): Promise<DashboardFigures> {
       )
       .order("quantity_available")
       .limit(200),
+    // `!inner` restreint aux lignes dont la commande est payée : une commande
+    // en attente de virement n'est pas une vente, et une commande annulée ne
+    // doit pas gonfler le classement.
+    supabase
+      .from("order_items")
+      .select(
+        "product_name_snapshot, sku_snapshot, unit_label_snapshot, quantity, line_total_cents, order:orders!inner(payment_status, placed_at)",
+      )
+      .eq("orders.payment_status", "paid")
+      .gte("orders.placed_at", since)
+      .limit(2000),
+    supabase.from("business_accounts").select("id").eq("status", "pending"),
   ]);
 
   const todayRows = (slotsToday.data ?? []) as Row[];
@@ -159,6 +204,28 @@ export async function getDashboard(): Promise<DashboardFigures> {
       };
     });
 
+  // Le classement s'agrège par SKU et non par produit : savoir que le format
+  // 1 kg part deux fois plus vite que le 250 g change quoi commander, là où un
+  // total par produit ne dirait rien d'utile.
+  const byVariant = new Map<string, TopSeller>();
+  for (const row of (sold.data ?? []) as Row[]) {
+    const sku = (row.sku_snapshot as string) ?? "";
+    const entry = byVariant.get(sku) ?? {
+      sku,
+      name: (row.product_name_snapshot as string) ?? "",
+      label: (row.unit_label_snapshot as string) ?? "",
+      quantity: 0,
+      revenueCents: 0,
+    };
+    entry.quantity += (row.quantity as number) ?? 0;
+    entry.revenueCents += (row.line_total_cents as number) ?? 0;
+    byVariant.set(sku, entry);
+  }
+
+  const topSellers = [...byVariant.values()]
+    .sort((a, b) => b.quantity - a.quantity || b.revenueCents - a.revenueCents)
+    .slice(0, 8);
+
   return {
     pendingPayment: (pending.data ?? []).length,
     toPrepare: (toPrepare.data ?? []).length,
@@ -170,6 +237,9 @@ export async function getDashboard(): Promise<DashboardFigures> {
       0,
     ),
     lowStock,
+    topSellers,
+    topSellersDays: TOP_SELLERS_DAYS,
+    pendingBusiness: (business.data ?? []).length,
   };
 }
 
@@ -521,6 +591,180 @@ export async function getAdminPage(slug: string): Promise<AdminPage | null> {
   const { data } = await supabase.from("pages").select("*").eq("slug", slug).limit(1);
   const row = ((data ?? []) as Row[])[0];
   return row ? toAdminPage(row) : null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Arrivages                                                                   */
+/* -------------------------------------------------------------------------- */
+
+export interface AdminShipmentItem {
+  id: string;
+  variantId: string;
+  sku: string;
+  label: string;
+  productName: string;
+  plannedQuantity: number;
+  reservedQuantity: number;
+  remainingQuantity: number;
+  depositCents: number;
+}
+
+export interface AdminShipment {
+  id: string;
+  code: string;
+  titleFr: string;
+  titleEn: string;
+  notesFr: string;
+  notesEn: string;
+  originCountry: string;
+  status: string;
+  etaDate: string;
+  reservationDeadline: string;
+  isPublished: boolean;
+  items: AdminShipmentItem[];
+}
+
+const ADMIN_SHIPMENT_SELECT = `
+  id, code, title_fr, title_en, notes_fr, notes_en, origin_country, status,
+  eta_date, reservation_deadline, is_published,
+  items:shipment_items(
+    id, variant_id, planned_quantity, reserved_quantity, remaining_quantity, deposit_cents,
+    variant:product_variants(sku, label_fr, product:products(name_fr))
+  )
+`;
+
+function toAdminShipment(row: Row): AdminShipment {
+  return {
+    id: row.id as string,
+    code: row.code as string,
+    titleFr: (row.title_fr as string) ?? "",
+    titleEn: (row.title_en as string) ?? "",
+    notesFr: (row.notes_fr as string | null) ?? "",
+    notesEn: (row.notes_en as string | null) ?? "",
+    originCountry: (row.origin_country as string | null) ?? "",
+    status: row.status as string,
+    etaDate: (row.eta_date as string | null) ?? "",
+    reservationDeadline: (row.reservation_deadline as string | null) ?? "",
+    isPublished: Boolean(row.is_published),
+    items: ((row.items as Row[] | null) ?? []).map((item) => {
+      const variant = item.variant as Row | null;
+      const product = variant?.product as Row | null;
+      return {
+        id: item.id as string,
+        variantId: item.variant_id as string,
+        sku: (variant?.sku as string) ?? "",
+        label: (variant?.label_fr as string) ?? "",
+        productName: (product?.name_fr as string) ?? "",
+        plannedQuantity: item.planned_quantity as number,
+        reservedQuantity: item.reserved_quantity as number,
+        remainingQuantity: item.remaining_quantity as number,
+        depositCents: (item.deposit_cents as number) ?? 0,
+      };
+    }),
+  };
+}
+
+export async function getAdminShipments(): Promise<AdminShipment[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("shipments")
+    // Les arrivages sans date d'arrivée passent en dernier plutôt que d'ouvrir
+    // la liste : ce sont des brouillons, pas ce qui arrive bientôt.
+    .select(ADMIN_SHIPMENT_SELECT)
+    .order("eta_date", { ascending: true, nullsFirst: false })
+    .limit(100);
+
+  return ((data ?? []) as Row[]).map(toAdminShipment);
+}
+
+export async function getAdminShipment(code: string): Promise<AdminShipment | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("shipments")
+    .select(ADMIN_SHIPMENT_SELECT)
+    .eq("code", code)
+    .limit(1);
+
+  const row = ((data ?? []) as Row[])[0];
+  return row ? toAdminShipment(row) : null;
+}
+
+/** Tous les formats actifs, pour le sélecteur d'ajout à un arrivage. */
+export async function getVariantOptions(): Promise<
+  Array<{ variantId: string; sku: string; label: string; name: string }>
+> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("product_variants")
+    .select("id, sku, label_fr, is_active, product:products(name_fr)")
+    .eq("is_active", true)
+    .limit(500);
+
+  return ((data ?? []) as Row[])
+    .map((row) => ({
+      variantId: row.id as string,
+      sku: (row.sku as string) ?? "",
+      label: (row.label_fr as string) ?? "",
+      name: ((row.product as Row | null)?.name_fr as string) ?? "",
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "fr") || a.label.localeCompare(b.label, "fr"));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Demandes de compte professionnel                                            */
+/* -------------------------------------------------------------------------- */
+
+export interface BusinessRequest {
+  id: string;
+  companyName: string;
+  businessNumber: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  /** Les produits et volumes que le client a décrits. */
+  notes: string | null;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Les demandes, les plus anciennes en attente d'abord.
+ *
+ * L'ordre est délibéré : une demande qui traîne depuis trois semaines est plus
+ * urgente que celle de ce matin, et le tri par date de création seule les
+ * mélangerait avec les dossiers déjà tranchés.
+ */
+export async function getBusinessRequests(): Promise<BusinessRequest[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("business_accounts")
+    .select(
+      "id, company_name, business_number, contact_name, contact_email, contact_phone, notes, status, created_at, updated_at",
+    )
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  const rows = ((data ?? []) as Row[]).map((row) => ({
+    id: row.id as string,
+    companyName: row.company_name as string,
+    businessNumber: (row.business_number as string | null) ?? null,
+    contactName: (row.contact_name as string | null) ?? null,
+    contactEmail: (row.contact_email as string | null) ?? null,
+    contactPhone: (row.contact_phone as string | null) ?? null,
+    notes: (row.notes as string | null) ?? null,
+    status: (row.status as BusinessRequest["status"]) ?? "pending",
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  }));
+
+  return rows.sort((a, b) => {
+    if (a.status === "pending" && b.status !== "pending") return -1;
+    if (b.status === "pending" && a.status !== "pending") return 1;
+    return a.status === "pending"
+      ? a.createdAt.localeCompare(b.createdAt)
+      : b.updatedAt.localeCompare(a.updatedAt);
+  });
 }
 
 /* -------------------------------------------------------------------------- */

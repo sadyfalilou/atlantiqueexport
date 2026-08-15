@@ -147,7 +147,11 @@ export interface Shipment {
   etaDate: string;
   reservationDeadline: string;
   items: Array<{
+    variantId: string;
     productSlug: string;
+    /** Nom et format déjà traduits : la ligne se lit sans requête de plus. */
+    name: LocalizedText;
+    label: LocalizedText;
     plannedQuantity: number;
     reservedQuantity: number;
     depositCents: number;

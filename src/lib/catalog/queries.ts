@@ -198,6 +198,13 @@ function unwrap<T>(result: {
 /* Requêtes                                                                    */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Les catégories visibles du site.
+ *
+ * `is_active` est l'interrupteur général : une catégorie éteinte disparaît de
+ * toutes les listes ET sa page devient introuvable. C'est cette liste que
+ * doivent servir la boutique, la grille d'accueil et les filtres.
+ */
 export async function getCategories(): Promise<Category[]> {
   const supabase = createCatalogClient();
   const rows = unwrap<Row[]>(
@@ -210,6 +217,13 @@ export async function getCategories(): Promise<Category[]> {
   return rows.map(toCategory);
 }
 
+/**
+ * Les catégories du menu de navigation, un sous-ensemble des précédentes.
+ *
+ * Réservée à l'en-tête et au pied de page. L'employer ailleurs viderait de son
+ * sens la case « Dans le méga-menu », qui masquerait alors la catégorie du
+ * site entier au lieu du seul menu — c'était le cas jusqu'ici.
+ */
 export async function getMegaMenuCategories(): Promise<Category[]> {
   return (await getCategories()).filter((c) => c.showInMegaMenu);
 }
@@ -387,7 +401,14 @@ export async function getOpenShipments(): Promise<Shipment[]> {
   const rows = unwrap<Row[]>(
     await supabase
       .from("shipments")
-      .select("*, items:shipment_items(variant_id, planned_quantity, remaining_quantity, deposit_cents)")
+      .select(
+        `*, items:shipment_items(
+           variant_id, planned_quantity, remaining_quantity, deposit_cents,
+           variant:product_variants(
+             label_fr, label_en, product:products(slug, name_fr, name_en)
+           )
+         )`,
+      )
       .not("status", "in", "(completed,cancelled)")
       .order("eta_date"),
   );
@@ -400,13 +421,24 @@ export async function getOpenShipments(): Promise<Shipment[]> {
     status: row.status as Shipment["status"],
     etaDate: (row.eta_date as string | null) ?? "",
     reservationDeadline: (row.reservation_deadline as string | null) ?? "",
-    items: ((row.items as Row[] | null) ?? []).map((item) => ({
-      productSlug: item.variant_id as string,
-      plannedQuantity: item.planned_quantity as number,
-      reservedQuantity:
-        (item.planned_quantity as number) - (item.remaining_quantity as number),
-      depositCents: (item.deposit_cents as number) ?? 0,
-    })),
+    items: ((row.items as Row[] | null) ?? []).map((item) => {
+      // Le nom et le format viennent de la jointure. Les chercher ensuite par
+      // slug coûtait une requête par ligne, et affichait un identifiant brut
+      // quand elle ne trouvait rien.
+      const variant = (item.variant ?? {}) as Row;
+      const product = (variant.product ?? {}) as Row;
+
+      return {
+        variantId: item.variant_id as string,
+        productSlug: (product.slug as string) ?? "",
+        name: toLocalized(product, "name"),
+        label: toLocalized(variant, "label"),
+        plannedQuantity: item.planned_quantity as number,
+        reservedQuantity:
+          (item.planned_quantity as number) - (item.remaining_quantity as number),
+        depositCents: (item.deposit_cents as number) ?? 0,
+      };
+    }),
   }));
 }
 

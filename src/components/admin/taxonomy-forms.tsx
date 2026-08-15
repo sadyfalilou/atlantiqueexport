@@ -173,9 +173,16 @@ export function CategoryRow({ category }: { category: AdminCategory }) {
                 defaultChecked={category.showInMegaMenu}
                 className="size-4"
               />
-              Dans le méga-menu
+              Dans les menus
             </label>
           </div>
+
+          <p className={hint}>
+            « Visible sur le site » est l&apos;interrupteur général : décochée, la
+            catégorie disparaît partout et sa page devient introuvable. « Dans les
+            menus » ne touche que l&apos;en-tête et le pied de page — la catégorie
+            reste dans la boutique, sur l&apos;accueil et dans les filtres.
+          </p>
 
           {category.productCount > 0 ? (
             <p className={hint}>
@@ -245,7 +252,7 @@ export function NewCategoryForm() {
         </label>
         <label className="flex items-center gap-2.5 text-sm text-forest-900">
           <input type="checkbox" name="showInMegaMenu" defaultChecked className="size-4" />
-          Dans le méga-menu
+          Dans les menus
         </label>
       </div>
 

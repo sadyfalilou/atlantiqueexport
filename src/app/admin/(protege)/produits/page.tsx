@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Eye, EyeOff, Plus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Plus } from "lucide-react";
 import { getAdminProducts, getPricingReadiness } from "@/lib/admin/queries";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
-import { disableProvisionalPricesAction } from "@/app/actions/admin";
+import { disableProvisionalPricesAction, togglePublishAction } from "@/app/actions/admin";
+import { PublishToggle } from "@/components/admin/publish-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn, formatPrice } from "@/lib/utils";
@@ -19,6 +20,7 @@ export default async function AdminProductsPage() {
   ]);
 
   const canSwitch = member != null && hasRole(member, "super_admin");
+  const canEdit = member != null && hasRole(member, "super_admin", "manager");
 
   return (
     <div>
@@ -34,7 +36,7 @@ export default async function AdminProductsPage() {
           </p>
         </div>
 
-        {member != null && hasRole(member, "super_admin", "manager") ? (
+        {canEdit ? (
           <Link
             href="/admin/produits/nouveau"
             className={cn(buttonVariants({ variant: "primary" }))}
@@ -131,17 +133,13 @@ export default async function AdminProductsPage() {
                   ) : null}
                 </td>
                 <td className="px-4 py-3">
-                  {product.isPublished ? (
-                    <span className="inline-flex items-center gap-1.5 text-success">
-                      <Eye aria-hidden="true" className="size-4" />
-                      En ligne
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-muted">
-                      <EyeOff aria-hidden="true" className="size-4" />
-                      Masqué
-                    </span>
-                  )}
+                  <PublishToggle
+                    action={togglePublishAction}
+                    idField="productId"
+                    id={product.id}
+                    isPublished={product.isPublished}
+                    canEdit={canEdit}
+                  />
                 </td>
               </tr>
             ))}

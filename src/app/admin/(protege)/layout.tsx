@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
+  Briefcase,
   ClipboardList,
   FolderTree,
   LayoutDashboard,
   LogOut,
   Package,
+  Ship,
   BookOpen,
   FileText,
   Store,
@@ -45,6 +47,9 @@ export default async function ProtectedAdminLayout({
             <AdminLink href="/admin/commandes" icon={<ClipboardList className="size-4" />}>
               Commandes
             </AdminLink>
+            <AdminLink href="/admin/demandes-pro" icon={<Briefcase className="size-4" />}>
+              Demandes pro
+            </AdminLink>
             <AdminLink href="/admin/produits" icon={<Tag className="size-4" />}>
               Produits
             </AdminLink>
@@ -56,6 +61,9 @@ export default async function ProtectedAdminLayout({
             </AdminLink>
             <AdminLink href="/admin/stocks" icon={<Package className="size-4" />}>
               Stocks
+            </AdminLink>
+            <AdminLink href="/admin/arrivages" icon={<Ship className="size-4" />}>
+              Arrivages
             </AdminLink>
             <AdminLink href="/admin/pages" icon={<FileText className="size-4" />}>
               Pages

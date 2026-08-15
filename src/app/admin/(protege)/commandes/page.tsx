@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getOrders } from "@/lib/admin/queries";
+import { getOrders, TO_PREPARE_STATUSES } from "@/lib/admin/queries";
 import { OrderStatusBadge, PaymentBadge } from "@/components/admin/order-badges";
 import { formatDate, formatPrice } from "@/lib/utils";
 
@@ -22,7 +22,13 @@ export default async function AdminOrdersPage({
   const status = typeof params.statut === "string" ? params.statut : undefined;
   const paymentStatus = typeof params.paiement === "string" ? params.paiement : undefined;
 
-  const orders = await getOrders({ status, paymentStatus });
+  // « À préparer » couvre deux statuts, exactement comme le compteur du
+  // tableau de bord. Les autres valeurs restent des statuts exacts.
+  const toPrepare = status === "a-preparer";
+  const orders = await getOrders({
+    status: toPrepare ? TO_PREPARE_STATUSES : status,
+    paymentStatus,
+  });
 
   return (
     <div>
@@ -34,6 +40,7 @@ export default async function AdminOrdersPage({
           <p className="mt-1 text-sm text-muted">
             {orders.length} commande{orders.length > 1 ? "s" : ""}
             {paymentStatus === "pending" ? " en attente de virement" : ""}
+            {toPrepare ? " à préparer" : ""}
           </p>
         </div>
 
@@ -47,7 +54,7 @@ export default async function AdminOrdersPage({
           >
             À encaisser
           </Filter>
-          <Filter href="/admin/commandes?statut=confirmed" active={status === "confirmed"}>
+          <Filter href="/admin/commandes?statut=a-preparer" active={toPrepare}>
             À préparer
           </Filter>
         </nav>
