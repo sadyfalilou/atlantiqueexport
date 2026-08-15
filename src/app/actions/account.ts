@@ -71,11 +71,17 @@ export async function signUpAction(
   const locale = parsed.data.locale ?? "fr";
   const fullName = String(formData.get("fullName") ?? "").trim();
 
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+
   const supabase = await createSessionClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
+      // Sans cette destination, Supabase fabrique le lien de confirmation à
+      // partir du « Site URL » de son tableau de bord — et renvoie sur
+      // localhost quiconque s'inscrit depuis le vrai site.
+      emailRedirectTo: `${site}/auth/callback?next=/${locale}/compte`,
       // Repris par le déclencheur qui crée le profil à l'inscription.
       data: { full_name: fullName || null, locale },
     },
