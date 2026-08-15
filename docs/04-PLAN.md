@@ -547,6 +547,8 @@ correctement mais reste un pis-aller. Le vrai correctif demande une colonne
   et portions. Les données structurées `Recipe` ne sont émises **que si la recette est
   écrite** — déclarer une recette sans ingrédients ni étapes ferait remonter une fiche
   vide dans les moteurs de recherche, au nom d'Atlantique Export.
+- ✅ **Création d'une recette** : deux titres suffisent, le reste s'écrit sur l'écran
+  suivant. Elle naît non publiée, et ne peut pas être publiée sans étape.
 - ✅ **Éditeur de recettes** (`/admin/recettes`) : une ligne par ingrédient ou par étape,
   les deux langues séparées par une barre verticale. Sans barre, le même texte sert
   partout — « 1 litre d'eau » n'a pas besoin d'être traduit.

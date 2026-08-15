@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { getAdminRecipes } from "@/lib/admin/queries";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
+import { NewRecipeForm } from "@/components/admin/new-recipe-form";
 
 export const metadata: Metadata = { title: "Recettes" };
 export const dynamic = "force-dynamic";
@@ -88,11 +89,15 @@ export default async function AdminRecipesPage() {
         </table>
       </div>
 
-      {!canEdit ? (
+      {canEdit ? (
+        <div className="mt-8">
+          <NewRecipeForm />
+        </div>
+      ) : (
         <p className="mt-6 rounded-lg border border-line bg-surface p-5 text-sm text-muted">
           Seuls un gestionnaire ou un super administrateur peuvent modifier les recettes.
         </p>
-      ) : null}
+      )}
     </div>
   );
 }

@@ -1038,6 +1038,70 @@ function parseCount(raw: string | undefined): number {
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
+/**
+ * Crée une recette, vide, puis ouvre son éditeur.
+ *
+ * Seuls les deux titres sont demandés : le reste s'écrit dans la foulée, sur
+ * un écran fait pour ça. Réclamer ingrédients et étapes dans un formulaire de
+ * création obligerait à tout rédiger d'un trait, sans pouvoir enregistrer en
+ * chemin.
+ *
+ * La recette naît **non publiée**, et l'action d'enregistrement refuse de
+ * publier une recette sans étape : elle ne peut donc pas paraître vide.
+ */
+export async function createRecipeAction(
+  _previous: TaxonomyState,
+  formData: FormData,
+): Promise<TaxonomyState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin", "manager")) {
+    return { status: "error", message: "Vous n'avez pas les droits nécessaires." };
+  }
+
+  const parsed = z
+    .object({
+      titleFr: z.string().trim().min(2).max(200),
+      titleEn: z.string().trim().min(2).max(200),
+    })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { status: "error", message: "Les deux titres sont requis." };
+  }
+
+  const base = slugify(parsed.data.titleFr);
+  if (!base) return { status: "error", message: "Le titre ne donne aucune adresse valide." };
+
+  const supabase = createAdminClient();
+
+  // Même suffixage que pour les produits : « thiakry », puis « thiakry-2 ».
+  let slug = base;
+  for (let attempt = 2; attempt <= 50; attempt += 1) {
+    const { data } = await supabase.from("recipes").select("id").eq("slug", slug).limit(1);
+    if (!data?.length) break;
+    slug = `${base}-${attempt}`;
+  }
+
+  const { error } = await supabase.from("recipes").insert({
+    slug,
+    title_fr: parsed.data.titleFr,
+    title_en: parsed.data.titleEn,
+    ingredients: [],
+    steps: [],
+    is_published: false,
+  });
+
+  if (error) {
+    console.error("Création de la recette refusée :", error);
+    return { status: "error", message: "La création a échoué." };
+  }
+
+  await logAdminAction(member.userId, "recipe.create", "recipes", null, { slug });
+
+  revalidatePath("/admin/recettes");
+  redirect(`/admin/recettes/${slug}`);
+}
+
 export async function saveRecipeAction(
   _previous: TaxonomyState,
   formData: FormData,
