@@ -172,7 +172,8 @@
     "cookies": "Gestion des témoins",
     "accessibility": "Accessibilité",
     "rights": "Tous droits réservés.",
-    "location": "Montréal, Québec, Canada"
+    "location": "Montréal, Québec, Canada",
+    "credit": "Conçu et développé par <link>Hakim Numérique</link>"
   },
   "notFound": {
     "title": "Cette page n'est pas encore en ligne",

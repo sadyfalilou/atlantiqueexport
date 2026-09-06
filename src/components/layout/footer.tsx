@@ -98,6 +98,34 @@ export async function Footer({ locale }: { locale: Locale }) {
             © {new Date().getFullYear()} Atlantique Export. {t("footer.rights")}
           </p>
           <p>{t("brand.taglineSecondary")}</p>
+
+          {/*
+            Crédit de l'artisan. Volontairement de la même taille et de la même
+            couleur que la mention de droits d'auteur : un crédit se signe, il
+            ne se met pas en avant.
+
+            Seul le nom de marque est cliquable, et il reste le nom de marque.
+            Y glisser des mots-clés — « développement web Montréal » — ferait
+            passer un crédit sincère pour un échange de liens artificiel, aux
+            yeux des moteurs comme des visiteurs.
+
+            Souligné parce qu'il ne se distingue du texte voisin ni par la
+            taille ni par la couleur : sans cela, rien n'indiquerait qu'il
+            s'agit d'un lien.
+          */}
+          <p>
+            {t.rich("footer.credit", {
+              link: (chunks) => (
+                <a
+                  href="https://hakimnumerique.com"
+                  rel="noopener"
+                  className="underline underline-offset-2 hover:text-cream-50 focus-visible:text-cream-50"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
+          </p>
         </div>
       </Container>
     </footer>

@@ -172,7 +172,8 @@
     "cookies": "Cookie settings",
     "accessibility": "Accessibility",
     "rights": "All rights reserved.",
-    "location": "Montréal, Québec, Canada"
+    "location": "Montréal, Québec, Canada",
+    "credit": "Designed and built by <link>Hakim Numérique</link>"
   },
   "notFound": {
     "title": "This page isn't live yet",
