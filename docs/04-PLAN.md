@@ -845,6 +845,38 @@ qui écarte.
 - Déploiement Vercel, variables d'environnement, domaine, webhooks de production
 - Documentation d'exploitation pour l'équipe
 
+### ⚠️ Déploiement bloqué par un incident Supabase (14 septembre 2026)
+
+Un déploiement de production a échoué sur **un seul** `Gateway Timeout` renvoyé par Supabase
+pendant la prégénération des fiches produits (`generateStaticParams`). Le déploiement Preview
+du même commit, lancé trente secondes plus tôt, était passé ; la même requête, mesurée juste
+après, répondait en 124 à 256 ms. Un incident passager avait donc suffi à bloquer toute la
+mise en ligne. Le site, lui, n'a pas été touché : Vercel garde la version précédente quand un
+build échoue. Un « Redeploy » du même commit est passé.
+
+**Parade** — le client du catalogue passe par un `fetch` qui retente (`src/lib/supabase/retrying-fetch.ts`) :
+
+- **uniquement les lectures** (GET et HEAD). Rejouer une écriture dont on ignore si elle a
+  abouti risquerait de la faire deux fois ; la règle tient à la méthode HTTP, donc aucun
+  appelant ne peut l'oublier. La recherche, qui passe par un appel RPC en POST, n'est pas
+  retentée ;
+- **uniquement les erreurs passagères** : 502, 503, 504 et coupures réseau. Une 500, une 404 ou
+  un refus de droits ne s'arrangent pas en réessayant ;
+- **trois essais au plus**, espacés de 300 puis 600 ms. Si le dernier échoue, l'erreur remonte
+  comme avant et le build s'arrête toujours — plutôt que de publier un catalogue vide ;
+- chaque nouvelle tentative est **écrite dans le journal de build**, pour qu'un succès obtenu à
+  la deuxième tentative reste visible au lieu de masquer un problème qui s'installe.
+
+Le `fetch` sous-jacent est résolu à chaque appel, pas figé au chargement : Next remplace le
+`fetch` global pour son cache de données, et capturer l'original l'aurait contourné sans bruit.
+
+Le client d'administration (clé de service), qui sert aux écritures, n'est pas concerné.
+
+**Vérifié** : 9 tests sur le module (reprise après 504, 502 et 503, abandon au troisième essai
+avec l'erreur d'origine, délais croissants, coupure réseau, aucune reprise d'un POST, d'une 500,
+d'une 404, d'une 401 ni d'une requête annulée), et 2 tests sur le **vrai** client du catalogue —
+une lecture reprend après un 504 et rend ses données, la recherche RPC n'est pas rejouée.
+
 ## Lot 16 — Tarif professionnel 🚧
 
 - ✅ **Le tarif de gros s'applique au panier et à la commande.** Un compte professionnel

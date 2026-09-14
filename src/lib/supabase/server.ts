@@ -1,5 +1,13 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
+import { createRetryingFetch } from "@/lib/supabase/retrying-fetch";
+
+/**
+ * Un incident passager de Supabase ne doit plus faire échouer un build entier.
+ * Les lectures sont retentées ; les écritures et appels RPC, jamais — la règle
+ * tient à la méthode HTTP (voir `retrying-fetch.ts`).
+ */
+const retryingFetch = createRetryingFetch();
 
 /**
  * Client Supabase pour la lecture publique, côté serveur.
@@ -27,5 +35,6 @@ export function createCatalogClient() {
 
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: retryingFetch },
   });
 }
