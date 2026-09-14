@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { localizedAlternates } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { Clock, Users } from "lucide-react";
 import { hasLocale } from "next-intl";
@@ -19,7 +20,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "recipes" });
-  return { title: t("title"), description: t("subtitle") };
+  return {
+    title: t("title"),
+    description: t("subtitle"),
+    alternates: localizedAlternates(locale, "/recettes"),
+  };
 }
 
 export default async function RecipesPage({

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { localizedAlternates, pageRobots } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -48,7 +49,10 @@ export async function generateMetadata({
     title: page.title[typedLocale],
     // Un brouillon juridique n'a rien à faire dans un moteur de recherche : il
     // serait cité comme la position de l'entreprise avant d'avoir été relu.
-    robots: page.isDraftLegal ? { index: false, follow: true } : undefined,
+    alternates: localizedAlternates(locale, `/${rest.join("/")}`),
+    // Passe par `pageRobots` : définir `robots` ici remplace celui du gabarit,
+    // et rendre `undefined` aurait rouvert l'indexation en démonstration.
+    robots: await pageRobots(page.isDraftLegal),
   };
 }
 

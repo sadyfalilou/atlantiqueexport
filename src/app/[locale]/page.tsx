@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { localizedAlternates, SITE_URL } from "@/lib/seo";
 import { Info } from "lucide-react";
 import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -33,6 +35,15 @@ import type { Locale } from "@/lib/types";
  * prix ou de stock n'apparaîtrait qu'au redéploiement suivant.
  */
 export const revalidate = 300;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return { alternates: localizedAlternates(locale) };
+}
 
 export default async function HomePage({
   params,
@@ -69,7 +80,7 @@ export default async function HomePage({
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Atlantique Export",
-    url: "https://atlantiqueexport.com",
+    url: SITE_URL,
     description: t("about.body"),
     address: {
       "@type": "PostalAddress",

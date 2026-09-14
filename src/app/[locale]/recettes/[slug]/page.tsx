@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { localizedAlternates, pageRobots } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { ChevronRight, Clock, Users } from "lucide-react";
 import { hasLocale } from "next-intl";
@@ -29,7 +30,10 @@ export async function generateMetadata({
   return {
     title: recipe.title[typedLocale],
     description: recipe.description[typedLocale],
-    alternates: { canonical: `/${locale}/recettes/${slug}` },
+    alternates: localizedAlternates(locale, `/recettes/${slug}`),
+    // Sans étape, la page affiche « en cours de rédaction » : même règle que
+    // pour ses données structurées, elle reste hors de l'index.
+    robots: await pageRobots(recipe.steps.length === 0),
   };
 }
 

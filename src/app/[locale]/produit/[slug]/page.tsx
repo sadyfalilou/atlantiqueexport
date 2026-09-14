@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { localizedAlternates } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -58,7 +59,7 @@ export async function generateMetadata({
   return {
     title: product.name[typedLocale],
     description: product.shortDescription[typedLocale],
-    alternates: { canonical: `/${locale}/produit/${slug}` },
+    alternates: localizedAlternates(locale, `/produit/${slug}`),
   };
 }
 

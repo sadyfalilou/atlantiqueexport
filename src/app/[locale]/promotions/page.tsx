@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { localizedAlternates } from "@/lib/seo";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CatalogueView } from "@/components/catalog/catalogue-view";
 import { parseFilters, sortProducts } from "@/lib/catalog/filters";
@@ -16,7 +17,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "home.deals" });
-  return { title: t("title"), description: t("subtitle") };
+  return {
+    title: t("title"),
+    description: t("subtitle"),
+    alternates: localizedAlternates(locale, "/promotions"),
+  };
 }
 
 export default async function PromotionsPage({

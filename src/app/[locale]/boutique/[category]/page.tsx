@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { localizedAlternates } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { CatalogueView } from "@/components/catalog/catalogue-view";
@@ -32,7 +33,7 @@ export async function generateMetadata({
   return {
     title: name,
     description: category.description?.[locale as Locale],
-    alternates: { canonical: `/${locale}/boutique/${slug}` },
+    alternates: localizedAlternates(locale, `/boutique/${slug}`),
   };
 }
 

@@ -1,6 +1,6 @@
 # Étape 4 — Plan d'implémentation
 
-_Dernière mise à jour : 15 août 2026 (soir)_
+_Dernière mise à jour : 13 septembre 2026_
 
 Le plan est découpé en lots courts et vérifiables. Chaque lot se termine par : `npm run lint`,
 `npm run typecheck`, les tests concernés, et une vérification du rendu à 320 px et à 1280 px.
@@ -769,14 +769,73 @@ laisserait quiconque obtiendrait un accès en écriture exécuter du script chez
 visiteur ; la conversion en éléments React ferme la porte par construction, et les liens
 sont filtrés pour écarter `javascript:`.
 
-## Lot 14 — SEO, performance, PWA ⬜
+## Lot 14 — SEO, performance, PWA 🚧
 
-- Métadonnées par page, sitemap, robots, Open Graph, `hreflang`
-- Données structurées `Organization`, `Product`, `Breadcrumb`, `Recipe`
-- Produit épuisé : page conservée et indexable, jamais de 404 inutile
-- Manifeste PWA, service worker, mode hors ligne dégradé, installation sur mobile
-- Optimisation des images, chargement différé, budget Lighthouse ≥ 90
+- ✅ **Métadonnées par page** : titre, description, adresse canonique propre à chaque page,
+  aperçu de partage, langue du document.
+- ✅ **Liens de langue** (`hreflang`) français, anglais et `x-default` sur **toutes** les pages
+  publiques, construits par une seule fonction, `localizedAlternates` (`src/lib/seo.ts`).
+- ✅ **`robots.txt` et `sitemap.xml`** générés depuis la base et relus toutes les cinq minutes :
+  produits publiés — épuisés compris —, catégories actives, recettes rédigées, pages de
+  contenu hors brouillons juridiques, dans les deux langues. Les rayons calculés et les
+  recettes sans étape n'y figurent pas.
+- ✅ **Site hors de l'index tant que la boutique est en démonstration.** Même interrupteur que
+  les données structurées des produits : `noindex` sur chaque page, plan du site vide, et
+  aucun plan annoncé dans `robots.txt`. La bascule en mode réel rend le site indexable
+  d'elle-même, sans intervention.
+- ✅ Données structurées `Organization`, `Product` (bloquée en démonstration), `Recipe`
+  (bloquée tant que la recette n'est pas rédigée)
+- ✅ Produit épuisé : page conservée et indexable, jamais de 404 inutile
+- ⬜ Données structurées `BreadcrumbList` — le fil d'Ariane existe à l'écran, pas en données
+- ⬜ **Déclarer le domaine dans la Google Search Console** et y soumettre le plan du site —
+  à faire par Atlantique Export, **après** le passage en mode réel : avant, le plan est vide
+- ⬜ Manifeste PWA, service worker, mode hors ligne dégradé, installation sur mobile
+- ⬜ Optimisation des images, chargement différé, budget Lighthouse ≥ 90
 - **Vérification** : Lighthouse mobile et desktop, test d'installation PWA
+
+### ⚠️ Cinq défauts trouvés et corrigés (13 septembre 2026)
+
+Constatés sur le site **en ligne**, pas dans le code :
+
+1. **Toutes les pages désignaient une adresse qui redirige.** Canonique, liens de langue et
+   image de partage pointaient vers `atlantiqueexport.com`, que Vercel redirige vers `www`.
+   L'adresse du site vit désormais dans `SITE_URL`, une seule fois.
+2. **Six rubriques se déclaraient doublons de l'accueil.** Boutique, Nouveautés, Recettes,
+   Arrivages, Promotions et les pages de contenu portaient `canonical: /fr`. Google les aurait
+   écartées de l'index.
+3. **Les fiches perdaient leurs liens de langue.** Produits, catégories et recettes
+   redéfinissaient leur canonique, ce qui écrasait tout le bloc hérité — langues comprises.
+4. **Ni `robots.txt` ni `sitemap.xml`** : les deux renvoyaient 404.
+5. **Le site était indexable avec des prix inventés.** Les données structurées étaient
+   bloquées, pas le texte visible.
+
+Les défauts 2 et 3 ont la même cause, et elle se reproduira si on l'oublie : **la fusion des
+métadonnées de Next est superficielle.** Un bloc défini par le gabarit est hérité tel quel par
+toute page qui ne le redéfinit pas, et entièrement remplacé par celle qui le redéfinit. D'où
+deux règles, écrites dans `src/lib/seo.ts` :
+
+- **le gabarit ne pose aucune adresse canonique** — le panier et le compte héritaient eux aussi
+  de celle de l'accueil ; chaque page publique pose la sienne ;
+- **une page qui définit `robots` passe par `pageRobots`** — sans quoi elle remplacerait le
+  `noindex` du gabarit et rouvrirait l'indexation en démonstration. Les pages de contenu
+  rendaient `robots: undefined` : c'est exactement ce qui serait arrivé.
+
+**Pourquoi `robots.txt` n'interdit pas le site en démonstration.** Interdire `/` aurait
+l'effet inverse : Google ne pourrait plus lire le `noindex`, et garderait affichées sans
+contenu les adresses qu'il connaît déjà. L'exploration reste donc permise, c'est le `noindex`
+qui écarte.
+
+**Vérifié** :
+
+- les 98 pages prégénérées inspectées une à une dans le HTML du build : adresse canonique
+  propre en `www`, trois liens de langue, `noindex` — zéro anomalie ;
+- pages dynamiques sur le serveur local : Arrivages conforme ; panier, connexion, compte et
+  commander sans adresse canonique et en `noindex` ;
+- `robots.txt` et `sitemap.xml` servis tels qu'attendus en démonstration ;
+- le **mode réel**, par 11 tests qui simulent les deux réglages (`src/lib/seo.test.ts`) —
+  basculer la vraie base pour le vérifier aurait ouvert la boutique. Plan du site peuplé dans
+  les deux langues, `robots.txt` qui l'annonce, pages indexables, brouillons et recettes vides
+  écartés.
 
 ## Lot 15 — Tests et déploiement ⬜
 

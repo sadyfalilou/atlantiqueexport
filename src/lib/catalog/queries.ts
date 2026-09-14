@@ -601,6 +601,21 @@ export async function getSitePage(slug: string): Promise<SitePage | null> {
   };
 }
 
+/**
+ * Pages de contenu à déclarer dans le plan du site.
+ *
+ * Les brouillons juridiques en sont écartés : ils portent un `noindex`, et les
+ * soumettre à Google serait se contredire — la Search Console le signale comme
+ * une erreur.
+ */
+export async function getIndexableSitePageSlugs(): Promise<string[]> {
+  const supabase = createCatalogClient();
+  const { data } = await supabase.from("pages").select("slug, is_draft_legal").limit(100);
+  return ((data ?? []) as Row[])
+    .filter((row) => !row.is_draft_legal)
+    .map((row) => row.slug as string);
+}
+
 /** Chemins des pages publiées, pour la prégénération. */
 export async function getSitePageSlugs(): Promise<string[]> {
   const supabase = createCatalogClient();

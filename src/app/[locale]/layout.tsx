@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { siteRobots, SITE_URL } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -36,7 +37,7 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "brand" });
 
   return {
-    metadataBase: new URL("https://atlantiqueexport.com"),
+    metadataBase: new URL(SITE_URL),
     title: {
       default: `Atlantique Export — ${t("tagline")}`,
       template: "%s · Atlantique Export",
@@ -55,10 +56,13 @@ export async function generateMetadata({
         },
       ],
     },
-    alternates: {
-      canonical: `/${locale}`,
-      languages: { fr: "/fr", en: "/en" },
-    },
+    // Aucune adresse canonique ici : la fusion étant superficielle, toute page
+    // qui n'en définit pas en hériterait. C'est ainsi que six rubriques, puis
+    // le panier et le compte, se déclaraient doublons de l'accueil. Chaque
+    // page publique pose désormais la sienne ; l'accueil compris.
+    // Hérité par toute page qui ne définit pas le sien : en démonstration, le
+    // site entier reste hors de l'index.
+    robots: await siteRobots(),
   };
 }
 
