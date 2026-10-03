@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getStaffMember } from "@/lib/supabase/auth";
 import { SignInForm } from "@/components/admin/sign-in-form";
 
@@ -25,7 +26,22 @@ export default async function AdminSignInPage() {
           <SignInForm />
         </div>
 
-        <p className="mt-6 text-sm text-muted">
+        {/*
+          La réinitialisation vit du côté boutique : c'est le même compte
+          Supabase des deux côtés. L'administration n'étant pas traduite, le
+          /fr est écrit en dur — un lien localisé n'aurait aucune locale à
+          lire depuis ce segment.
+        */}
+        <p className="mt-6 text-sm">
+          <Link
+            href="/fr/mot-de-passe"
+            className="font-semibold text-forest-800 underline underline-offset-2 hover:text-forest-900"
+          >
+            Mot de passe oublié ?
+          </Link>
+        </p>
+
+        <p className="mt-3 text-sm text-muted">
           Pas encore de compte ? Il doit être créé dans Supabase, puis recevoir un rôle
           avec&nbsp;
           <code className="rounded-sm bg-cream-200 px-1 py-0.5 text-xs">
