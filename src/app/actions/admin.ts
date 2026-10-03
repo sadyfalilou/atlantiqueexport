@@ -17,6 +17,7 @@ import {
   queuePaymentConfirmedEmail,
 } from "@/lib/resend/order-emails";
 import { isKnownRegion } from "@/lib/regions";
+import { queueEmail } from "@/lib/resend";
 import { ASSIGNABLE_ROLES } from "@/lib/admin/roles";
 
 /**
@@ -2622,6 +2623,41 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
 }
 
 /**
+ * Invite une nouvelle personne : un lien pour poser un mot de passe, jamais
+ * un mot de passe.
+ *
+ * Le lien est fabriqué ici avec la clé de service, puis expédié par Resend
+ * avec le gabarit de la marque — comme la réinitialisation, et pour la même
+ * raison : le service de courriel intégré de Supabase a un débit trop faible
+ * pour qu'on lui confie quoi que ce soit d'important.
+ */
+async function sendStaffInvite(email: string): Promise<boolean> {
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: { redirectTo: `${site}/auth/callback?next=/fr/compte/mot-de-passe` },
+  });
+
+  const link = data?.properties?.action_link;
+  if (error || !link) {
+    console.error("Lien d'invitation non généré :", error?.message);
+    return false;
+  }
+
+  const queued = await queueEmail({
+    type: "staff_invite",
+    recipientEmail: email,
+    locale: "fr",
+    data: { recipientName: null, inviteLink: link, expiresIn: "60 minutes" },
+  });
+
+  return queued !== null;
+}
+
+/**
  * Donne un rôle à quelqu'un, en créant son compte s'il n'existe pas encore.
  *
  * Aucun mot de passe n'est fabriqué ni transmis ici : la personne choisit le
@@ -2689,15 +2725,19 @@ export async function addStaffMemberAction(
 
   revalidatePath("/admin/equipe");
 
-  return created
-    ? {
-        status: "created",
-        message:
-          "Compte créé. Dites à cette personne d'aller sur l'écran de connexion de " +
-          "l'administration et de cliquer « Mot de passe oublié ? » pour choisir son " +
-          "mot de passe.",
-      }
-    : { status: "saved", message: "Rôle accordé." };
+  if (!created) return { status: "saved", message: "Rôle accordé." };
+
+  // L'invitation part après le rôle : un courriel qui annonce un accès que la
+  // base n'aurait finalement pas accordé serait pire que pas de courriel.
+  const invited = await sendStaffInvite(email);
+
+  return {
+    status: "created",
+    message: invited
+      ? `Compte créé. L'invitation part vers ${email} : cette personne y choisira son mot de passe.`
+      : "Compte créé, mais l'invitation n'est pas partie. Dites-lui d'aller sur " +
+        "l'écran de connexion et de cliquer « Mot de passe oublié ? ».",
+  };
 }
 
 /**

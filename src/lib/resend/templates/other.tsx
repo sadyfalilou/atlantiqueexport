@@ -18,6 +18,11 @@ interface PasswordResetEmailProps extends SimpleEmailProps {
   expiresIn: string;
 }
 
+interface StaffInviteEmailProps extends SimpleEmailProps {
+  inviteLink: string;
+  expiresIn: string;
+}
+
 /** « Bonjour Awa » ou « Bonjour » selon ce que la commande nous apprend. */
 function greet(name: string | null | undefined, locale: "fr" | "en") {
   const hello = locale === "fr" ? "Bonjour" : "Hello";
@@ -419,6 +424,67 @@ export function PasswordResetEmail({
       <Button href={resetLink}>{t.cta}</Button>
       <Text size={13} color={C.muted}>
         {t.expires}
+      </Text>
+      <Panel accent={C.danger}>
+        <Text size={13} color={C.ink} bottom={0}>
+          {t.warning}
+        </Text>
+      </Panel>
+    </EmailLayout>
+  );
+}
+
+/**
+ * Invitation à rejoindre l'administration.
+ *
+ * Le compte existe déjà quand ce courriel part, mais il n'a pas de mot de
+ * passe : le lien est le seul moyen d'en poser un. Dire pourquoi on reçoit ce
+ * message compte autant que le bouton — un accès qu'on n'a pas demandé
+ * ressemble sinon à une tentative d'hameçonnage.
+ */
+export function StaffInviteEmail({
+  recipientName,
+  inviteLink,
+  expiresIn,
+  locale,
+}: StaffInviteEmailProps) {
+  const t =
+    locale === "fr"
+      ? {
+          title: "Votre accès à l'administration",
+          preview: `Choisissez votre mot de passe — le lien expire dans ${expiresIn}.`,
+          message: `${greet(recipientName, "fr")}, l'équipe d'Atlantique Export vous a donné accès à l'administration de la boutique.`,
+          instruction:
+            "Il reste à choisir votre mot de passe. Personne ne vous en enverra jamais un par courriel.",
+          cta: "Choisir mon mot de passe",
+          expires: `Ce lien expire dans ${expiresIn} et ne peut servir qu'une fois. Passé ce délai, utilisez « Mot de passe oublié ? » sur l'écran de connexion.`,
+          later: `Ensuite, vous entrerez par ${site()}/admin/connexion.`,
+          warning:
+            "Si ce message vous surprend, ne cliquez sur rien et prévenez la personne qui gère la boutique.",
+        }
+      : {
+          title: "Your access to the admin area",
+          preview: `Choose your password — the link expires in ${expiresIn}.`,
+          message: `${greet(recipientName, "en")}, the Atlantique Export team has given you access to the shop's admin area.`,
+          instruction:
+            "All that is left is to choose your password. Nobody will ever email you one.",
+          cta: "Choose my password",
+          expires: `This link expires in ${expiresIn} and can only be used once. After that, use “Mot de passe oublié ?” on the sign-in screen.`,
+          later: `From then on, you sign in at ${site()}/admin/connexion.`,
+          warning:
+            "If this message is a surprise, do not click anything and tell whoever runs the shop.",
+        };
+
+  return (
+    <EmailLayout title={t.title} preview={t.preview} locale={locale}>
+      <Text>{t.message}</Text>
+      <Text bottom={0}>{t.instruction}</Text>
+      <Button href={inviteLink}>{t.cta}</Button>
+      <Text size={13} color={C.muted}>
+        {t.expires}
+      </Text>
+      <Text size={13} color={C.muted}>
+        {t.later}
       </Text>
       <Panel accent={C.danger}>
         <Text size={13} color={C.ink} bottom={0}>

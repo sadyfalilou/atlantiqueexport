@@ -15,6 +15,7 @@ import {
   ArrivalAvailableEmail,
   BackInStockEmail,
   PasswordResetEmail,
+  StaffInviteEmail,
 } from "./templates/other";
 
 export type EmailType =
@@ -30,7 +31,8 @@ export type EmailType =
   | "preorder_confirmation"
   | "arrival_available"
   | "back_in_stock"
-  | "password_reset";
+  | "password_reset"
+  | "staff_invite";
 
 /**
  * Génère le contenu HTML d'un email à partir de son type et ses données.
@@ -275,6 +277,24 @@ export async function generateEmailContent(
         <PasswordResetEmail
           recipientName={d.recipientName}
           resetLink={d.resetLink}
+          expiresIn={d.expiresIn}
+          locale={locale}
+        />
+      );
+      subject = t.subject;
+      break;
+    }
+
+    case "staff_invite": {
+      const t =
+        locale === "fr"
+          ? { subject: "Votre accès à l'administration d'Atlantique Export" }
+          : { subject: "Your access to the Atlantique Export admin area" };
+      const d = data as { recipientName: string | null; inviteLink: string; expiresIn: string };
+      component = (
+        <StaffInviteEmail
+          recipientName={d.recipientName}
+          inviteLink={d.inviteLink}
           expiresIn={d.expiresIn}
           locale={locale}
         />

@@ -87,9 +87,10 @@ export default async function AdminTeamPage() {
           Ajouter quelqu&apos;un
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Si la personne n&apos;a pas encore de compte, il est créé. Elle choisit
-          elle-même son mot de passe par « Mot de passe oublié ? » sur
-          l&apos;écran de connexion : vous n&apos;avez jamais à en manipuler un.
+          Si la personne n&apos;a pas encore de compte, il est créé et une invitation
+          lui part aussitôt : elle y choisit son mot de passe, valable une heure.
+          Aucun mot de passe n&apos;est jamais fabriqué ni envoyé. Si elle a déjà un
+          compte sur le site, elle garde le sien et reçoit simplement le rôle.
         </p>
         <AddStaffForm />
       </section>

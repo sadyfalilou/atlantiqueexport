@@ -58,6 +58,11 @@ const samples: Record<string, Record<string, unknown>> = {
     resetLink: "https://atlantiqueexport.com/fr/mot-de-passe",
     expiresIn: "60 minutes",
   },
+  staff_invite: {
+    recipientName: null,
+    inviteLink: "https://atlantiqueexport.com/auth/callback?code=exemple",
+    expiresIn: "60 minutes",
+  },
 };
 
 it.skipIf(!OUT)("génère les aperçus", async () => {
