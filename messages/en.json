@@ -363,6 +363,8 @@
     "newPassword": "New password",
     "fullName": "Full name",
     "passwordHint": "Eight characters minimum.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "signIn": "Sign in",
     "signUp": "Create my account",
     "save": "Save",

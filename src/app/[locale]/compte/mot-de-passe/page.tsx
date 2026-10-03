@@ -36,6 +36,8 @@ export default async function NewPasswordPage({
   const t = await getTranslations("account");
   const labels = {
     newPassword: t("newPassword"),
+    showPassword: t("showPassword"),
+    hidePassword: t("hidePassword"),
     passwordHint: t("passwordHint"),
     save: t("save"),
     pending: t("pending"),

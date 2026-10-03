@@ -11,6 +11,7 @@ import {
   type AccountState,
 } from "@/app/actions/account";
 import { Button } from "@/components/ui/button";
+import { PasswordField } from "@/components/ui/password-field";
 import type { Locale } from "@/lib/types";
 
 const field =
@@ -66,19 +67,15 @@ export function SignInForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label className={labelClass} htmlFor="password">
-          {labels.password}
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          className={field}
-        />
-      </div>
+      <PasswordField
+        name="password"
+        label={labels.password}
+        showLabel={labels.showPassword}
+        hideLabel={labels.hidePassword}
+        autoComplete="current-password"
+        className={field}
+        labelClassName={labelClass}
+      />
 
       <Feedback state={state} />
       <Submit label={labels.signIn} pendingLabel={labels.pending} />
@@ -140,21 +137,17 @@ export function SignUpForm({
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label className={labelClass} htmlFor="password">
-          {labels.password}
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
-          required
-          className={field}
-        />
-        <p className="text-xs text-muted">{labels.passwordHint}</p>
-      </div>
+      <PasswordField
+        name="password"
+        label={labels.password}
+        showLabel={labels.showPassword}
+        hideLabel={labels.hidePassword}
+        autoComplete="new-password"
+        minLength={8}
+        hint={labels.passwordHint}
+        className={field}
+        labelClassName={labelClass}
+      />
 
       <Feedback state={state} />
       <Submit label={labels.signUp} pendingLabel={labels.pending} />
@@ -219,21 +212,17 @@ export function NewPasswordForm({
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="locale" value={locale} />
-      <div className="flex flex-col gap-1.5">
-        <label className={labelClass} htmlFor="password">
-          {labels.newPassword}
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={8}
-          required
-          className={field}
-        />
-        <p className="text-xs text-muted">{labels.passwordHint}</p>
-      </div>
+      <PasswordField
+        name="password"
+        label={labels.newPassword}
+        showLabel={labels.showPassword}
+        hideLabel={labels.hidePassword}
+        autoComplete="new-password"
+        minLength={8}
+        hint={labels.passwordHint}
+        className={field}
+        labelClassName={labelClass}
+      />
       <Feedback state={state} />
       <Submit label={labels.save} pendingLabel={labels.pending} />
     </form>

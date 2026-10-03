@@ -36,6 +36,8 @@ export default async function SignUpPage({
   const labels = {
     email: t("email"),
     password: t("password"),
+    showPassword: t("showPassword"),
+    hidePassword: t("hidePassword"),
     fullName: t("fullName"),
     passwordHint: t("passwordHint"),
     signUp: t("signUp"),

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PasswordField } from "@/components/ui/password-field";
 import { signInAction, type SignInState } from "@/app/actions/admin";
 
 const field =
@@ -38,18 +39,14 @@ export function SignInForm() {
         />
       </label>
 
-      <label className="block">
-        <span className="mb-1 block text-sm font-semibold text-forest-900">
-          Mot de passe
-        </span>
-        <input
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-          className={field}
-        />
-      </label>
+      <PasswordField
+        name="password"
+        label="Mot de passe"
+        showLabel="Afficher le mot de passe"
+        hideLabel="Masquer le mot de passe"
+        autoComplete="current-password"
+        className={field}
+      />
 
       {state.status === "error" ? (
         <p role="alert" className="flex items-start gap-2 text-sm text-danger">

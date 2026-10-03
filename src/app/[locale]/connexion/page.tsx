@@ -40,6 +40,8 @@ export default async function SignInPage({
   const labels = {
     email: t("email"),
     password: t("password"),
+    showPassword: t("showPassword"),
+    hidePassword: t("hidePassword"),
     signIn: t("signIn"),
     pending: t("pending"),
   };
