@@ -29,7 +29,7 @@ export default async function ProtectedAdminLayout({
             Administration
           </Link>
 
-          <AdminNav />
+          <AdminNav roles={member.roles} />
 
           <div className="ml-auto flex items-center gap-3 text-sm">
             <span className="hidden text-cream-200 sm:inline">{member.email}</span>

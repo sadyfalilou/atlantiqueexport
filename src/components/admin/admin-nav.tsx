@@ -16,7 +16,9 @@ import {
   Store,
   Tag,
   Truck,
+  Users,
 } from "lucide-react";
+import { canSeeSection, type StaffRole } from "@/lib/admin/roles";
 
 /**
  * Navigation de l'administration.
@@ -28,6 +30,10 @@ import {
  * Les deux gestes du quotidien, les commandes et les demandes en attente,
  * restent au premier niveau : les enfouir dans un menu ajouterait un clic à ce
  * qu'on fait vingt fois par jour.
+ *
+ * Chaque entrée est filtrée par les rôles : un observateur n'y voit que le
+ * tableau de bord, les commandes et les stocks, et l'équipe n'apparaît qu'aux
+ * super administrateurs.
  */
 
 const ICONS = {
@@ -42,6 +48,7 @@ const ICONS = {
   shipments: Ship,
   delivery: Truck,
   pages: FileText,
+  team: Users,
 } as const;
 
 type IconName = keyof typeof ICONS;
@@ -56,6 +63,7 @@ const DIRECT: Item[] = [
   { href: "/admin", label: "Tableau de bord", icon: "dashboard" },
   { href: "/admin/commandes", label: "Commandes", icon: "orders" },
   { href: "/admin/demandes-pro", label: "Demandes pro", icon: "business" },
+  { href: "/admin/equipe", label: "Équipe", icon: "team" },
 ];
 
 const GROUPS: Array<{ label: string; items: Item[] }> = [
@@ -98,8 +106,16 @@ function Icon({ name }: { name: IconName }) {
   return <Component aria-hidden="true" className="size-4" />;
 }
 
-export function AdminNav() {
+export function AdminNav({ roles }: { roles: StaffRole[] }) {
   const pathname = usePathname();
+
+  // Un menu ne doit proposer que des portes qui s'ouvrent. La garde, elle,
+  // est posée côté serveur : cacher un lien n'a jamais fermé une adresse.
+  const direct = DIRECT.filter((item) => canSeeSection(roles, item.href));
+  const groups = GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => canSeeSection(roles, item.href)),
+  })).filter((group) => group.items.length > 0);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
 
@@ -134,7 +150,7 @@ export function AdminNav() {
       aria-label="Administration"
       className="flex flex-wrap items-center gap-1"
     >
-      {DIRECT.map((item) => (
+      {direct.map((item) => (
         <Link
           key={item.href}
           href={item.href}
@@ -146,7 +162,7 @@ export function AdminNav() {
         </Link>
       ))}
 
-      {GROUPS.map((group) => {
+      {groups.map((group) => {
         const groupActive = group.items.some((item) => isActive(pathname, item.href));
         const open = openGroup === group.label;
 

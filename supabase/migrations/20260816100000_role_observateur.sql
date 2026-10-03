@@ -1,0 +1,11 @@
+-- Rôle d'observation : voir les ventes et les stocks, ne rien modifier.
+--
+-- Aucune action d'écriture de l'administration n'a besoin d'être retouchée :
+-- chacune énumère explicitement les rôles qu'elle accepte (super_admin,
+-- manager, parfois picker et driver). Un rôle absent de ces listes ne peut
+-- rien écrire, y compris en contournant l'interface. La lecture seule tient
+-- donc à l'absence, pas à une interdiction qu'on pourrait oublier d'écrire.
+--
+-- La valeur est ajoutée seule, sans être employée dans la même transaction :
+-- PostgreSQL ne l'autorise pas autrement.
+alter type public.staff_role add value if not exists 'viewer';

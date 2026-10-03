@@ -17,6 +17,7 @@ import {
   queuePaymentConfirmedEmail,
 } from "@/lib/resend/order-emails";
 import { isKnownRegion } from "@/lib/regions";
+import { ASSIGNABLE_ROLES } from "@/lib/admin/roles";
 
 /**
  * Actions de l'administration.
@@ -2587,4 +2588,196 @@ export async function disableProvisionalPricesAction(): Promise<void> {
 
   revalidatePath("/admin/produits");
   revalidatePath("/", "layout");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Équipe                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export type TeamState = {
+  status: "idle" | "saved" | "created" | "error";
+  message?: string;
+};
+
+/**
+ * Retrouve un compte par son adresse.
+ *
+ * `auth.users` n'est pas exposée par PostgREST : il faut parcourir l'API
+ * d'administration. La recherche s'arrête au bout de quelques pages — si une
+ * adresse connue se cache au-delà, la création qui suit échouera proprement
+ * avec « déjà inscrite » plutôt que de dérouler toute la clientèle.
+ */
+async function findUserIdByEmail(email: string): Promise<string | null> {
+  const supabase = createAdminClient();
+
+  for (let page = 1; page <= 10; page += 1) {
+    const { data } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
+    const users = data?.users ?? [];
+    const found = users.find((user) => (user.email ?? "").toLowerCase() === email);
+    if (found) return found.id;
+    if (users.length < 200) return null;
+  }
+
+  return null;
+}
+
+/**
+ * Donne un rôle à quelqu'un, en créant son compte s'il n'existe pas encore.
+ *
+ * Aucun mot de passe n'est fabriqué ni transmis ici : la personne choisit le
+ * sien par « Mot de passe oublié ? », depuis l'écran de connexion. Un mot de
+ * passe qu'on envoie est un mot de passe qui traîne dans une boîte courriel.
+ */
+export async function addStaffMemberAction(
+  _previous: TeamState,
+  formData: FormData,
+): Promise<TeamState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin")) {
+    return { status: "error", message: "Seul un super administrateur peut le faire." };
+  }
+
+  const parsed = z
+    .object({ email: z.email().max(254), role: z.enum(ASSIGNABLE_ROLES) })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { status: "error", message: "Adresse ou rôle invalide." };
+  }
+
+  const email = parsed.data.email.trim().toLowerCase();
+  const supabase = createAdminClient();
+
+  let userId = await findUserIdByEmail(email);
+  let created = false;
+
+  if (!userId) {
+    const { data, error } = await supabase.auth.admin.createUser({
+      email,
+      // Confirmée d'office : c'est vous qui ajoutez cette personne, elle n'a
+      // pas à valider une inscription qu'elle n'a pas demandée. Il lui reste
+      // à choisir son mot de passe.
+      email_confirm: true,
+    });
+
+    if (error || !data.user) {
+      console.error("Création du compte du personnel refusée :", error?.message);
+      return {
+        status: "error",
+        message: "Le compte n'a pas pu être créé. Vérifiez l'adresse.",
+      };
+    }
+
+    userId = data.user.id;
+    created = true;
+  }
+
+  const { error } = await supabase
+    .from("staff_roles")
+    .upsert({ user_id: userId, role: parsed.data.role }, { onConflict: "user_id,role" });
+
+  if (error) {
+    console.error("Attribution du rôle refusée :", error);
+    return { status: "error", message: "Le rôle n'a pas pu être accordé." };
+  }
+
+  await logAdminAction(member.userId, "staff.grant", "staff_roles", userId, {
+    email,
+    role: parsed.data.role,
+    created,
+  });
+
+  revalidatePath("/admin/equipe");
+
+  return created
+    ? {
+        status: "created",
+        message:
+          "Compte créé. Dites à cette personne d'aller sur l'écran de connexion de " +
+          "l'administration et de cliquer « Mot de passe oublié ? » pour choisir son " +
+          "mot de passe.",
+      }
+    : { status: "saved", message: "Rôle accordé." };
+}
+
+/**
+ * Change le rôle d'un membre : l'ancien est remplacé, pas cumulé.
+ *
+ * Changer son propre rôle est refusé. C'est le seul garde-fou nécessaire
+ * contre le verrouillage : puisque la personne qui agit est elle-même super
+ * administratrice et ne peut pas se rétrograder, il en reste toujours au
+ * moins une.
+ */
+export async function setStaffRoleAction(
+  _previous: TeamState,
+  formData: FormData,
+): Promise<TeamState> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin")) {
+    return { status: "error", message: "Seul un super administrateur peut le faire." };
+  }
+
+  const parsed = z
+    .object({ userId: z.uuid(), role: z.enum(ASSIGNABLE_ROLES) })
+    .safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { status: "error", message: "Membre ou rôle inconnu." };
+  }
+
+  if (parsed.data.userId === member.userId) {
+    return {
+      status: "error",
+      message: "Vous ne pouvez pas changer votre propre rôle.",
+    };
+  }
+
+  const supabase = createAdminClient();
+
+  // Le nouveau rôle est posé avant que les anciens ne tombent : un échec en
+  // cours de route laisse la personne avec trop de droits, jamais avec aucun.
+  const { error } = await supabase
+    .from("staff_roles")
+    .upsert(
+      { user_id: parsed.data.userId, role: parsed.data.role },
+      { onConflict: "user_id,role" },
+    );
+
+  if (error) {
+    console.error("Changement de rôle refusé :", error);
+    return { status: "error", message: "Le rôle n'a pas pu être changé." };
+  }
+
+  await supabase
+    .from("staff_roles")
+    .delete()
+    .eq("user_id", parsed.data.userId)
+    .neq("role", parsed.data.role);
+
+  await logAdminAction(member.userId, "staff.role", "staff_roles", parsed.data.userId, {
+    role: parsed.data.role,
+  });
+
+  revalidatePath("/admin/equipe");
+  return { status: "saved", message: "Rôle changé." };
+}
+
+/** Retire tous les rôles : la personne garde son compte client, pas l'administration. */
+export async function revokeStaffAccessAction(formData: FormData): Promise<void> {
+  const member = await getStaffMember();
+  if (!member || !hasRole(member, "super_admin")) return;
+
+  const userId = z.uuid().safeParse(formData.get("userId"));
+  if (!userId.success || userId.data === member.userId) return;
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("staff_roles").delete().eq("user_id", userId.data);
+
+  if (error) {
+    console.error("Retrait de l'accès refusé :", error);
+    return;
+  }
+
+  await logAdminAction(member.userId, "staff.revoke", "staff_roles", userId.data);
+  revalidatePath("/admin/equipe");
 }

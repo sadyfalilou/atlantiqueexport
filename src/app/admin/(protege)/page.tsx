@@ -8,12 +8,18 @@ import {
   Truck,
 } from "lucide-react";
 import { getDashboard } from "@/lib/admin/queries";
+import { isViewerOnly } from "@/lib/admin/roles";
+import { getStaffMember } from "@/lib/supabase/auth";
 import { formatPrice } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const figures = await getDashboard();
+  const [figures, member] = await Promise.all([getDashboard(), getStaffMember()]);
+
+  // Une tuile qui mène à une page interdite est une promesse non tenue : un
+  // observateur serait renvoyé ici même, sans explication.
+  const canSeeBusiness = member != null && !isViewerOnly(member.roles);
 
   return (
     <div>
@@ -32,13 +38,15 @@ export default async function AdminDashboardPage() {
           icon={<Banknote className="size-5" />}
           urgent={figures.pendingPayment > 0}
         />
-        <Stat
-          label="Demandes pro"
-          value={figures.pendingBusiness}
-          href="/admin/demandes-pro"
-          icon={<Briefcase className="size-5" />}
-          urgent={figures.pendingBusiness > 0}
-        />
+        {canSeeBusiness ? (
+          <Stat
+            label="Demandes pro"
+            value={figures.pendingBusiness}
+            href="/admin/demandes-pro"
+            icon={<Briefcase className="size-5" />}
+            urgent={figures.pendingBusiness > 0}
+          />
+        ) : null}
         <Stat
           label="Commandes à préparer"
           value={figures.toPrepare}

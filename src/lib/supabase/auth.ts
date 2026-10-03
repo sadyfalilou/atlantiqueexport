@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { StaffRole } from "@/lib/admin/roles";
 
 /**
  * Session Supabase côté serveur.
@@ -36,12 +37,10 @@ export async function createSessionClient() {
   );
 }
 
-export type StaffRole =
-  | "super_admin"
-  | "manager"
-  | "picker"
-  | "driver"
-  | "support";
+// Les rôles vivent dans un module pur, que la navigation peut aussi lire
+// côté client. Ils restent exportés d'ici : c'est l'adresse que connaissent
+// les pages de l'administration.
+export type { StaffRole };
 
 export interface StaffMember {
   userId: string;

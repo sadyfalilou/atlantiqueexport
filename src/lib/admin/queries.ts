@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { productImageUrl } from "@/lib/catalog/queries";
+import type { StaffRole } from "@/lib/admin/roles";
 
 /**
  * Lectures de l'administration.
@@ -1095,4 +1096,46 @@ export async function getAdminRecipe(slug: string): Promise<AdminRecipe | null> 
   const { data } = await supabase.from("recipes").select("*").eq("slug", slug).limit(1);
   const row = ((data ?? []) as Row[])[0];
   return row ? toAdminRecipe(row) : null;
+}
+
+export interface StaffEntry {
+  userId: string;
+  email: string;
+  roles: StaffRole[];
+  lastSignInAt: string | null;
+  createdAt: string;
+}
+
+/**
+ * L'équipe : qui porte un rôle, et depuis quand.
+ *
+ * Les adresses vivent dans `auth.users`, que PostgREST n'expose pas. Elles
+ * sont donc relues une par une par l'API d'administration — l'équipe se
+ * compte en unités, pas en milliers, et cela évite de parcourir toute la
+ * clientèle pour retrouver quelques personnes.
+ */
+export async function getStaffDirectory(): Promise<StaffEntry[]> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("staff_roles").select("user_id, role");
+
+  const roles = new Map<string, StaffRole[]>();
+  for (const row of (data ?? []) as Row[]) {
+    const id = row.user_id as string;
+    roles.set(id, [...(roles.get(id) ?? []), row.role as StaffRole]);
+  }
+
+  const entries = await Promise.all(
+    [...roles].map(async ([userId, list]) => {
+      const { data: found } = await supabase.auth.admin.getUserById(userId);
+      return {
+        userId,
+        email: found?.user?.email ?? "(compte supprimé)",
+        roles: list,
+        lastSignInAt: found?.user?.last_sign_in_at ?? null,
+        createdAt: found?.user?.created_at ?? "",
+      };
+    }),
+  );
+
+  return entries.sort((a, b) => a.email.localeCompare(b.email, "fr"));
 }
