@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
-import { createSessionClient } from "@/lib/supabase/auth";
+import { redirect as redirectToPath } from "next/navigation";
+import { createSessionClient, getStaffMember } from "@/lib/supabase/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { addToCart, getCartId } from "@/lib/cart/cart";
 import { getOrderForCurrentVisitor } from "@/lib/checkout/checkout";
@@ -495,6 +496,14 @@ export async function updatePasswordAction(
   if (error) {
     return { status: "error", message: "Le mot de passe n'a pas pu être changé." };
   }
+
+  // Une personne du personnel qui change son mot de passe le fait pour
+  // reprendre son travail, pas pour consulter ses commandes : on la ramène
+  // à l'administration. Le rôle est relu en base plutôt que transporté dans
+  // le lien du courriel — un paramètre qui traverse Supabase se perd, et un
+  // paramètre qu'on croirait sur parole déciderait de la destination sans
+  // qu'aucun droit ne soit vérifié.
+  if (await getStaffMember()) redirectToPath("/admin");
 
   redirect({ href: "/compte", locale });
   return { status: "idle" };
