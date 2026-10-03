@@ -2641,7 +2641,15 @@ async function sendStaffInvite(email: string): Promise<boolean> {
     options: { redirectTo: `${site}/auth/callback?next=/fr/compte/mot-de-passe` },
   });
 
-  const link = data?.properties?.action_link;
+  // Le jeton haché plutôt que `action_link`, pour la même raison que la
+  // réinitialisation : notre client est en flux PKCE et ne peut pas échanger
+  // ce que le point de vérification de Supabase lui renverrait.
+  const hashed = data?.properties?.hashed_token;
+  const destination = encodeURIComponent("/fr/compte/mot-de-passe");
+  const link = hashed
+    ? `${site}/auth/callback?token_hash=${hashed}&type=recovery&next=${destination}`
+    : null;
+
   if (error || !link) {
     console.error("Lien d'invitation non généré :", error?.message);
     return false;

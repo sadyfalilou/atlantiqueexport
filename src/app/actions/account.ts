@@ -181,7 +181,15 @@ export async function requestPasswordResetAction(
     return { status: "sent" };
   }
 
-  const link = data.properties?.action_link;
+  // Pas `action_link` : il passe par le point de vérification de Supabase,
+  // qui renvoie ensuite un jeton que notre client, en flux PKCE, ne sait pas
+  // échanger. Le jeton haché, lui, se valide dans notre propre route.
+  const hashed = data.properties?.hashed_token;
+  const destination = encodeURIComponent(`/${locale}/compte/mot-de-passe`);
+  const link = hashed
+    ? `${site}/auth/callback?token_hash=${hashed}&type=recovery&next=${destination}`
+    : null;
+
   if (link) {
     await queueEmail({
       type: "password_reset",

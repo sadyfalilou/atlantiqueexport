@@ -40,15 +40,6 @@ export default async function AdminSignInPage() {
             Mot de passe oublié ?
           </Link>
         </p>
-
-        <p className="mt-3 text-sm text-muted">
-          Pas encore de compte ? Il doit être créé dans Supabase, puis recevoir un rôle
-          avec&nbsp;
-          <code className="rounded-sm bg-cream-200 px-1 py-0.5 text-xs">
-            npm run grant:admin
-          </code>
-          .
-        </p>
       </div>
     </div>
   );
