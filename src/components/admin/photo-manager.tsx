@@ -7,7 +7,7 @@ import { ImagePlus, Star, Trash2 } from "lucide-react";
 import {
   deleteProductPhotoAction,
   setPrimaryPhotoAction,
-  uploadProductPhotoAction,
+  uploadProductPhotosAction,
   type PhotoState,
 } from "@/app/actions/admin";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ function SubmitButton() {
   return (
     <Button type="submit" variant="secondary" disabled={pending}>
       <ImagePlus aria-hidden="true" className="size-4" />
-      {pending ? "Envoi en cours…" : "Ajouter la photo"}
+      {pending ? "Envoi en cours…" : "Ajouter les photos"}
     </Button>
   );
 }
@@ -39,7 +39,7 @@ export function PhotoManager({
 
   const [state, action] = useActionState<PhotoState, FormData>(
     async (previous, formData) => {
-      const result = await uploadProductPhotoAction(previous, formData);
+      const result = await uploadProductPhotosAction(previous, formData);
       if (result.status === "saved") formRef.current?.reset();
       return result;
     },
@@ -119,19 +119,22 @@ export function PhotoManager({
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="photo" className="text-sm font-semibold text-forest-900">
-            Fichier
+            Fichiers
           </label>
           <input
             id="photo"
             name="photo"
             type="file"
+            multiple
             required
             accept="image/jpeg,image/png,image/webp,image/avif"
             className="text-sm text-forest-900 file:mr-3 file:h-11 file:rounded-md file:border-0 file:bg-cream-100 file:px-4 file:text-sm file:font-semibold file:text-forest-800"
           />
           <p className="text-xs text-muted">
-            JPEG, PNG, WebP ou AVIF, 5 Mo au maximum. Une image carrée s&apos;affiche
-            le mieux : le site la recadre au centre.
+            Vous pouvez en choisir plusieurs d&apos;un coup : elles se rangent dans
+            l&apos;ordre où vous les sélectionnez, et la première devient la photo
+            principale. JPEG, PNG, WebP ou AVIF, 5 Mo chacune au maximum. Une image
+            carrée s&apos;affiche le mieux : le site la recadre au centre.
           </p>
         </div>
 
@@ -167,7 +170,9 @@ export function PhotoManager({
         <p className="text-xs text-muted">
           Ces descriptions sont lues à voix haute par les lecteurs d&apos;écran et
           s&apos;affichent si l&apos;image ne charge pas. Laissées vides, le nom du produit
-          sert de secours.
+          sert de secours. Elles ne s&apos;appliquent qu&apos;à un envoi d&apos;un seul
+          fichier : la même phrase répétée sur cinq photos renseignerait moins
+          qu&apos;elle n&apos;embrouillerait.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -179,7 +184,7 @@ export function PhotoManager({
           ) : null}
           {state.status === "saved" ? (
             <p role="status" className="text-sm text-success">
-              Photo ajoutée.
+              {state.message ?? "Photos ajoutées."}
             </p>
           ) : null}
         </div>

@@ -118,6 +118,9 @@ export interface Product {
   imageUrl?: string | null;
   /** Texte alternatif de la photo, dans les deux langues. */
   imageAlt?: LocalizedText | null;
+  /** Toutes les photos, la principale en tête. Les cartes n'en montrent
+      qu'une ; la fiche les montre toutes. */
+  images?: Array<{ url: string; alt: LocalizedText }>;
   tags: string[];
   allergens: string[];
   ingredients?: LocalizedText;

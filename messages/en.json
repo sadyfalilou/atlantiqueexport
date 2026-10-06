@@ -117,6 +117,8 @@
     "reserve": "Reserve",
     "notifyMe": "Notify me",
     "from": "From",
+    "photoNumber": "Photo {number} of {total}",
+    "photoList": "Product photos",
     "seeAll": "See all",
     "viewProduct": "View product",
     "perKg": "per kilo",

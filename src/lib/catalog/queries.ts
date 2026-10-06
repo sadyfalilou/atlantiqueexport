@@ -149,6 +149,13 @@ function toProduct(row: Row): Product {
           en: (cover.alt_en as string | null) ?? "",
         }
       : null,
+    images: images.map((image) => ({
+      url: productImageUrl(image.storage_path as string),
+      alt: {
+        fr: (image.alt_fr as string | null) ?? "",
+        en: (image.alt_en as string | null) ?? "",
+      },
+    })),
     tags: (row.tags as string[] | null) ?? [],
     allergens: (row.allergens as string[] | null) ?? [],
     isFeatured: Boolean(row.is_featured),

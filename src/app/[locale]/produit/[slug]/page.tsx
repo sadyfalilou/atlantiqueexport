@@ -6,7 +6,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Container, Section } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/badge";
-import { ProductImage } from "@/components/shared/product-image";
+import { ProductGallery } from "@/components/product/product-gallery";
 import { VariantPicker } from "@/components/product/variant-picker";
 import {
   getCategoryBySlug,
@@ -80,6 +80,7 @@ export default async function ProductPage({
   const tTemperature = await getTranslations("temperature");
   const tShop = await getTranslations("shop");
   const tCommon = await getTranslations("common");
+  const tBadge = await getTranslations("badge");
 
   const [category, settings] = await Promise.all([
     product.categorySlug ? getCategoryBySlug(product.categorySlug) : undefined,
@@ -149,19 +150,20 @@ export default async function ProductPage({
         </nav>
 
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
-          <div className="relative aspect-square overflow-hidden rounded-xl border border-line bg-surface">
-            <ProductImage
-              src={product.imageUrl}
-              alt={product.imageAlt?.[typedLocale]}
-              name={product.name[typedLocale]}
-              placeholderLabel={tCommon("photoComing")}
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              priority
-            />
-            <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-              {product.isNew ? <Badge variant="new">{t("from")}</Badge> : null}
-            </div>
-          </div>
+          <ProductGallery
+            images={(product.images ?? []).map((image) => ({
+              url: image.url,
+              alt: image.alt[typedLocale],
+            }))}
+            name={product.name[typedLocale]}
+            placeholderLabel={tCommon("photoComing")}
+            photoLabels={(product.images ?? []).map((_, index) =>
+              t("photoNumber", { number: index + 1, total: product.images?.length ?? 0 }),
+            )}
+            listLabel={t("photoList")}
+          >
+            {product.isNew ? <Badge variant="new">{tBadge("new")}</Badge> : null}
+          </ProductGallery>
 
           <div>
             <div className="flex flex-wrap gap-2">

@@ -117,6 +117,8 @@
     "reserve": "Réserver",
     "notifyMe": "M'avertir du retour",
     "from": "À partir de",
+    "photoNumber": "Photo {number} sur {total}",
+    "photoList": "Photos du produit",
     "seeAll": "Tout voir",
     "viewProduct": "Voir le produit",
     "perKg": "le kilo",

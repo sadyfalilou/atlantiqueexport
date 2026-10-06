@@ -2397,7 +2397,7 @@ export type PhotoState = { status: "idle" | "saved" | "error"; message?: string 
  * « IMG_4821 (copie).JPG » ferait une URL fragile, et un nom fourni par
  * l'utilisateur permettrait d'écraser un fichier existant en le devinant.
  */
-export async function uploadProductPhotoAction(
+export async function uploadProductPhotosAction(
   _previous: PhotoState,
   formData: FormData,
 ): Promise<PhotoState> {
@@ -2407,76 +2407,112 @@ export async function uploadProductPhotoAction(
   }
 
   const productId = formData.get("productId");
-  const file = formData.get("photo");
   const slug = String(formData.get("slug") ?? "");
 
   if (typeof productId !== "string" || !z.uuid().safeParse(productId).success) {
     return { status: "error", message: "Produit inconnu." };
   }
-  if (!(file instanceof File) || file.size === 0) {
-    return { status: "error", message: "Choisissez une image." };
-  }
-  if (!IMAGE_TYPES.includes(file.type)) {
-    return {
-      status: "error",
-      message: "Format refusé. Utilisez du JPEG, du PNG, du WebP ou de l'AVIF.",
-    };
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    const mo = (file.size / 1024 / 1024).toFixed(1);
-    return {
-      status: "error",
-      message: `Image trop lourde (${mo} Mo). La limite est de 5 Mo — exportez-la en plus petit.`,
-    };
+
+  const files = formData
+    .getAll("photo")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+
+  if (files.length === 0) {
+    return { status: "error", message: "Choisissez au moins une image." };
   }
 
   const supabase = createAdminClient();
-  const extension = file.type.split("/")[1].replace("jpeg", "jpg");
-  const storagePath = `${productId}/${randomUUID()}.${extension}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from("produits")
-    .upload(storagePath, file, { contentType: file.type, upsert: false });
-
-  if (uploadError) {
-    console.error("Téléversement refusé :", uploadError);
-    return { status: "error", message: "Le téléversement a échoué. Réessayez." };
-  }
-
+  // La position de départ est lue une seule fois : les photos envoyées
+  // ensemble se rangent dans l'ordre où elles ont été choisies.
   const { data: existing } = await supabase
     .from("product_images")
     .select("id")
     .eq("product_id", productId);
 
-  const count = (existing ?? []).length;
+  let position = (existing ?? []).length;
+  const alts = {
+    fr: String(formData.get("altFr") ?? "").trim() || null,
+    en: String(formData.get("altEn") ?? "").trim() || null,
+  };
 
-  const { error: insertError } = await supabase.from("product_images").insert({
-    product_id: productId,
-    storage_path: storagePath,
-    alt_fr: String(formData.get("altFr") ?? "").trim() || null,
-    alt_en: String(formData.get("altEn") ?? "").trim() || null,
-    position: count,
-    // La première photo devient la principale d'office : sans cela, un produit
-    // avec une seule photo n'en afficherait aucune.
-    is_primary: count === 0,
-  });
+  let added = 0;
+  const refusees: string[] = [];
 
-  if (insertError) {
-    // Le fichier est déjà en ligne : le retirer évite de laisser un orphelin
-    // que plus rien ne référence et que personne ne saura retrouver.
-    await supabase.storage.from("produits").remove([storagePath]);
-    console.error("Enregistrement de la photo refusé :", insertError);
-    return { status: "error", message: "La photo n'a pas pu être enregistrée." };
+  for (const file of files) {
+    if (!IMAGE_TYPES.includes(file.type)) {
+      refusees.push(`${file.name} : format refusé`);
+      continue;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      refusees.push(`${file.name} : ${(file.size / 1024 / 1024).toFixed(1)} Mo`);
+      continue;
+    }
+
+    const extension = file.type.split("/")[1].replace("jpeg", "jpg");
+    const storagePath = `${productId}/${randomUUID()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("produits")
+      .upload(storagePath, file, { contentType: file.type, upsert: false });
+
+    if (uploadError) {
+      console.error("Téléversement refusé :", uploadError);
+      refusees.push(`${file.name} : téléversement échoué`);
+      continue;
+    }
+
+    const { error: insertError } = await supabase.from("product_images").insert({
+      product_id: productId,
+      storage_path: storagePath,
+      // Les descriptions ne valent que pour un envoi unique : la même phrase
+      // répétée sur cinq photos renseignerait moins qu'elle n'embrouillerait.
+      alt_fr: files.length === 1 ? alts.fr : null,
+      alt_en: files.length === 1 ? alts.en : null,
+      position,
+      // La première photo du produit devient la principale d'office : sans
+      // cela, un produit avec une seule photo n'en afficherait aucune.
+      is_primary: position === 0,
+    });
+
+    if (insertError) {
+      // Le fichier est déjà en ligne : le retirer évite de laisser un orphelin
+      // que plus rien ne référence et que personne ne saura retrouver.
+      await supabase.storage.from("produits").remove([storagePath]);
+      console.error("Enregistrement de la photo refusé :", insertError);
+      refusees.push(`${file.name} : enregistrement échoué`);
+      continue;
+    }
+
+    position += 1;
+    added += 1;
   }
 
-  await logAdminAction(member.userId, "product.photo.add", "products", productId, {
-    storage_path: storagePath,
-  });
+  if (added > 0) {
+    await logAdminAction(member.userId, "product.photo.add", "products", productId, {
+      added,
+      refusees: refusees.length,
+    });
+    revalidatePath(`/admin/produits/${slug}`);
+    revalidatePath("/", "layout");
+  }
 
-  revalidatePath(`/admin/produits/${slug}`);
-  revalidatePath("/", "layout");
-  return { status: "saved" };
+  if (added === 0) {
+    return {
+      status: "error",
+      message: `Aucune photo ajoutée — ${refusees.join(", ")}. Formats acceptés : JPEG, PNG, WebP, AVIF, 5 Mo au maximum.`,
+    };
+  }
+
+  return {
+    status: "saved",
+    message:
+      refusees.length === 0
+        ? `${added} photo${added > 1 ? "s" : ""} ajoutée${added > 1 ? "s" : ""}.`
+        : `${added} ajoutée${added > 1 ? "s" : ""}, ${refusees.length} refusée${refusees.length > 1 ? "s" : ""} — ${refusees.join(", ")}.`,
+  };
 }
+
 
 export async function deleteProductPhotoAction(formData: FormData): Promise<void> {
   const member = await getStaffMember();
