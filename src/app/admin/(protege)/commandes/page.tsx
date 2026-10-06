@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getOrders, TO_PREPARE_STATUSES } from "@/lib/admin/queries";
 import { OrderStatusBadge, PaymentBadge } from "@/components/admin/order-badges";
+import { ListFilter } from "@/components/admin/list-filter";
+import { matches } from "@/lib/admin/search";
 import { formatDate, formatPrice } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Commandes" };
@@ -39,12 +41,20 @@ export default async function AdminOrdersPage({
         : undefined;
   const today = new Date().toISOString().slice(0, 10);
 
-  const orders = await getOrders({
+  const query = typeof params.q === "string" ? params.q : "";
+
+  const found = await getOrders({
     status: toPrepare ? TO_PREPARE_STATUSES : status,
     paymentStatus,
     method: todayMethod,
     slotDate: todayMethod ? today : undefined,
   });
+
+  // Le filtre s'applique APRÈS les filtres de statut, pas à leur place :
+  // chercher un numéro dans « à encaisser » doit rester dans « à encaisser ».
+  const orders = found.filter((order) =>
+    matches(query, order.orderNumber, order.email, order.phone),
+  );
 
   return (
     <div>
@@ -54,7 +64,8 @@ export default async function AdminOrdersPage({
             Commandes
           </h1>
           <p className="mt-1 text-sm text-muted">
-            {orders.length} commande{orders.length > 1 ? "s" : ""}
+            {query ? `${orders.length} sur ${found.length}` : `${found.length}`} commande
+            {found.length > 1 ? "s" : ""}
             {paymentStatus === "pending" ? " en attente de virement" : ""}
             {toPrepare ? " à préparer" : ""}
             {todayMethod === "pickup" ? " à ramasser aujourd'hui" : ""}
@@ -62,6 +73,10 @@ export default async function AdminOrdersPage({
           </p>
         </div>
 
+        <ListFilter placeholder="Numéro, courriel, téléphone…" label="Rechercher une commande" />
+      </div>
+
+      <div className="mt-4">
         <nav className="flex flex-wrap gap-2 text-sm">
           <Filter href="/admin/commandes" active={!status && !paymentStatus}>
             Toutes

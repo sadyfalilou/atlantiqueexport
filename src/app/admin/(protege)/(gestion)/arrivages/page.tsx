@@ -6,32 +6,51 @@ import { getStaffMember, hasRole } from "@/lib/supabase/auth";
 import { toggleShipmentPublishAction } from "@/app/actions/admin";
 import { NewShipmentForm } from "@/components/admin/new-shipment-form";
 import { PublishToggle } from "@/components/admin/publish-toggle";
+import { ListFilter } from "@/components/admin/list-filter";
+import { matches } from "@/lib/admin/search";
 import { formatDate } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Arrivages" };
 export const dynamic = "force-dynamic";
 
-export default async function AdminShipmentsPage() {
-  const [shipments, member] = await Promise.all([getAdminShipments(), getStaffMember()]);
+export default async function AdminShipmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const query = typeof params.q === "string" ? params.q : "";
+
+  const [all, member] = await Promise.all([getAdminShipments(), getStaffMember()]);
   const canEdit = member != null && hasRole(member, "super_admin", "manager");
 
-  const online = shipments.filter((shipment) => shipment.isPublished).length;
+  const shipments = all.filter((shipment) =>
+    matches(query, shipment.code, shipment.titleFr, shipment.titleEn, shipment.status),
+  );
+  const online = all.filter((shipment) => shipment.isPublished).length;
 
   return (
     <div>
-      <h1 className="font-display text-[1.75rem] font-semibold text-forest-900">
-        Arrivages
-      </h1>
-      <p className="mt-1 text-sm text-muted">
-        {shipments.length} arrivage{shipments.length > 1 ? "s" : ""} · {online} en ligne.
-        La section « Prochain arrivage » de l&apos;accueil affiche le plus proche des
-        arrivages publiés.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-[1.75rem] font-semibold text-forest-900">
+            Arrivages
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            {query ? `${shipments.length} sur ${all.length}` : `${all.length}`} arrivage
+            {all.length > 1 ? "s" : ""} · {online} en ligne. La section « Prochain
+            arrivage » de l&apos;accueil affiche le plus proche des arrivages publiés.
+          </p>
+        </div>
+
+        <ListFilter placeholder="Code, titre, statut…" label="Rechercher un arrivage" />
+      </div>
 
       {shipments.length === 0 ? (
         <p className="mt-6 rounded-lg border border-dashed border-line bg-surface p-8 text-center text-muted">
-          Aucun arrivage. La page d&apos;accueil affiche pour l&apos;instant un encadré
-          vide à la place.
+          {query
+            ? "Aucun arrivage ne correspond à cette recherche."
+            : "Aucun arrivage. La page d'accueil affiche pour l'instant un encadré vide à la place."}
         </p>
       ) : (
         <div className="mt-6 overflow-x-auto rounded-lg border border-line bg-surface">

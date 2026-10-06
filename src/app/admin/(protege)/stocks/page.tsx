@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
 import { StockMovementForm } from "@/components/admin/stock-movement-form";
 import { StockThresholdForm } from "@/components/admin/stock-threshold-form";
+import { ListFilter } from "@/components/admin/list-filter";
+import { matches } from "@/lib/admin/search";
 
 export const metadata: Metadata = { title: "Stocks" };
 export const dynamic = "force-dynamic";
@@ -17,7 +19,14 @@ type Row = Record<string, unknown>;
  * signé et motivé. Écrire un total à la main ferait perdre l'historique, qui
  * est précisément ce qui permet de comprendre un écart d'inventaire.
  */
-export default async function AdminStockPage() {
+export default async function AdminStockPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const query = typeof params.q === "string" ? params.q : "";
+
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("stock_levels")
@@ -28,7 +37,7 @@ export default async function AdminStockPage() {
     .order("quantity_available")
     .limit(500);
 
-  const rows = ((data ?? []) as Row[]).map((row) => {
+  const allRows = ((data ?? []) as Row[]).map((row) => {
     const variant = row.variant as Row | null;
     const product = variant?.product as Row | null;
     return {
@@ -43,6 +52,7 @@ export default async function AdminStockPage() {
     };
   });
 
+  const rows = allRows.filter((row) => matches(query, row.name, row.label, row.sku));
   const low = rows.filter((row) => row.available <= row.threshold).length;
 
   const [member, movements] = await Promise.all([
@@ -86,12 +96,20 @@ export default async function AdminStockPage() {
 
   return (
     <div>
-      <h1 className="font-display text-[1.75rem] font-semibold text-forest-900">Stocks</h1>
-      <p className="mt-1 text-sm text-muted">
-        {rows.length} format{rows.length > 1 ? "s" : ""} suivi
-        {rows.length > 1 ? "s" : ""}
-        {low > 0 ? ` — ${low} sous le seuil d'alerte` : ""}
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-[1.75rem] font-semibold text-forest-900">
+            Stocks
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            {query ? `${rows.length} sur ${allRows.length}` : `${allRows.length}`} format
+            {allRows.length > 1 ? "s" : ""} suivi{allRows.length > 1 ? "s" : ""}
+            {low > 0 ? ` — ${low} sous le seuil d'alerte` : ""}
+          </p>
+        </div>
+
+        <ListFilter placeholder="Produit, format, code…" label="Rechercher un format" />
+      </div>
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-line bg-surface">
         <table className="w-full min-w-[42rem] text-sm">
@@ -105,6 +123,13 @@ export default async function AdminStockPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                  Aucun format ne correspond à cette recherche.
+                </td>
+              </tr>
+            ) : null}
             {rows.map((row) => {
               const isLow = row.available <= row.threshold;
               return (

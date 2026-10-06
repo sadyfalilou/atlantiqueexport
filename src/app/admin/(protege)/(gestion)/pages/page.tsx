@@ -4,17 +4,27 @@ import { AlertTriangle, Eye, EyeOff, Plus } from "lucide-react";
 import { getAdminPages } from "@/lib/admin/queries";
 import { getStaffMember, hasRole } from "@/lib/supabase/auth";
 import { buttonVariants } from "@/components/ui/button";
+import { ListFilter } from "@/components/admin/list-filter";
+import { matches } from "@/lib/admin/search";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Pages" };
 export const dynamic = "force-dynamic";
 
-export default async function AdminPagesPage() {
-  const [pages, member] = await Promise.all([getAdminPages(), getStaffMember()]);
+export default async function AdminPagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const query = typeof params.q === "string" ? params.q : "";
+
+  const [all, member] = await Promise.all([getAdminPages(), getStaffMember()]);
   const canEdit = member != null && hasRole(member, "super_admin", "manager");
 
-  const pending = pages.reduce((n, page) => n + page.pendingCount, 0);
-  const drafts = pages.filter((page) => page.isDraftLegal).length;
+  const pages = all.filter((page) => matches(query, page.titleFr, page.titleEn, page.slug));
+  const pending = all.reduce((n, page) => n + page.pendingCount, 0);
+  const drafts = all.filter((page) => page.isDraftLegal).length;
 
   return (
     <div>
@@ -24,10 +34,12 @@ export default async function AdminPagesPage() {
             Pages
           </h1>
           <p className="mt-1 text-sm text-muted">
-            {pages.length} pages · {drafts} brouillon{drafts > 1 ? "s" : ""} juridique
+            {query ? `${pages.length} sur ${all.length}` : `${all.length}`} pages · {drafts} brouillon{drafts > 1 ? "s" : ""} juridique
             {drafts > 1 ? "s" : ""}
           </p>
         </div>
+
+        <ListFilter placeholder="Titre, adresse…" label="Rechercher une page" />
 
         {canEdit ? (
           <Link
@@ -67,6 +79,13 @@ export default async function AdminPagesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
+            {pages.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                  Aucune page ne correspond à cette recherche.
+                </td>
+              </tr>
+            ) : null}
             {pages.map((page) => (
               <tr key={page.id} className="hover:bg-cream-100">
                 <td className="px-4 py-3">

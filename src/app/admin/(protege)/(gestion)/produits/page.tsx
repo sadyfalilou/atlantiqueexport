@@ -7,17 +7,38 @@ import { disableProvisionalPricesAction, togglePublishAction } from "@/app/actio
 import { PublishToggle } from "@/components/admin/publish-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ListFilter } from "@/components/admin/list-filter";
+import { matches } from "@/lib/admin/search";
 import { cn, formatPrice } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Produits" };
 export const dynamic = "force-dynamic";
 
-export default async function AdminProductsPage() {
-  const [products, readiness, member] = await Promise.all([
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const query = typeof params.q === "string" ? params.q : "";
+
+  const [all, readiness, member] = await Promise.all([
     getAdminProducts(),
     getPricingReadiness(),
     getStaffMember(),
   ]);
+
+  // Le filtre mord aussi sur les formats : on cherche souvent un produit par
+  // le code d'un sachet lu sur un carton, pas par son nom.
+  const products = all.filter((product) =>
+    matches(
+      query,
+      product.name,
+      product.slug,
+      product.categoryName,
+      ...product.variants.map((variant) => `${variant.sku} ${variant.label}`),
+    ),
+  );
 
   const canSwitch = member != null && hasRole(member, "super_admin");
   const canEdit = member != null && hasRole(member, "super_admin", "manager");
@@ -30,10 +51,14 @@ export default async function AdminProductsPage() {
             Produits
           </h1>
           <p className="mt-1 text-sm text-muted">
-            {products.length} produits ·{" "}
+            {query ? `${products.length} sur ${all.length}` : `${all.length}`} produits ·{" "}
             {products.reduce((n, p) => n + p.variants.length, 0)} formats ·{" "}
             {products.filter((p) => p.photos.length === 0).length} sans photo
           </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <ListFilter placeholder="Nom, code, catégorie…" label="Rechercher un produit" />
         </div>
 
         {canEdit ? (
@@ -105,6 +130,13 @@ export default async function AdminProductsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
+            {products.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                  Aucun produit ne correspond à cette recherche.
+                </td>
+              </tr>
+            ) : null}
             {products.map((product) => (
               <tr key={product.id} className="hover:bg-cream-100">
                 <td className="px-4 py-3">

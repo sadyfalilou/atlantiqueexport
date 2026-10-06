@@ -6,24 +6,43 @@ import { getStaffMember, hasRole } from "@/lib/supabase/auth";
 import { NewRecipeForm } from "@/components/admin/new-recipe-form";
 import { PublishToggle } from "@/components/admin/publish-toggle";
 import { toggleRecipePublishAction } from "@/app/actions/admin";
+import { ListFilter } from "@/components/admin/list-filter";
+import { matches } from "@/lib/admin/search";
 
 export const metadata: Metadata = { title: "Recettes" };
 export const dynamic = "force-dynamic";
 
-export default async function AdminRecipesPage() {
-  const [recipes, member] = await Promise.all([getAdminRecipes(), getStaffMember()]);
+export default async function AdminRecipesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const query = typeof params.q === "string" ? params.q : "";
+
+  const [all, member] = await Promise.all([getAdminRecipes(), getStaffMember()]);
   const canEdit = member != null && hasRole(member, "super_admin", "manager");
 
-  const empty = recipes.filter((recipe) => recipe.stepCount === 0).length;
+  const recipes = all.filter((recipe) =>
+    matches(query, recipe.titleFr, recipe.titleEn, recipe.slug),
+  );
+  const empty = all.filter((recipe) => recipe.stepCount === 0).length;
 
   return (
     <div>
-      <h1 className="font-display text-[1.75rem] font-semibold text-forest-900">
-        Recettes
-      </h1>
-      <p className="mt-1 text-sm text-muted">
-        {recipes.length} recettes · {recipes.filter((r) => r.isPublished).length} en ligne
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-[1.75rem] font-semibold text-forest-900">
+            Recettes
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            {query ? `${recipes.length} sur ${all.length}` : `${all.length}`} recettes ·{" "}
+            {all.filter((r) => r.isPublished).length} en ligne
+          </p>
+        </div>
+
+        <ListFilter placeholder="Titre, adresse…" label="Rechercher une recette" />
+      </div>
 
       {empty > 0 ? (
         <section className="mt-6 rounded-lg border-2 border-mango-700 bg-mango-50 p-5">
@@ -51,6 +70,13 @@ export default async function AdminRecipesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
+            {recipes.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-muted">
+                  Aucune recette ne correspond à cette recherche.
+                </td>
+              </tr>
+            ) : null}
             {recipes.map((recipe) => (
               <tr key={recipe.id} className="hover:bg-cream-100">
                 <td className="px-4 py-3">
