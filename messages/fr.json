@@ -132,7 +132,6 @@
     "allergens": "Allergènes",
     "description": "Description",
     "noAllergens": "Aucun allergène déclaré.",
-    "cartComingSoon": "Le panier arrive à la prochaine étape du développement : cette fiche est consultable, mais la commande n'est pas encore ouverte.",
     "provisionalPrice": "Prix de démonstration, non définitif.",
     "backToShop": "Retour à la boutique",
     "unitPrice": "Prix au kilo"
@@ -178,8 +177,8 @@
     "credit": "Conçu et développé par <link>Hakim Numérique</link>"
   },
   "notFound": {
-    "title": "Cette page n'est pas encore en ligne",
-    "body": "Le site est en cours de construction : la boutique, le panier et l'espace client arrivent dans les prochaines étapes. Si vous pensez être arrivé ici par un lien cassé, écrivez-nous.",
+    "title": "Cette page n'existe pas",
+    "body": "Le lien est peut-être cassé, ou la page a changé d'adresse. Revenez à l'accueil, ou écrivez-nous si vous pensez que l'erreur vient de notre côté.",
     "home": "Retour à l'accueil",
     "contact": "Nous écrire"
   },

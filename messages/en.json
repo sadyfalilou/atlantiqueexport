@@ -132,7 +132,6 @@
     "allergens": "Allergens",
     "description": "Description",
     "noAllergens": "No declared allergens.",
-    "cartComingSoon": "The cart is coming in the next development step: this page is browsable, but ordering is not open yet.",
     "provisionalPrice": "Demo price, not final.",
     "backToShop": "Back to the shop",
     "unitPrice": "Price per kilo"
@@ -178,8 +177,8 @@
     "credit": "Designed and built by <link>Hakim Numérique</link>"
   },
   "notFound": {
-    "title": "This page isn't live yet",
-    "body": "The site is under construction: the shop, cart and account area are coming in the next steps. If you think you followed a broken link, let us know.",
+    "title": "This page does not exist",
+    "body": "The link may be broken, or the page may have moved. Head back to the home page, or write to us if you think the mistake is on our side.",
     "home": "Back to home",
     "contact": "Contact us"
   },
